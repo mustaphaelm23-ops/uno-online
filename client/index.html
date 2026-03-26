@@ -738,7 +738,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .hpill{padding:4px 10px;font-size:10px;}
   .actbar{bottom:110px;right:10px;}
   .cancel-area{top:52%;}
-  .myhand{padding-bottom:2px;min-height:75px;}
+  .myhand{padding-bottom:0;min-height:65px;margin-bottom:-8px;}
+  .hcard{width:44px!important;height:68px!important;border-radius:8px!important;}
+  .card-num{font-size:22px!important;}
+  .card-tl,.card-br{font-size:10px!important;}
   .chat-fab{left:10px;top:50px;width:36px;height:36px;font-size:15px;}
   .btnUNO{width:64px;height:64px;font-size:18px;}
   .myinfo{bottom:10px;left:10px;padding:5px 10px;}
@@ -762,6 +765,12 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   :root{--card-w:50px;--card-h:76px;--hcard-w:42px;--hcard-h:66px;}
   .lside{padding:10px;gap:5px;}
   .lside .btnA{min-width:calc(50% - 5px);padding:9px 6px;font-size:10px;}
+  .myhand{min-height:55px;margin-bottom:-10px;}
+  .hcard{width:38px!important;height:60px!important;border-radius:7px!important;}
+  .card-num{font-size:18px!important;}
+  .card-tl,.card-br{font-size:9px!important;}
+  .carea{gap:12px;}
+  .ucard{width:50px!important;height:76px!important;}
   .btnA{padding:9px 12px;font-size:11px;}
   .logo{font-size:38px;}
   .auth-box{padding:24px 16px;}
@@ -1228,18 +1237,10 @@ function initSock(){
 
   sk.on('game:drew_card',({card,canPlay})=>{
     SFX.play('draw');
-    if(card){
-      S.g.drawnCardId=card.id;
-      // Add card locally only if not already in hand
-      if(!S.g.myHand.find(c=>c.id===card.id)){
-        S.g.myHand.push(card);
-        if(canPlay)S.g.myPlayable.push(card.id);
-      }
-      S.g.turnPhase=canPlay?'drew_card':'waiting';
-      renderHand();updateTurnUI();
-    }
-    if(canPlay){document.getElementById('cancelArea').style.display='block';toast('Drew a playable card!','s');}
-    else{document.getElementById('cancelArea').style.display='none';toast('Drew — turn passed','i');}
+    if(card)S.g.drawnCardId=card.id;
+    S.g.turnPhase=canPlay?'drew_card':'waiting';
+    if(canPlay){document.getElementById('cancelArea').style.display='block';}
+    else{document.getElementById('cancelArea').style.display='none';}
   });
 
   sk.on('game:player_drew',({playerId,count})=>{
