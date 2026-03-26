@@ -1,0 +1,44 @@
+[
+  {
+    "id": "2da8e58c-6c25-4e2f-9309-09266a8f49fb",
+    "username": "Mustapha",
+    "passwordHash": "$2a$10$GLqBurGFrDYIpj1KLQV2NOuZkP9FBzNXjV/2UqMxz1ZFnGsOcgc0q",
+    "coins": 9000,
+    "avatar": null,
+    "stats": {
+      "gamesPlayed": 11,
+      "gamesWon": 7,
+      "totalPoints": 0
+    },
+    "createdAt": 1774384903722,
+    "lastLoginAt": 1774472179049,
+    "lastDailyClaimAt": 1774390784224,
+    "instaFollowed": true,
+    "brokeCount2": 0,
+    "brokeCount": 1,
+    "lastBrokeAt": 1774410116709,
+    "lastLoginBonus": 1774472158008,
+    "migrationBonus": true
+  },
+  {
+    "id": "ed1f56c1-b184-436f-8441-8ed8f6ffe136",
+    "username": "Mustapha1",
+    "passwordHash": "$2a$10$KIQbJF1ohbsZktW6vfvAtuPBL93K9JTL6t4PjgV2DKlSQED04n8yO",
+    "coins": 1000,
+    "avatar": null,
+    "stats": {
+      "gamesPlayed": 11,
+      "gamesWon": 4,
+      "totalPoints": 0
+    },
+    "createdAt": 1774384945787,
+    "lastLoginAt": 1774472173915,
+    "lastDailyClaimAt": 1774390782493,
+    "instaFollowed": true,
+    "brokeCount2": 0,
+    "brokeCount": 1,
+    "lastBrokeAt": 1774463961408,
+    "lastLoginBonus": 1774464827097,
+    "migrationBonus": true
+  }
+]
