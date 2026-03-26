@@ -3,11 +3,11 @@
     "id": "2da8e58c-6c25-4e2f-9309-09266a8f49fb",
     "username": "Mustapha",
     "passwordHash": "$2a$10$GLqBurGFrDYIpj1KLQV2NOuZkP9FBzNXjV/2UqMxz1ZFnGsOcgc0q",
-    "coins": 9000,
+    "coins": 9100,
     "avatar": null,
     "stats": {
-      "gamesPlayed": 13,
-      "gamesWon": 8,
+      "gamesPlayed": 14,
+      "gamesWon": 9,
       "totalPoints": 0
     },
     "createdAt": 1774384903722,
@@ -24,10 +24,10 @@
     "id": "ed1f56c1-b184-436f-8441-8ed8f6ffe136",
     "username": "Mustapha1",
     "passwordHash": "$2a$10$KIQbJF1ohbsZktW6vfvAtuPBL93K9JTL6t4PjgV2DKlSQED04n8yO",
-    "coins": 1000,
+    "coins": 900,
     "avatar": null,
     "stats": {
-      "gamesPlayed": 13,
+      "gamesPlayed": 14,
       "gamesWon": 5,
       "totalPoints": 0
     },
