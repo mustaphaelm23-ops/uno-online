@@ -314,6 +314,16 @@ app.post('/api/coins/insta-reward', authMiddleware, (req, res) => {
   console.log(`[Coins] Instagram reward: +${CONFIG.INSTA_REWARD} for ${user.username}`);
   res.json({ coins: user.coins, earned: CONFIG.INSTA_REWARD });
 });
+// Admin: reset password
+app.post('/api/auth/reset', async (req, res) => {
+  const { username, newPassword } = req.body;
+  if (!username || !newPassword) return res.status(400).json({ error: 'Fill all fields' });
+  const user = [...usersDB.values()].find(u => u.username.toLowerCase() === username.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.passwordHash = await bcrypt.hash(newPassword, CONFIG.SALT_ROUNDS);
+  saveUsers();
+  res.json({ success: true, message: 'Password reset' });
+});
 app.get('/api/leaderboard', (req, res) => {
   const top = [...usersDB.values()]
     .sort((a, b) => b.coins - a.coins)
