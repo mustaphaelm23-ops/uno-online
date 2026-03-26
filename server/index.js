@@ -61,10 +61,12 @@ function saveUsers() {
 loadUsers();
 // One-time coin grants
 (function grantCoins(){
-  const grants = { 'mustapha': 50000, 'mustapha98': 100000 };
+  const grants = { 'mustapha': 50000, 'mustapha98': 100000, 'mustapha98_v2': 100000 };
   let changed = false;
   for (const [uname, amount] of Object.entries(grants)) {
     const user = [...usersDB.values()].find(u => u.username.toLowerCase() === uname);
+    const realName = uname.replace('_v2','');
+    const User = [...usersDB.values()].find(u => u.username.toLowerCase() === realName);
     if (user && !user['grant_' + uname]) {
       user.coins += amount;
       user['grant_' + uname] = true;
