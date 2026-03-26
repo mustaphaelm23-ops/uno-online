@@ -566,19 +566,79 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:768px){
   .chat-panel{width:100%;}
-  .lside{width:200px;padding:14px;}
   .lbody{flex-direction:column;}
-  .lside{width:100%;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;overflow-x:auto;overflow-y:hidden;}
-  .lmain{padding:14px;}
-  :root{--card-w:64px;--card-h:96px;--hcard-w:52px;--hcard-h:80px;}
-  .logo{font-size:48px;}
-  .auth-box{padding:32px 24px;}
+  .lside{
+    width:100%!important;border-right:none;border-bottom:1px solid var(--border);
+    flex-direction:row;flex-wrap:wrap;overflow-x:hidden;overflow-y:auto;
+    padding:12px;gap:6px;max-height:none;
+  }
+  .lside .stitle{width:100%;margin:4px 0 0!important;}
+  .lside .btnA{flex:1;min-width:calc(50% - 6px);padding:10px 8px;font-size:11px;justify-content:center;text-align:center;}
+  .lside>div[style*="background"]{flex:1;min-width:calc(50% - 6px);}
+  .lside .stitle{margin-top:8px!important;margin-bottom:4px;}
+  .lmain{padding:14px;flex:1;overflow-y:auto;}
+  .lhdr{padding:10px 14px;flex-wrap:wrap;gap:8px;}
+  .lhdr>div{flex-wrap:wrap;gap:6px;justify-content:flex-end;}
+  .llogo{font-size:22px;}
+  .btnA{padding:10px 14px;font-size:12px;}
+  .btnS{padding:6px 10px;font-size:11px;}
+  .rgrid{grid-template-columns:1fr;gap:10px;}
+  .rcard{padding:14px;}
+  :root{--card-w:60px;--card-h:90px;--hcard-w:50px;--hcard-h:78px;}
+  .logo{font-size:44px;}
+  .auth-box{padding:28px 20px;width:min(380px,94vw);}
   .gwrap{padding:6px;gap:4px;}
-  .opanel{min-width:100px;padding:7px 10px;}
+  .orow{gap:6px;}
+  .opanel{min-width:90px;padding:6px 8px;}
+  .oname{font-size:11px;}
+  .carea{gap:16px;}
+  .ucard{width:60px;height:90px;}
+  .myhand{gap:1px;min-height:90px;}
+  .ghud{top:8px;right:8px;}
+  .hpill{padding:4px 10px;font-size:10px;}
+  .actbar{bottom:100px;right:10px;}
+  .btnUNO{width:64px;height:64px;font-size:18px;}
+  .myinfo{bottom:10px;left:10px;padding:5px 10px;}
+  .miname{font-size:11px;}
+  .micnt{font-size:10px;}
+  .turndisp{font-size:12px;}
+  .turndisp.me{font-size:14px;}
+  .game-menu-btn{width:34px;height:34px;font-size:15px;}
+  .chat-fab{width:42px;height:42px;font-size:17px;bottom:14px;right:14px;}
+  .rbox{padding:28px 20px;width:min(400px,94vw);}
+  .rtitle{font-size:26px;}
+  .btnSt{padding:12px;font-size:13px;}
+  .mbox{padding:24px;border-radius:16px;}
+  .mbox h3{font-size:22px;}
+  .cbtn{width:58px;height:58px;font-size:20px;}
+  .wtitle{font-size:44px;letter-spacing:4px;}
+  .profile-box{padding:28px 20px;}
+  .lb-box{padding:28px 20px;}
 }
 @media(max-width:480px){
-  :root{--card-w:56px;--card-h:84px;--hcard-w:46px;--hcard-h:72px;}
-  .rgrid{grid-template-columns:1fr;}
+  :root{--card-w:50px;--card-h:76px;--hcard-w:42px;--hcard-h:66px;}
+  .lside{padding:10px;gap:5px;}
+  .lside .btnA{min-width:calc(50% - 5px);padding:9px 6px;font-size:10px;}
+  .btnA{padding:9px 12px;font-size:11px;}
+  .logo{font-size:38px;}
+  .auth-box{padding:24px 16px;}
+  .fg input{padding:10px 12px;font-size:13px;}
+  .btnP{padding:12px;font-size:13px;}
+  .orow{gap:4px;}
+  .opanel{min-width:80px;padding:5px 6px;border-radius:9px;}
+  .oname{font-size:10px;}
+  .carea{gap:12px;}
+  .ucard{width:50px;height:76px;border-radius:9px;}
+  .card-num{font-size:22px;}
+  .card-tl,.card-br{font-size:10px;}
+  .wild-txt{font-size:16px;}
+  .cbl{font-size:13px;}
+  .actbar{bottom:80px;right:8px;gap:8px;}
+  .btnUNO{width:56px;height:56px;font-size:16px;}
+  .hpill{font-size:9px;padding:3px 8px;}
+  .wtitle{font-size:36px;}
+  .lhdr{padding:8px 10px;}
+  .llogo{font-size:20px;}
 }
 </style>
 </head>
@@ -612,10 +672,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 <div id="lobby-screen" class="screen">
   <div class="lhdr">
     <div class="llogo">UNO</div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-weight:800;font-size:13px">🪙 <span id="hcoins">0</span></div>
-      <span id="huser" style="font-weight:800;font-size:13px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
-      <button class="btnS" onclick="doLogout()">🚪 Logout</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-weight:800;font-size:12px">🪙 <span id="hcoins">0</span></div>
+      <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
+      <button class="btnS" onclick="doLogout()">🚪</button>
     </div>
   </div>
   <div class="lbody">
