@@ -52,9 +52,16 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
    AUTH SCREEN
    ═══════════════════════════════════════════ */
 #auth-screen{
-  background:radial-gradient(ellipse at 30% 20%,#1a1040,transparent 60%),
-             radial-gradient(ellipse at 70% 80%,#0f2847,transparent 60%),
-             var(--bg);
+  background:
+    radial-gradient(ellipse at 30% 20%,rgba(124,58,237,.15),transparent 50%),
+    radial-gradient(ellipse at 70% 80%,rgba(37,99,235,.12),transparent 50%),
+    radial-gradient(ellipse at 50% 50%,rgba(232,50,74,.05),transparent 60%),
+    linear-gradient(135deg,#080c1a,#0d1225,#0a0f20);
+}
+#auth-screen::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 120%,rgba(245,158,11,.06),transparent 50%);
+  pointer-events:none;
 }
 .auth-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
 .auth-bg-card{position:absolute;width:60px;height:90px;border-radius:12px;opacity:.07;animation:floatCard 8s ease-in-out infinite;border:2px solid rgba(255,255,255,.15);}
@@ -203,11 +210,29 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
    ═══════════════════════════════════════════ */
 #game-screen{
   background:
-    radial-gradient(ellipse at 50% 30%,rgba(21,32,53,.8),transparent 70%),
-    radial-gradient(ellipse at 20% 80%,rgba(15,10,40,.5),transparent 50%),
-    var(--bg);
+    radial-gradient(ellipse at 50% 0%,rgba(245,158,11,.06) 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 20%,rgba(232,50,74,.05) 0%,transparent 40%),
+    radial-gradient(ellipse at 20% 80%,rgba(37,99,235,.05) 0%,transparent 40%),
+    radial-gradient(ellipse at 50% 50%,rgba(22,50,30,.4) 0%,transparent 70%),
+    linear-gradient(180deg,#0a0f1a 0%,#0d1a12 40%,#0a1520 100%);
   overflow:hidden;
 }
+#game-screen::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 50% 50%,rgba(22,163,74,.08) 0%,transparent 60%),
+    repeating-conic-gradient(from 0deg at 50% 50%,transparent 0deg,rgba(255,255,255,.003) 1deg,transparent 2deg);
+  pointer-events:none;z-index:0;
+}
+#game-screen::after{
+  content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(ellipse at 50% 30%,rgba(245,158,11,.03),transparent 40%),
+    radial-gradient(ellipse at 30% 70%,rgba(37,99,235,.03),transparent 40%),
+    radial-gradient(ellipse at 70% 60%,rgba(232,50,74,.03),transparent 40%);
+  animation:bgSlow 20s ease-in-out infinite alternate;
+  pointer-events:none;z-index:0;
+}
+@keyframes bgSlow{0%{transform:rotate(0deg) scale(1)}100%{transform:rotate(8deg) scale(1.05)}}
 /* Ambient particles */
 .game-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 .game-particle{
@@ -302,8 +327,9 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 .hcard.play{
   cursor:pointer;
   border-color:rgba(245,158,11,.4);
-  animation:glow 2.5s ease-in-out infinite;
+  animation:cardBounce 1.5s ease-in-out infinite,glow 2.5s ease-in-out infinite;
 }
+@keyframes cardBounce{0%,100%{transform:perspective(600px) rotateX(2deg) translateY(0)}50%{transform:perspective(600px) rotateX(2deg) translateY(-8px)}}
 .hcard.play:hover{
   transform:perspective(600px) rotateX(-5deg) translateY(-28px) scale(1.15)!important;
   z-index:99!important;
@@ -683,7 +709,15 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-weight:800;font-size:12px;display:flex;align-items:center;gap:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#F59E0B"/><circle cx="12" cy="12" r="7" fill="#D97706" opacity=".3"/><text x="12" y="16" text-anchor="middle" fill="#92400E" font-size="12" font-weight="900" font-family="Arial">$</text></svg><span id="hcoins">0</span></div>
       <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
-      <button class="btnS" onclick="doLogout()">🚪</button>
+      <div class="lobby-menu-wrap" style="position:relative">
+        <button class="btnS" onclick="document.getElementById('lobbyMenu').classList.toggle('show')">⚙</button>
+        <div id="lobbyMenu" class="game-menu" style="right:0;left:auto;top:40px;">
+          <div class="game-menu-title">Settings</div>
+          <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 Profile</button>
+          <button class="game-menu-item" onclick="showLeaderboard();document.getElementById('lobbyMenu').classList.remove('show')">🏆 Leaderboard</button>
+          <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 Logout</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="lbody">
@@ -883,6 +917,7 @@ const SFX={
   init(){if(!this.ctx)this.ctx=new(window.AudioContext||window.webkitAudioContext)();},
   play(type){
     try{
+      if(typeof soundOn!=='undefined'&&!soundOn)return;
       this.init();
       const c=this.ctx,o=c.createOscillator(),g=c.createGain();
       o.connect(g);g.connect(c.destination);
@@ -1403,6 +1438,15 @@ function showCatchButton(targetId){
 }
 function removeCatch(){document.querySelectorAll('.catch-btn').forEach(b=>b.remove());}
 function toggleGameMenu(){document.getElementById('gameMenu').classList.toggle('show');}
+let soundOn=true;
+function toggleSound(){
+  soundOn=!soundOn;
+  document.getElementById('soundLabel').textContent=soundOn?'Sound: ON':'Sound: OFF';
+}
+function confirmLeave(){
+  toggleGameMenu();
+  if(confirm('Are you sure? You will lose the bet and your opponent wins!')){doLeaveGame();}
+}
 function doLeaveGame(){
   S.socket.emit('room:leave',{},()=>{
     S.roomId=null;showChatFab(false);Chat.open=false;
