@@ -59,6 +59,21 @@ function saveUsers() {
 }
 
 loadUsers();
+// One-time coin grants
+(function grantCoins(){
+  const grants = { 'mustapha': 50000, 'mustapha98': 100000 };
+  let changed = false;
+  for (const [uname, amount] of Object.entries(grants)) {
+    const user = [...usersDB.values()].find(u => u.username.toLowerCase() === uname);
+    if (user && !user['grant_' + uname]) {
+      user.coins += amount;
+      user['grant_' + uname] = true;
+      changed = true;
+      console.log(`[Grant] +${amount} coins to ${user.username}`);
+    }
+  }
+  if (changed) saveUsers();
+})();
 
 const roomsDB = new Map();
 const matchmakingQueue = [];
@@ -336,6 +351,11 @@ io.on('connection', (socket) => {
 
     const alreadyInRoom = room.playerIds.includes(userId);
     if (!alreadyInRoom) {
+      // Check if player has enough coins for the bet
+      const bet = room.settings.bet || 0;
+      if (bet > 0 && user.coins < bet) {
+        return ack?.({ success: false, reason: `Not enough coins! You need ${bet} 🪙 (you have ${user.coins})` });
+      }
       const player = new Player(user.id, user.username, user.coins);
       player.avatar = user.avatar;
       const result = room.game.addPlayer(player);
