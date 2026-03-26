@@ -666,9 +666,54 @@ function handlePlayerLeave(socket, roomId) {
   const room = roomsDB.get(roomId);
   if (!room) return;
 
+  // If game is playing — leaver forfeits, opponent wins
+  if (room.status === 'playing' && room.game.phase === 'playing') {
+    const bet = room.settings.bet || 0;
+    const leaver = usersDB.get(socket.userId);
+    const remainingIds = room.playerIds.filter(id => id !== socket.userId);
+
+    if (leaver && bet > 0) {
+      leaver.coins = Math.max(0, leaver.coins - bet);
+    }
+
+    // Give bet to remaining players (winner)
+    remainingIds.forEach(pid => {
+      const winner = usersDB.get(pid);
+      if (winner) {
+        winner.coins += bet;
+        winner.stats.gamesWon = (winner.stats.gamesWon || 0) + 1;
+      }
+    });
+
+    if (leaver) leaver.stats.gamesPlayed = (leaver.stats.gamesPlayed || 0) + 1;
+    remainingIds.forEach(pid => {
+      const u = usersDB.get(pid);
+      if (u) u.stats.gamesPlayed = (u.stats.gamesPlayed || 0) + 1;
+    });
+
+    saveUsers();
+
+    // Notify remaining players they won
+    const winnerSocket = remainingIds.length > 0 ? findSocketByUserId(remainingIds[0]) : null;
+    const winnerUser = remainingIds.length > 0 ? usersDB.get(remainingIds[0]) : null;
+
+    io.to(roomId).emit('game:player_won', {
+      winnerId: remainingIds[0],
+      username: winnerUser?.username || 'Player',
+      score: 0,
+      coinsEarned: bet,
+      bet,
+      forfeit: true,
+      quitter: socket.username,
+    });
+
+    room.status = 'finished';
+    setTimeout(() => { roomsDB.delete(roomId); }, 10000);
+    console.log(`[Game] ${socket.username} forfeited. ${winnerUser?.username} wins +${bet} coins`);
+  }
+
   room.game.removePlayer(socket.userId);
 
-  // Remove from playerIds array
   const pidIdx = room.playerIds.indexOf(socket.userId);
   if (pidIdx !== -1) room.playerIds.splice(pidIdx, 1);
 
@@ -679,7 +724,6 @@ function handlePlayerLeave(socket, roomId) {
     playerId: socket.userId, username: socket.username,
   });
 
-  // If room is empty, delete it
   if (room.playerIds.length === 0) {
     roomsDB.delete(roomId);
     console.log(`[Room] Deleted empty room: ${roomId}`);

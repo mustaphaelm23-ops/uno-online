@@ -322,6 +322,8 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   padding:6px 14px;font-size:11px;font-weight:700;
   backdrop-filter:blur(10px);
 }
+.cancel-area{position:absolute;left:50%;top:58%;transform:translateX(-50%);z-index:12;text-align:center;animation:fadeIn .3s ease;}
+.cancel-area .btnCancel{padding:8px 20px;font-size:13px;border-radius:20px;}
 .actbar{position:absolute;bottom:140px;right:14px;display:flex;flex-direction:column-reverse;gap:12px;align-items:flex-end;z-index:10;}
 .btnUNO{
   width:80px;height:80px;
@@ -417,7 +419,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 
 /* ═══ CHAT + ACTIVITY ═══ */
 .chat-fab{
-  position:fixed;right:18px;bottom:18px;z-index:40;
+  position:fixed;left:12px;top:58px;z-index:40;
   width:50px;height:50px;border-radius:50%;
   background:linear-gradient(135deg,var(--bg2),var(--bg3));
   border:1px solid var(--border);
@@ -596,7 +598,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .myhand{gap:1px;min-height:90px;}
   .ghud{top:8px;right:8px;}
   .hpill{padding:4px 10px;font-size:10px;}
-  .actbar{bottom:100px;right:10px;}
+  .actbar{bottom:110px;right:10px;}
+  .cancel-area{top:52%;}
+  .myhand{padding-bottom:2px;min-height:75px;}
+  .chat-fab{left:10px;top:50px;width:36px;height:36px;font-size:15px;}
   .btnUNO{width:64px;height:64px;font-size:18px;}
   .myinfo{bottom:10px;left:10px;padding:5px 10px;}
   .miname{font-size:11px;}
@@ -633,7 +638,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   .card-tl,.card-br{font-size:10px;}
   .wild-txt{font-size:16px;}
   .cbl{font-size:13px;}
-  .actbar{bottom:80px;right:8px;gap:8px;}
+  .actbar{bottom:85px;right:8px;gap:8px;}
+  .cancel-area{top:50%;}
+  .myhand{min-height:70px;padding-bottom:1px;}
+  .chat-fab{left:8px;top:46px;width:32px;height:32px;font-size:14px;}
   .btnUNO{width:56px;height:56px;font-size:16px;}
   .hpill{font-size:9px;padding:3px 8px;}
   .wtitle{font-size:36px;}
@@ -673,7 +681,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   <div class="lhdr">
     <div class="llogo">UNO</div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-weight:800;font-size:12px">🪙 <span id="hcoins">0</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-weight:800;font-size:12px;display:flex;align-items:center;gap:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#F59E0B"/><circle cx="12" cy="12" r="7" fill="#D97706" opacity=".3"/><text x="12" y="16" text-anchor="middle" fill="#92400E" font-size="12" font-weight="900" font-family="Arial">$</text></svg><span id="hcoins">0</span></div>
       <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
       <button class="btnS" onclick="doLogout()">🚪</button>
     </div>
@@ -748,15 +756,18 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
     <div class="miname" id="myname">You</div>
     <div class="micnt"><span id="mycnt">0</span> cards</div>
   </div>
+  <div class="cancel-area" id="cancelArea" style="display:none">
+    <button class="btnI btnCancel" id="btnCancel" onclick="doCancel()">✕ Pass turn</button>
+  </div>
   <div class="actbar">
-    <button class="btnI btnCancel" id="btnCancel" style="display:none" onclick="doCancel()">✕ Pass</button>
     <button class="btnUNO disabled" id="btnUNO" onclick="doUNO()">UNO!</button>
   </div>
   <!-- Settings gear (top-left) -->
   <div class="game-menu-btn" id="gameMenuBtn" onclick="toggleGameMenu()">⚙</div>
+  <!-- Chat button under settings -->
   <div class="game-menu" id="gameMenu">
     <div class="game-menu-title">Menu</div>
-    <button class="game-menu-item" onclick="toggleGameMenu();doLeaveGame()">🚪 Leave game</button>
+    <button class="game-menu-item" onclick="toggleGameMenu();doLeaveGame()">🚪 Leave game (forfeit)</button>
     <button class="game-menu-item" onclick="toggleGameMenu()">✕ Close</button>
   </div>
   <div class="unoremind" id="unoremind">
@@ -1058,7 +1069,7 @@ function initSock(){
     S.g.drawnCardId=data.drawnCardId||null;S.g.stackDraw=data.stackDraw||0;
     if(data.topCard)renderTop(data.topCard);
     document.getElementById('dcnt').textContent=data.drawPileSize;
-    document.getElementById('btnCancel').style.display='none';
+    document.getElementById('cancelArea').style.display='none';
     if(data.currentPlayerId===S.user?.id)SFX.play('turn');
     updateTurnUI();
   });
@@ -1075,8 +1086,8 @@ function initSock(){
       S.g.turnPhase=canPlay?'drew_card':'waiting';
       renderHand();updateTurnUI();
     }
-    if(canPlay){document.getElementById('btnCancel').style.display='block';toast('Drew a playable card!','s');}
-    else{document.getElementById('btnCancel').style.display='none';toast('Drew — turn passed','i');}
+    if(canPlay){document.getElementById('cancelArea').style.display='block';toast('Drew a playable card!','s');}
+    else{document.getElementById('cancelArea').style.display='none';toast('Drew — turn passed','i');}
   });
 
   sk.on('game:player_drew',({playerId,count})=>{const p=S.g.players.find(p=>p.id===playerId);if(p&&!isMe(p.id))toast(`${p.username} drew ${count}`,'i');});
@@ -1118,8 +1129,8 @@ function applyFullState(state){
   document.getElementById('dcnt').textContent=g.drawPileSize;
   document.getElementById('myname').textContent=S.user?.username||'You';
   document.getElementById('mycnt').textContent=g.myHand.length;
-  if(g.turnPhase==='drew_card'&&isMe(g.currentTurn))document.getElementById('btnCancel').style.display='block';
-  else document.getElementById('btnCancel').style.display='none';
+  if(g.turnPhase==='drew_card'&&isMe(g.currentTurn))document.getElementById('cancelArea').style.display='block';
+  else document.getElementById('cancelArea').style.display='none';
   updateTurnUI();
 }
 
@@ -1130,7 +1141,7 @@ function updateTurnUI(){
   else stackEl.style.display='none';
   const me=myTurn(),el=document.getElementById('tdisp'),ht=document.getElementById('hturn');
   if(me){el.textContent='⚡ YOUR TURN!';el.className='turndisp me';ht.textContent='⚡ Your Turn';}
-  else{const p=g.players.find(p=>p.id===g.currentTurn);el.textContent=`${p?.username||'...'}\'s turn`;el.className='turndisp';ht.textContent=`⏳ ${p?.username||'...'}`;document.getElementById('btnCancel').style.display='none';}
+  else{const p=g.players.find(p=>p.id===g.currentTurn);el.textContent=`${p?.username||'...'}\'s turn`;el.className='turndisp';ht.textContent=`⏳ ${p?.username||'...'}`;document.getElementById('cancelArea').style.display='none';}
   document.getElementById('hdir').textContent=g.direction===1?'↻ Clockwise':'↺ Counter-CW';
   document.getElementById('hphase').textContent=`🃏 ${g.myHand.length} cards`;
   updateUNOButton();
@@ -1157,7 +1168,6 @@ function renderOpps(players){
     return`<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
         <div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)}${p.saidUno?'<span class="ouno">UNO!</span>':''}</div>
         <div style="display:flex;align-items:center;height:70px;min-width:${Math.min(max*20+44,190)}px">${cards}${p.handSize>10?`<div style="font-size:11px;color:var(--muted);margin-left:6px;font-weight:700">+${p.handSize-10}</div>`:''}</div>
-        <div style="font-size:10px;color:var(--yellow);margin-top:4px">🪙 ${p.coins}</div>
         ${!p.isConnected?'<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ Offline</div>':''}
       </div>`;
   }).join('');
@@ -1352,7 +1362,7 @@ function playCard(cardId){
   setTimeout(()=>{
     S.socket.emit('game:play_card',{cardId},(res)=>{
       if(!res.success){toast(res.reason,'e');SFX.play('error');if(el){el.classList.remove('playing');el.style.pointerEvents='';}}
-      else{document.getElementById('btnCancel').style.display='none';if(S.g.myHand.length!==1)S.calledUNO=false;SFX.play('play');}
+      else{document.getElementById('cancelArea').style.display='none';if(S.g.myHand.length!==1)S.calledUNO=false;SFX.play('play');}
     });
   },300);
 }
@@ -1361,7 +1371,7 @@ function pickColor(color){
   const cardId=S.pendingWild;S.pendingWild=null;if(!cardId)return;
   S.socket.emit('game:play_card',{cardId,chosenColor:color},(res)=>{
     if(!res.success){toast(res.reason,'e');SFX.play('error');}
-    else{document.getElementById('btnCancel').style.display='none';toast(`Color: ${color.toUpperCase()}!`,'s');SFX.play('play');}
+    else{document.getElementById('cancelArea').style.display='none';toast(`Color: ${color.toUpperCase()}!`,'s');SFX.play('play');}
   });
 }
 function doDraw(){
@@ -1370,7 +1380,7 @@ function doDraw(){
   S.socket.emit('game:draw_card',{},(res)=>{if(!res.success){toast(res.reason,'e');SFX.play('error');}});
 }
 function doCancel(){
-  document.getElementById('btnCancel').style.display='none';S.g.turnPhase='waiting';
+  document.getElementById('cancelArea').style.display='none';S.g.turnPhase='waiting';
   S.socket.emit('game:pass',{},(res)=>{if(res&&!res.success)toast(res.reason||'Error','e');});
 }
 function doUNO(){
@@ -1406,11 +1416,12 @@ function doLeaveGame(){
 function showWin(data){
   const iWon=data.winnerId===S.user?.id;
   const bet=data.bet||0;
+  const forfeit=data.forfeit||false;
   if(iWon&&data.coinsEarned){S.user.coins=(S.user.coins||0)+data.coinsEarned;localStorage.setItem('uno_user',JSON.stringify(S.user));}
   else if(!iWon){S.user.coins=Math.max(0,(S.user.coins||0)-bet);localStorage.setItem('uno_user',JSON.stringify(S.user));}
   document.getElementById('wtitle').textContent=iWon?'🏆 YOU WIN!':'💀 GAME OVER';
   document.getElementById('wtitle').className=`wtitle ${iWon?'w':'l'}`;
-  document.getElementById('wdet').textContent=iWon?`Score: ${data.score}`:`${data.username} won!`;
+  document.getElementById('wdet').textContent=iWon?(forfeit?`${data.quitter} left the game!`:`Score: ${data.score}`):`${data.username} won!`;
   document.getElementById('wcoins').textContent=iWon?`+${data.coinsEarned} 🪙`:`-${bet} 🪙`;
   document.getElementById('wbet').textContent=bet?`Bet was 🪙${bet} per player`:'';
   document.getElementById('winov').classList.add('show');
