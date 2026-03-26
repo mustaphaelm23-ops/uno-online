@@ -6,12 +6,12 @@
     "coins": 9000,
     "avatar": null,
     "stats": {
-      "gamesPlayed": 11,
-      "gamesWon": 7,
+      "gamesPlayed": 13,
+      "gamesWon": 8,
       "totalPoints": 0
     },
     "createdAt": 1774384903722,
-    "lastLoginAt": 1774472179049,
+    "lastLoginAt": 1774515472209,
     "lastDailyClaimAt": 1774390784224,
     "instaFollowed": true,
     "brokeCount2": 0,
@@ -27,8 +27,8 @@
     "coins": 1000,
     "avatar": null,
     "stats": {
-      "gamesPlayed": 11,
-      "gamesWon": 4,
+      "gamesPlayed": 13,
+      "gamesWon": 5,
       "totalPoints": 0
     },
     "createdAt": 1774384945787,
