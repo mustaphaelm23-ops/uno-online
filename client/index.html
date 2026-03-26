@@ -248,7 +248,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
   90%{opacity:.5}
   100%{transform:translateY(-10vh) scale(0);opacity:0}
 }
-.gwrap{width:100vw;height:100vh;display:grid;grid-template-rows:auto 1fr auto;padding:10px;gap:8px;position:relative;z-index:1;}
+.gwrap{width:100vw;height:100vh;display:grid;grid-template-rows:auto 1fr auto;padding:6px 10px 2px;gap:4px;position:relative;z-index:1;}
 
 /* ── Opponents Row ── */
 .orow{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;animation:slideDown .5s var(--transition-smooth);}
@@ -315,9 +315,9 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-fam
 /* ── My Hand ── */
 .myhand{
   display:flex;align-items:flex-end;justify-content:center;
-  flex-wrap:wrap;gap:3px;padding-bottom:0;min-height:100px;
+  flex-wrap:wrap;gap:2px;padding-bottom:0;min-height:90px;
   animation:slideUp .5s var(--transition-smooth);
-  margin-bottom:-10px;
+  margin-bottom:-6px;
 }
 .hcard{
   width:var(--hcard-w);height:var(--hcard-h);border-radius:11px;
@@ -1277,14 +1277,7 @@ function applyFullState(state){
   if(state.direction!==undefined)g.direction=state.direction;
   if(state.drawPileSize!==undefined)g.drawPileSize=state.drawPileSize;
   if(state.myHand!==undefined){
-    const serverLen=state.myHand.length;
-    const localLen=g.myHand.length;
-    const diff=Math.abs(serverLen-localLen);
-    if(diff>3&&localLen>0){
-      console.log('[Sync] Big hand diff detected, ignoring:',localLen,'vs',serverLen);
-    }else{
-      g.myHand=state.myHand;
-    }
+    g.myHand=state.myHand;
   }
   if(state.myPlayable!==undefined)g.myPlayable=state.myPlayable;
   if(state.turnPhase!==undefined)g.turnPhase=state.turnPhase;
