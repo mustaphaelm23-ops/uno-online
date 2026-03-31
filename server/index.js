@@ -360,6 +360,15 @@ app.post('/api/auth/reset', async (req, res) => {
   saveUsers();
   res.json({ success: true, message: 'Password reset' });
 });
+app.post('/api/admin/add-coins', async (req, res) => {
+  const { username, amount, secret } = req.body;
+  if (secret !== 'uno_admin_2024') return res.status(403).json({ error: 'Forbidden' });
+  const user = [...usersDB.values()].find(u => u.username.toLowerCase() === username.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.coins += amount;
+  saveUsers();
+  res.json({ success: true, username: user.username, coins: user.coins });
+});
 app.get('/api/leaderboard', (req, res) => {
   const top = [...usersDB.values()]
     .sort((a, b) => b.coins - a.coins)
