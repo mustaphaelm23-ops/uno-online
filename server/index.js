@@ -826,7 +826,7 @@ app.get('/health', (req, res) => {
 // ─────────────────────────────────────────
 
 loadUsers().then(() => {
-server.listen(CONFIG.PORT, '0.0.0.0', () => {
+  server.listen(CONFIG.PORT, '0.0.0.0', () => {
   console.log(`
 ╔══════════════════════════════════╗
 ║   UNO Online Server v2.1        ║
@@ -835,5 +835,10 @@ server.listen(CONFIG.PORT, '0.0.0.0', () => {
 ╚══════════════════════════════════╝
   `);
 });
+}).catch(err => {
+  console.log('[DB] Starting without MongoDB:', err.message);
+  server.listen(CONFIG.PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${CONFIG.PORT} (no DB)`);
+  });
 });
 module.exports = { app, server, io };
