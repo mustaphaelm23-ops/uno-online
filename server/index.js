@@ -18,7 +18,7 @@ const { Player }                 = require('../src/core/Player');
 // ─────────────────────────────────────────
 
 const CONFIG = Object.freeze({
-  PORT:           process.env.PORT           || 3001,
+  PORT:           process.env.PORT           || 8080,
   JWT_SECRET:     process.env.JWT_SECRET     || 'uno_dev_secret_change_in_prod',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   CORS_ORIGIN:    process.env.CORS_ORIGIN    || '*',
