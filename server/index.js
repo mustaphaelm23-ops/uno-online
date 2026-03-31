@@ -38,27 +38,61 @@ const CONFIG = Object.freeze({
 // IN-MEMORY DATABASE
 // ─────────────────────────────────────────
 
+const mongoose = require('mongoose');
 const usersDB = new Map();
-const fs = require('fs');
-const DB_FILE = './users-db.json';
 
-function loadUsers() {
+// MongoDB User Schema
+const UserSchema = new mongoose.Schema({
+  id: String,
+  username: String,
+  passwordHash: String,
+  coins: { type: Number, default: 1000 },
+  avatar: String,
+  stats: {
+    gamesPlayed: { type: Number, default: 0 },
+    gamesWon: { type: Number, default: 0 },
+    totalPoints: { type: Number, default: 0 },
+  },
+  lastLoginAt: Number,
+  lastDailyClaimAt: Number,
+  lastLoginBonus: Number,
+  migrationBonus: Boolean,
+  instaFollowed: Boolean,
+  brokeCount: Number,
+  brokeCount2: Number,
+  lastBrokeAt: Number,
+  createdAt: Number,
+}, { strict: false });
+
+const UserModel = mongoose.model('User', UserSchema);
+
+async function loadUsers() {
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-      data.forEach(u => usersDB.set(u.id, u));
-      console.log(`[DB] Loaded ${data.length} users`);
+    const uri = process.env.MONGODB_URI;
+    if (uri) {
+      await mongoose.connect(uri);
+      console.log('[DB] Connected to MongoDB');
+      const users = await UserModel.find({});
+      users.forEach(u => usersDB.set(u.id, u.toObject()));
+      console.log(`[DB] Loaded ${users.length} users from MongoDB`);
+    } else {
+      console.log('[DB] No MONGODB_URI — using in-memory only');
     }
-  } catch(e) { console.log('[DB] No saved users'); }
+  } catch(e) {
+    console.log('[DB] MongoDB connection failed:', e.message);
+  }
 }
 
-function saveUsers() {
+async function saveUsers() {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify([...usersDB.values()], null, 2));
-  } catch(e) { console.log('[DB] Save failed:', e.message); }
+    if (!mongoose.connection.readyState) return;
+    for (const [id, user] of usersDB) {
+      await UserModel.findOneAndUpdate({ id }, user, { upsert: true });
+    }
+  } catch(e) {
+    console.log('[DB] Save failed:', e.message);
+  }
 }
-
-loadUsers();
 // One-time coin grants
 (function grantCoins(){
   const grants = { 'mustapha': 50000, 'mustapha98': 100000, 'mustapha98_v2': 100000 };
@@ -791,6 +825,7 @@ app.get('/health', (req, res) => {
 // START SERVER
 // ─────────────────────────────────────────
 
+loadUsers().then(() => {
 server.listen(CONFIG.PORT, '0.0.0.0', () => {
   console.log(`
 ╔══════════════════════════════════╗
@@ -800,5 +835,5 @@ server.listen(CONFIG.PORT, '0.0.0.0', () => {
 ╚══════════════════════════════════╝
   `);
 });
-
+});
 module.exports = { app, server, io };
