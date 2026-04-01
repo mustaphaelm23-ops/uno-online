@@ -1237,8 +1237,15 @@
 
     sk.on('game:drew_card',({card,canPlay})=>{
       SFX.play('draw');
-      if(card)S.g.drawnCardId=card.id;
+      if(card){
+        S.g.drawnCardId=card.id;
+        if(!S.g.myHand.find(c=>c.id===card.id)){
+          S.g.myHand.push(card);
+          if(canPlay)S.g.myPlayable=[...new Set([...S.g.myPlayable,card.id])];
+        }
+      }
       S.g.turnPhase=canPlay?'drew_card':'waiting';
+      renderHand();updateTurnUI();
       if(canPlay){document.getElementById('cancelArea').style.display='block';}
       else{document.getElementById('cancelArea').style.display='none';}
     });
