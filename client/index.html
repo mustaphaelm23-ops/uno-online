@@ -875,6 +875,30 @@
     60%{opacity:1;transform:translateX(-50%) scale(1) translateY(-10px);}
     100%{opacity:0;transform:translateX(-50%) scale(.8) translateY(-30px);}
   }
+/* ═══ PRIVATE ROOM ═══ */
+  .room-code-box{
+    background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.05));
+    border:2px dashed rgba(245,158,11,.4);border-radius:14px;
+    padding:16px 24px;text-align:center;margin:16px 0;
+  }
+  .room-code-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:8px;}
+  .room-code{font-family:'Bangers',cursive;font-size:42px;letter-spacing:10px;color:var(--accent);text-shadow:0 0 20px rgba(245,158,11,.4);}
+  .room-code-copy{
+    margin-top:8px;padding:6px 16px;background:transparent;
+    border:1px solid rgba(245,158,11,.3);border-radius:8px;
+    color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:.2s;
+  }
+  .room-code-copy:hover{background:rgba(245,158,11,.1);}
+  .join-code-wrap{display:flex;gap:8px;margin-top:12px;}
+  .join-code-input{
+    flex:1;padding:12px 16px;background:var(--bg);
+    border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:'Bangers',cursive;font-size:22px;
+    letter-spacing:6px;text-transform:uppercase;outline:none;text-align:center;
+    transition:.2s;
+  }
+  .join-code-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.15);}
+  .join-code-input::placeholder{font-family:'Outfit',sans-serif;font-size:13px;letter-spacing:0;}
 </style>
   </head>
   <body>
@@ -925,6 +949,7 @@
       <div class="lside">
         <div class="stitle">Play</div>
         <button class="btnA btnC" onclick="doCreate()">➕ Create Room</button>
+        <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25);" onclick="showJoinByCode()">🔑 Join by Code</button>
         <button class="btnA btnM" onclick="doMM()">🎯 Quick Match</button>
         <button class="btnA btnD" onclick="doDaily()">🎁 Daily Reward</button>
         <button class="btnA" style="background:linear-gradient(135deg,#E1306C,#C13584);color:#fff;box-shadow:0 4px 12px rgba(225,48,108,.25)" onclick="doInsta()">📸 Follow + 1000🪙</button>
@@ -955,7 +980,12 @@
       <div class="rtitle">🃏 Game Room</div>
       <div style="color:var(--muted);font-size:11px;margin-bottom:20px" id="ridlbl"></div>
       <div style="font-size:10px;color:var(--muted);text-align:left;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Players:</div>
-      <div class="plist" id="plist"></div>
+      <div class="room-code-box" id="roomCodeBox" style="display:none">
+  <div class="room-code-label">Room Code — Share with friends</div>
+  <div class="room-code" id="roomCodeDisplay">------</div>
+  <button class="room-code-copy" onclick="copyRoomCode()">📋 Copy Code</button>
+</div>
+<div class="plist" id="plist"></div>
       <button class="btnSt" id="bstart" disabled onclick="doStart()">Waiting for players...</button>
       <br>
       <button class="btnLv" onclick="doLeaveRoom()">← Back to Lobby</button>
@@ -1081,6 +1111,19 @@
   </div>
   <div class="dbar" id="dbar">⚠️ Reconnecting...</div>
   <div class="twrap" id="twrap"></div>
+  <!-- Join by Code Modal -->
+  <div class="modal" id="joinCodeModal">
+    <div class="mbox" style="width:min(380px,92vw)">
+      <h3>🔑 JOIN BY CODE</h3>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Enter the 6-character room code</p>
+      <input class="join-code-input" id="joinCodeInput" maxlength="6" placeholder="ENTER CODE" oninput="this.value=this.value.toUpperCase()"/>
+      <div id="joinCodeErr" class="err"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btnP" style="flex:1" onclick="doJoinByCode()">JOIN</button>
+        <button class="btnI" onclick="document.getElementById('joinCodeModal').classList.remove('show')">Cancel</button>
+      </div>
+    </div>
+  </div>
   <div id="cardAnimLayer"></div>
   <!-- Emoji Reactions -->
   <button id="emojiBtn" onclick="toggleEmojiPicker()" title="React">😄</button>
@@ -1536,6 +1579,7 @@
         clearInterval(S.roomsTimer);showScreen('room-screen');
         document.getElementById('ridlbl').textContent=`Room: ${d.roomId.substr(0,8).toUpperCase()} | Bet: 🪙${bet}`;
         if(res.state?.players)renderWaiting(res.state.players);refreshRoom();
+        if(d.code) showRoomCode(d.code);
       });
     }catch(e){toast(e.message,'e');}
   }
@@ -1925,6 +1969,39 @@
     setTimeout(()=>badge.remove(),2100);
     const r = panel.getBoundingClientRect();
     showReactionFly(emoji, r.left+r.width/2, r.top, false);
+  }
+
+  /* ═══ PRIVATE ROOM CODE ═══ */
+  function showJoinByCode(){
+    document.getElementById('joinCodeInput').value='';
+    document.getElementById('joinCodeErr').textContent='';
+    document.getElementById('joinCodeModal').classList.add('show');
+    setTimeout(()=>document.getElementById('joinCodeInput').focus(),100);
+  }
+
+  async function doJoinByCode(){
+    const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+    if(code.length !== 6) return document.getElementById('joinCodeErr').textContent='Enter 6 characters';
+    document.getElementById('joinCodeErr').textContent='';
+    try{
+      const res = await apiFetch(`/api/rooms/code/${code}`);
+      document.getElementById('joinCodeModal').classList.remove('show');
+      doJoinRoom(res.roomId);
+    } catch(e){
+      document.getElementById('joinCodeErr').textContent = e.message||'Room not found';
+    }
+  }
+
+  function showRoomCode(code){
+    if(!code) return;
+    S.roomCode = code;
+    document.getElementById('roomCodeBox').style.display='block';
+    document.getElementById('roomCodeDisplay').textContent = code;
+  }
+
+  function copyRoomCode(){
+    if(!S.roomCode) return;
+    navigator.clipboard.writeText(S.roomCode).then(()=>toast('Code copied!','s'));
   }
 
   function handleAuthEnter(e){

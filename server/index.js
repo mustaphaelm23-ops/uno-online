@@ -136,9 +136,17 @@ function createUserRecord({ username, passwordHash }) {
 // ROOM RECORD
 // ─────────────────────────────────────────
 
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
 function createRoomRecord(hostId, settings = {}) {
   return {
     id:         uuidv4(),
+    code:       generateRoomCode(),
     hostId,
     settings: {
       maxPlayers:   settings.maxPlayers    || 4,
@@ -323,7 +331,13 @@ app.post('/api/rooms', authMiddleware, (req, res) => {
   roomsDB.set(room.id, room);
 
   console.log(`[Room] Created: ${room.id} by ${user.username} (bet: ${settings.bet || 0})`);
-  res.status(201).json({ roomId: room.id, settings: room.settings });
+  res.status(201).json({ roomId: room.id, code: room.code, settings: room.settings });
+});
+
+app.get('/api/rooms/code/:code', authMiddleware, (req, res) => {
+  const room = [...roomsDB.values()].find(r => r.code === req.params.code.toUpperCase());
+  if(!room) return res.status(404).json({ error: 'Room not found' });
+  res.json({ roomId: room.id, settings: room.settings, players: room.game.players.map(p => p.toPublicJSON()) });
 });
 
 app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
