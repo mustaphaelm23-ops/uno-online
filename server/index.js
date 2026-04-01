@@ -578,6 +578,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Game: Emoji Reaction ──
+  socket.on('game:reaction', ({ emoji } = {}) => {
+    if(!emoji) return;
+    const safe = String(emoji).slice(0,4);
+    socket.to(socket.currentRoomId).emit('game:reaction', { playerId: userId, emoji: safe });
+  });
+  
   // ── Game: Challenge WD4 ──
   socket.on('game:challenge_wd4', ({} = {}, ack) => {
     const room = roomsDB.get(socket.currentRoomId);

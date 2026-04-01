@@ -35,6 +35,11 @@
   @keyframes cardPlay{0%{transform:scale(1) translateY(0) rotate(0);opacity:1}30%{transform:scale(1.2) translateY(-30px) rotate(-5deg);opacity:1}100%{transform:scale(.4) translateY(-300px) rotate(10deg);opacity:0}}
   @keyframes cardDraw{0%{opacity:0;transform:translateX(-80px) translateY(20px) rotate(-20deg) scale(.7)}60%{opacity:1;transform:translateX(10px) translateY(-5px) rotate(3deg) scale(1.05)}100%{opacity:1;transform:translateX(0) translateY(0) rotate(0) scale(1)}}
   @keyframes cardLand{0%{transform:scale(1.3) rotate(-8deg)}50%{transform:scale(.95) rotate(2deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes dealCard{0%{opacity:0;transform:translateX(-120px) translateY(-80px) rotate(-25deg) scale(.5)}70%{opacity:1;transform:translateX(6px) translateY(-4px) rotate(2deg) scale(1.04)}100%{opacity:1;transform:translateX(0) translateY(0) rotate(0) scale(1)}}
+@keyframes playCard{0%{transform:scale(1) translateY(0) rotate(0);opacity:1;z-index:50}40%{transform:scale(1.3) translateY(-50px) rotate(-8deg);opacity:1;z-index:50}100%{transform:scale(.3) translateY(-250px) rotate(15deg);opacity:0;z-index:50}}
+@keyframes drawPop{0%{opacity:0;transform:translateX(60px) translateY(-30px) rotate(15deg) scale(.6)}60%{opacity:1;transform:translateX(-8px) translateY(4px) rotate(-3deg) scale(1.1)}100%{opacity:1;transform:translateX(0) translateY(0) rotate(0) scale(1)}}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.4)}}
+@keyframes opponentPlay{0%{opacity:0;transform:scale(2.2) rotate(-20deg)}50%{opacity:1;transform:scale(1.1) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
   @keyframes ripple{to{transform:scale(4);opacity:0}}
   @keyframes bgPulse{0%,100%{opacity:.3}50%{opacity:.6}}
   @keyframes borderGlow{0%,100%{border-color:rgba(245,158,11,.3)}50%{border-color:rgba(245,158,11,.8)}}
@@ -795,7 +800,82 @@
     .lhdr{padding:8px 10px;}
     .llogo{font-size:20px;}
   }
-  </style>
+  /* ═══ CARD ANIMATION OVERLAY ═══ */
+  #cardAnimLayer{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden;}
+  .anim-card{
+    position:absolute;width:var(--card-w);height:var(--card-h);
+    border-radius:var(--card-r);border:3px solid rgba(255,255,255,.3);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bangers',cursive;font-size:28px;color:#fff;
+    box-shadow:0 12px 32px rgba(0,0,0,.5);pointer-events:none;
+    will-change:transform,opacity;
+  }
+  .anim-card.red{background:linear-gradient(145deg,#E8324A,#9B1B2E);}
+  .anim-card.blue{background:linear-gradient(145deg,#2563EB,#1338A0);}
+  .anim-card.green{background:linear-gradient(145deg,#16A34A,#0A5C28);}
+  .anim-card.yellow{background:linear-gradient(145deg,#F59E0B,#B45309);}
+  .anim-card.wild{background:linear-gradient(145deg,#1a1a2e,#16213e);}
+  .anim-card.back{background:linear-gradient(145deg,#1a1a2e,#16213e);border-color:rgba(245,158,11,.5);}
+  .anim-card.back::after{content:'UNO';font-size:14px;letter-spacing:2px;color:var(--accent);}
+  .float-label{
+    position:absolute;font-family:'Bangers',cursive;font-size:32px;
+    color:#fff;text-shadow:0 0 20px currentColor;pointer-events:none;
+    animation:floatUp .9s ease forwards;
+  }
+  .deal-anim-card{animation:dealCard .55s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .play-anim-card{animation:playCard .5s cubic-bezier(.4,0,.2,1) forwards;}
+  .draw-anim-card{animation:drawPop .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .opponent-anim-card{animation:opponentPlay .6s cubic-bezier(.34,1.56,.64,1) forwards;}
+
+/* ═══ EMOJI REACTIONS ═══ */
+  #emojiBtn{
+    position:fixed;right:12px;bottom:130px;z-index:40;
+    width:46px;height:46px;border-radius:50%;
+    background:linear-gradient(135deg,var(--bg2),var(--bg3));
+    border:1px solid var(--border);
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;font-size:22px;transition:all .2s;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  #emojiBtn.visible{display:flex;}
+  #emojiBtn:hover{border-color:var(--accent);transform:scale(1.12);}
+  #emojiPicker{
+    position:fixed;right:10px;bottom:185px;z-index:41;
+    background:linear-gradient(145deg,var(--bg2),var(--bg3));
+    border:1px solid var(--border);border-radius:16px;padding:12px;
+    display:none;grid-template-columns:repeat(5,1fr);gap:8px;
+    box-shadow:0 16px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);
+    animation:fadeInScale .2s ease;
+  }
+  #emojiPicker.show{display:grid;}
+  .epick{
+    width:40px;height:40px;border:none;background:rgba(255,255,255,.05);
+    border-radius:10px;font-size:20px;cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .epick:hover{background:rgba(255,255,255,.12);transform:scale(1.2);}
+  .reaction-fly{
+    position:fixed;font-size:42px;pointer-events:none;z-index:90;
+    animation:reactionFly 1.6s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes reactionFly{
+    0%{opacity:0;transform:scale(.3) translateY(0);}
+    15%{opacity:1;transform:scale(1.4) translateY(0);}
+    40%{opacity:1;transform:scale(1) translateY(-30px);}
+    80%{opacity:.8;transform:scale(.9) translateY(-100px);}
+    100%{opacity:0;transform:scale(.6) translateY(-160px);}
+  }
+  .reaction-badge{
+    position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+    font-size:26px;animation:reactionBadge 2s ease forwards;pointer-events:none;
+  }
+  @keyframes reactionBadge{
+    0%{opacity:0;transform:translateX(-50%) scale(.4) translateY(0);}
+    20%{opacity:1;transform:translateX(-50%) scale(1.3) translateY(-5px);}
+    60%{opacity:1;transform:translateX(-50%) scale(1) translateY(-10px);}
+    100%{opacity:0;transform:translateX(-50%) scale(.8) translateY(-30px);}
+  }
+</style>
   </head>
   <body>
 
@@ -1001,6 +1081,21 @@
   </div>
   <div class="dbar" id="dbar">⚠️ Reconnecting...</div>
   <div class="twrap" id="twrap"></div>
+  <div id="cardAnimLayer"></div>
+  <!-- Emoji Reactions -->
+  <button id="emojiBtn" onclick="toggleEmojiPicker()" title="React">😄</button>
+  <div id="emojiPicker">
+    <button class="epick" onclick="sendReaction('😂')">😂</button>
+    <button class="epick" onclick="sendReaction('🔥')">🔥</button>
+    <button class="epick" onclick="sendReaction('😱')">😱</button>
+    <button class="epick" onclick="sendReaction('👏')">👏</button>
+    <button class="epick" onclick="sendReaction('💀')">💀</button>
+    <button class="epick" onclick="sendReaction('🤣')">🤣</button>
+    <button class="epick" onclick="sendReaction('😤')">😤</button>
+    <button class="epick" onclick="sendReaction('🎉')">🎉</button>
+    <button class="epick" onclick="sendReaction('😎')">😎</button>
+    <button class="epick" onclick="sendReaction('🥶')">🥶</button>
+  </div>
 
   <!-- ═══ CHAT FAB ═══ -->
   <div class="chat-fab" id="chatFab" onclick="toggleChat()">
@@ -1066,7 +1161,9 @@
     document.getElementById('chatPanel').classList.toggle('open',Chat.open);
     if(Chat.open){Chat.unread=0;updateChatBadge();scrollChatBottom();}
   }
-  function showChatFab(show){document.getElementById('chatFab').classList.toggle('visible',show);}
+  function showChatFab(show){
+    document.getElementById('emojiBtn').classList.toggle('visible', show);
+    if(!show) document.getElementById('emojiPicker').classList.remove('show');document.getElementById('chatFab').classList.toggle('visible',show);}
   function switchChatTab(tab){
     Chat.activeTab=tab;
     document.getElementById('chatMsgs').style.display=tab==='chat'?'flex':'none';
@@ -1125,6 +1222,9 @@
     sk.on('chat:history',({messages})=>{document.getElementById('chatMsgs').innerHTML='';messages.forEach(m=>addChatMsg(m));});
     sk.on('room:player_joined',({player})=>{const n=player?.username||'A player';addActivityMsg(`🟢 ${esc(n)} joined the room`,'join');toast(`${n} joined!`,'i');refreshRoom();});
     sk.on('room:player_left',({username})=>{addActivityMsg(`🔴 ${esc(username||'Player')} left`,'leave');toast(`${username||'Player'} left`,'w');refreshRoom();});
+    sk.on('game:reaction',(data)=>{
+      showReactionOnPanel(data.emoji, data.playerId);
+    });
     sk.on('game:uno_called',({username})=>{
       addActivityMsg(`🗣️ ${esc(username)} called UNO!`,'uno');SFX.play('uno');
       const d=document.createElement('div');d.className='uno-alert';d.textContent=`${username} — UNO!`;
@@ -1222,6 +1322,12 @@
       const who=(data.players||[]).find(p=>p.id===data.playerId);
       toast(`${who?.username||'?'} played ${fmtV(data.card?.value)}`,'i');
       if(data.players){const p=data.players.find(p=>p.id===data.playerId&&!isMe(p.id));if(p&&p.handSize===1&&!p.saidUno)showCatchButton(p.id);}
+      // Animation: opponent card flies to pile
+      if(data.playerId !== S.user?.id){
+        const oppPanel = document.querySelector(`.opanel[data-pid="${data.playerId}"]`);
+        const pileEl   = document.getElementById('topCard');
+        if(data.card) AnimLayer.opponentPlay(data.card, oppPanel, pileEl);
+      }
     });
 
     sk.on('turn:changed',(data)=>{
@@ -1237,6 +1343,8 @@
 
     sk.on('game:drew_card',({card,canPlay})=>{
       SFX.play('draw');
+      S._skipNextSync=true;
+      setTimeout(()=>{S._skipNextSync=false;},2000);
       if(card){
         S.g.drawnCardId=card.id;
         if(!S.g.myHand.find(c=>c.id===card.id)){
@@ -1285,7 +1393,10 @@
     if(state.direction!==undefined)g.direction=state.direction;
     if(state.drawPileSize!==undefined)g.drawPileSize=state.drawPileSize;
     if(state.myHand!==undefined){
-      g.myHand=state.myHand;
+      if(S._skipNextSync){
+      }else{
+        g.myHand=state.myHand;
+      }
     }
     if(state.myPlayable!==undefined)g.myPlayable=state.myPlayable;
     if(state.turnPhase!==undefined)g.turnPhase=state.turnPhase;
@@ -1529,7 +1640,14 @@
     setTimeout(()=>{
       S.socket.emit('game:play_card',{cardId},(res)=>{
         if(!res.success){toast(res.reason,'e');SFX.play('error');if(el){el.classList.remove('playing');el.style.pointerEvents='';}}
-        else{document.getElementById('cancelArea').style.display='none';if(S.g.myHand.length!==1)S.calledUNO=false;SFX.play('play');}
+        else{
+          document.getElementById('cancelArea').style.display='none';
+          if(S.g.myHand.length!==1)S.calledUNO=false;
+          const myCard=S.g?.myHand?.find(c=>c.id===cardId);
+          const pileEl=document.getElementById('topCard');
+          if(myCard)AnimLayer.play(myCard,el,pileEl);
+          SFX.play('play');
+        }
       });
     },300);
   }
@@ -1544,7 +1662,14 @@
   function doDraw(){
     if(!canIDraw())return toast(canIPlay()?'Already drew — play or cancel':'Not your turn!','e');
     if(S.g.stackDraw>0)toast(`Taking ${S.g.stackDraw} stacked cards!`,'w');
-    S.socket.emit('game:draw_card',{},(res)=>{if(!res.success){toast(res.reason,'e');SFX.play('error');}});
+    S.socket.emit('game:draw_card',{},(res)=>{
+      if(!res.success){toast(res.reason,'e');SFX.play('error');}
+      else{
+        const deckEl=document.getElementById('drawPile');
+        const handEl=document.getElementById('myHand');
+        AnimLayer.draw(null,deckEl,handEl);
+      }
+    });
   }
   function doCancel(){
     document.getElementById('cancelArea').style.display='none';S.g.turnPhase='waiting';
@@ -1632,6 +1757,7 @@
 
   /* ═══ GAME PARTICLES ═══ */
   function initGameParticles(){
+    AnimLayer.init();
     const c=document.getElementById('gameParticles');c.innerHTML='';
     for(let i=0;i<20;i++){
       const p=document.createElement('div');p.className='game-particle';
@@ -1651,7 +1777,156 @@
     }
   }
 
+  /* ═══ CARD ANIMATIONS ENGINE ═══ */
+  const AnimLayer = {
+    el: null,
+    init(){ this.el = document.getElementById('cardAnimLayer'); },
+
+    _cardColor(card){
+      if(!card) return 'back';
+      if(card.color === 'wild' || !card.color) return 'wild';
+      return card.color;
+    },
+
+    _cardLabel(card){
+      if(!card) return '';
+      const v = card.value||'';
+      const map = {skip:'⊘',reverse:'↺',draw_two:'+2',wild_draw_four:'+4',wild:'🌈'};
+      return map[v] || v.toUpperCase();
+    },
+
+    // Deal: fly cards from center to player hand
+    deal(count = 7, targetEl){
+      if(!this.el || !targetEl) return;
+      const tr = targetEl.getBoundingClientRect();
+      const cx = window.innerWidth/2, cy = window.innerHeight/2;
+      for(let i=0;i<count;i++){
+        setTimeout(()=>{
+          const c = document.createElement('div');
+          c.className = 'anim-card back deal-anim-card';
+          c.style.cssText = `left:${cx}px;top:${cy}px;animation-delay:0s;`;
+          // animate toward hand area
+          c.style.setProperty('--tx', `${tr.left + tr.width/2 - cx}px`);
+          c.style.setProperty('--ty', `${tr.top + tr.height/2 - cy}px`);
+          // Use keyframe override for target
+          c.animate([
+            {transform:`translate(0,0) rotate(-15deg) scale(.5)`,opacity:0},
+            {transform:`translate(${tr.left+tr.width/2-cx}px,${tr.top+tr.height/2-cy}px) rotate(0) scale(1)`,opacity:1,offset:.7},
+            {transform:`translate(${tr.left+tr.width/2-cx}px,${tr.top+tr.height/2-cy}px) rotate(0) scale(1)`,opacity:0}
+          ],{duration:700,delay:i*80,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+          this.el.appendChild(c);
+          setTimeout(()=>c.remove(), 700+i*80+200);
+        }, i*40);
+      }
+    },
+
+    // Play: card flies from hand to center pile
+    play(card, fromEl, toEl){
+      if(!this.el) return;
+      const from = fromEl?.getBoundingClientRect() || {left:window.innerWidth/2,top:window.innerHeight*.8,width:0,height:0};
+      const to   = toEl?.getBoundingClientRect()   || {left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0};
+      const c = document.createElement('div');
+      c.className = `anim-card ${this._cardColor(card)}`;
+      c.textContent = this._cardLabel(card);
+      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;`;
+      c.animate([
+        {transform:'scale(1) rotate(0)',opacity:1},
+        {transform:'scale(1.35) translateY(-40px) rotate(-6deg)',opacity:1,offset:.35},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1) rotate(0)`,opacity:1,offset:.8},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(.95) rotate(0)`,opacity:1}
+      ],{duration:480,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
+      this.el.appendChild(c);
+      setTimeout(()=>c.remove(),600);
+      // float label
+      this._floatLabel(card, to);
+    },
+
+    // Draw: card pops into hand from deck
+    draw(card, fromEl, toEl){
+      if(!this.el) return;
+      const from = fromEl?.getBoundingClientRect() || {left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0};
+      const to   = toEl?.getBoundingClientRect()   || {left:window.innerWidth/2,top:window.innerHeight*.85,width:0,height:0};
+      const c = document.createElement('div');
+      c.className = `anim-card ${card?this._cardColor(card):'back'} draw-anim-card`;
+      c.textContent = card ? this._cardLabel(card) : '';
+      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;`;
+      c.animate([
+        {transform:'scale(.6) rotate(15deg)',opacity:0},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1.1) rotate(-3deg)`,opacity:1,offset:.7},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1) rotate(0)`,opacity:1}
+      ],{duration:500,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+      this.el.appendChild(c);
+      setTimeout(()=>c.remove(),650);
+    },
+
+    // Opponent plays: card appears above opponent panel then flies to pile
+    opponentPlay(card, fromEl, toEl){
+      if(!this.el) return;
+      const from = fromEl?.getBoundingClientRect() || {left:window.innerWidth/2,top:80,width:0,height:0};
+      const to   = toEl?.getBoundingClientRect()   || {left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0};
+      const c = document.createElement('div');
+      c.className = `anim-card ${this._cardColor(card)}`;
+      c.textContent = this._cardLabel(card);
+      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;`;
+      c.animate([
+        {transform:'scale(.4) rotate(-20deg)',opacity:0},
+        {transform:'scale(1.2) rotate(3deg)',opacity:1,offset:.4},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1) rotate(0)`,opacity:1}
+      ],{duration:600,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+      this.el.appendChild(c);
+      setTimeout(()=>c.remove(),750);
+      this._floatLabel(card, to);
+    },
+
+    _floatLabel(card, pos){
+      if(!card||!this.el) return;
+      const v = card.value||'';
+      const special = {skip:'⊘ SKIP',reverse:'↺ REVERSE',draw_two:'⚡ +2',wild_draw_four:'💥 +4',wild:'🌈 WILD'};
+      const txt = special[v];
+      if(!txt) return;
+      const lbl = document.createElement('div');
+      lbl.className='float-label';
+      lbl.style.cssText=`left:${pos.left+pos.width/2-60}px;top:${pos.top-10}px;color:#F59E0B;`;
+      lbl.textContent=txt;
+      this.el.appendChild(lbl);
+      setTimeout(()=>lbl.remove(),950);
+    }
+  };
   /* ═══ ENTER KEY for auth ═══ */
+  /* ═══ EMOJI REACTIONS ═══ */
+  function toggleEmojiPicker(){
+    document.getElementById('emojiPicker').classList.toggle('show');
+  }
+
+  function sendReaction(emoji){
+    document.getElementById('emojiPicker').classList.remove('show');
+    if(!S.socket||!S.roomId) return;
+    showReactionFly(emoji, window.innerWidth/2, window.innerHeight/2, true);
+    S.socket.emit('game:reaction',{emoji});
+  }
+
+  function showReactionFly(emoji, x, y, isMine){
+    const el = document.createElement('div');
+    el.className='reaction-fly';
+    el.textContent=emoji;
+    el.style.cssText=`left:${x-21}px;top:${y-21}px;`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1700);
+  }
+
+  function showReactionOnPanel(emoji, playerId){
+    const panel = document.querySelector(`.opanel[data-pid="${playerId}"]`);
+    if(!panel) return;
+    const badge = document.createElement('div');
+    badge.className='reaction-badge';
+    badge.textContent=emoji;
+    panel.style.position='relative';
+    panel.appendChild(badge);
+    setTimeout(()=>badge.remove(),2100);
+    const r = panel.getBoundingClientRect();
+    showReactionFly(emoji, r.left+r.width/2, r.top, false);
+  }
+
   function handleAuthEnter(e){
     if(e.key==='Enter'){
       if(document.getElementById('lf').style.display!=='none')doLogin();
