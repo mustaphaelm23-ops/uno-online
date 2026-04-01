@@ -383,6 +383,91 @@ app.post('/api/admin/add-coins', async (req, res) => {
   saveUsers();
   res.json({ success: true, username: user.username, coins: user.coins });
 });
+// Friends: get list
+app.get('/api/friends', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  const friends = (user.friends || []).map(fid => {
+    const f = usersDB.get(fid);
+    if(!f) return null;
+    const isOnline = [...socketToUser.values()].includes(fid);
+    return { id: f.id, username: f.username, coins: f.coins, isOnline };
+  }).filter(Boolean);
+  res.json({ friends });
+});
+
+// Friends: send request
+app.post('/api/friends/request', authMiddleware, (req, res) => {
+  const { username } = req.body;
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  const target = [...usersDB.values()].find(u => u.username.toLowerCase() === username.toLowerCase());
+  if(!target) return res.status(404).json({ error: 'User not found' });
+  if(target.id === user.id) return res.status(400).json({ error: 'Cannot add yourself' });
+  if((user.friends||[]).includes(target.id)) return res.status(400).json({ error: 'Already friends' });
+  if(!target.friendRequests) target.friendRequests = [];
+  if(target.friendRequests.includes(user.id)) return res.status(400).json({ error: 'Request already sent' });
+  target.friendRequests.push(user.id);
+  saveUsers();
+  // Notify target if online
+  const targetSock = findSocketByUserId(target.id);
+  if(targetSock) targetSock.emit('friend:request', { from: { id: user.id, username: user.username } });
+  res.json({ success: true });
+});
+
+// Friends: accept
+app.post('/api/friends/accept', authMiddleware, (req, res) => {
+  const { userId: fromId } = req.body;
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  const from = usersDB.get(fromId);
+  if(!from) return res.status(404).json({ error: 'User not found' });
+  user.friendRequests = (user.friendRequests||[]).filter(id => id !== fromId);
+  if(!user.friends) user.friends = [];
+  if(!from.friends) from.friends = [];
+  if(!user.friends.includes(fromId)) user.friends.push(fromId);
+  if(!from.friends.includes(user.id)) from.friends.push(user.id);
+  saveUsers();
+  const fromSock = findSocketByUserId(fromId);
+  if(fromSock) fromSock.emit('friend:accepted', { by: { id: user.id, username: user.username } });
+  res.json({ success: true });
+});
+
+// Friends: decline
+app.post('/api/friends/decline', authMiddleware, (req, res) => {
+  const { userId: fromId } = req.body;
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  user.friendRequests = (user.friendRequests||[]).filter(id => id !== fromId);
+  saveUsers();
+  res.json({ success: true });
+});
+
+// Friends: remove
+app.post('/api/friends/remove', authMiddleware, (req, res) => {
+  const { userId: friendId } = req.body;
+  const user = usersDB.get(req.user.userId);
+  const friend = usersDB.get(friendId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  user.friends = (user.friends||[]).filter(id => id !== friendId);
+  if(friend) friend.friends = (friend.friends||[]).filter(id => id !== user.id);
+  saveUsers();
+  res.json({ success: true });
+});
+
+// Friends: invite to room
+app.post('/api/friends/invite', authMiddleware, (req, res) => {
+  const { friendId, roomId } = req.body;
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  const room = roomsDB.get(roomId);
+  if(!room) return res.status(404).json({ error: 'Room not found' });
+  const friendSock = findSocketByUserId(friendId);
+  if(!friendSock) return res.status(400).json({ error: 'Friend is offline' });
+  friendSock.emit('friend:invite', { from: { id: user.id, username: user.username }, roomId, code: room.code });
+  res.json({ success: true });
+});
+
 app.get('/api/leaderboard', (req, res) => {
   const top = [...usersDB.values()]
     .sort((a, b) => b.coins - a.coins)
