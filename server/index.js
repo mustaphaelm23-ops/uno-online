@@ -837,6 +837,11 @@ function attachGameListeners(room) {
     const winner = usersDB.get(data.winnerId);
     const eloChange = winner ? Math.abs((winner.elo||1000) - 1000) : 16;
     io.to(roomId).emit('game:player_won', { ...data, eloChange: eloChange || 16 });
+    // Tournament result
+    if(room.settings?.tournamentId) {
+      const loserId = room.game.players.find(p => p.id !== data.winnerId)?.id;
+      if(loserId) reportTournamentResult(room.settings.tournamentId, data.winnerId, loserId);
+    }
   });
 }
 
@@ -984,6 +989,161 @@ setInterval(() => {
 // HEALTH CHECK
 // ─────────────────────────────────────────
 
+// ─────────────────────────────────────────
+// TOURNAMENTS
+// ─────────────────────────────────────────
+
+const tournamentsDB = new Map();
+
+function createTournament({ name, maxPlayers, prizeCoins, secret }) {
+  if(secret !== 'uno_admin_2024') return null;
+  const id = uuidv4();
+  const t = {
+    id, name: name || 'UNO Tournament',
+    maxPlayers: maxPlayers || 8,
+    prizeCoins: prizeCoins || 5000,
+    players: [], bracket: [], round: 0,
+    status: 'open', createdAt: Date.now(),
+    winner: null,
+  };
+  tournamentsDB.set(id, t);
+  return t;
+}
+
+function buildBracket(players) {
+  const shuffled = [...players].sort(() => Math.random() - 0.5);
+  const matches = [];
+  for(let i = 0; i < shuffled.length; i += 2) {
+    if(shuffled[i+1]) matches.push({ p1: shuffled[i], p2: shuffled[i+1], winner: null, roomId: null });
+  }
+  return matches;
+}
+
+// Admin: create tournament
+app.post('/api/tournament/create', (req, res) => {
+  const { name, maxPlayers, prizeCoins, secret } = req.body;
+  if(secret !== 'uno_admin_2024') return res.status(403).json({ error: 'Forbidden' });
+  const t = createTournament({ name, maxPlayers, prizeCoins, secret });
+  if(!t) return res.status(400).json({ error: 'Failed' });
+  console.log(`[Tournament] Created: ${t.name} (${t.id})`);
+  io.emit('tournament:update', sanitizeTournament(t));
+  res.json({ tournament: sanitizeTournament(t) });
+});
+
+// Get all open tournaments
+app.get('/api/tournaments', authMiddleware, (req, res) => {
+  const list = [...tournamentsDB.values()]
+    .filter(t => t.status !== 'finished')
+    .map(sanitizeTournament);
+  res.json({ tournaments: list });
+});
+
+// Get single tournament
+app.get('/api/tournaments/:id', authMiddleware, (req, res) => {
+  const t = tournamentsDB.get(req.params.id);
+  if(!t) return res.status(404).json({ error: 'Not found' });
+  res.json({ tournament: sanitizeTournament(t) });
+});
+
+// Join tournament
+app.post('/api/tournaments/:id/join', authMiddleware, (req, res) => {
+  const t = tournamentsDB.get(req.params.id);
+  const user = usersDB.get(req.user.userId);
+  if(!t) return res.status(404).json({ error: 'Tournament not found' });
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  if(t.status !== 'open') return res.status(400).json({ error: 'Tournament already started' });
+  if(t.players.find(p => p.id === user.id)) return res.status(400).json({ error: 'Already registered' });
+  if(t.players.length >= t.maxPlayers) return res.status(400).json({ error: 'Tournament full' });
+  t.players.push({ id: user.id, username: user.username, elo: user.elo||1000 });
+  console.log(`[Tournament] ${user.username} joined ${t.name}`);
+  io.emit('tournament:update', sanitizeTournament(t));
+  res.json({ success: true, tournament: sanitizeTournament(t) });
+});
+
+// Admin: start tournament
+app.post('/api/tournaments/:id/start', (req, res) => {
+  const { secret } = req.body;
+  if(secret !== 'uno_admin_2024') return res.status(403).json({ error: 'Forbidden' });
+  const t = tournamentsDB.get(req.params.id);
+  if(!t) return res.status(404).json({ error: 'Not found' });
+  if(t.players.length < 2) return res.status(400).json({ error: 'Need at least 2 players' });
+  t.status = 'playing';
+  t.round = 1;
+  t.bracket = buildBracket(t.players);
+  // Create rooms for each match
+  t.bracket.forEach(match => {
+    const room = createRoomRecord(match.p1.id, { maxPlayers: 2, tournamentId: t.id });
+    room.game = new GameManager(room.id, room.settings);
+    attachGameListeners(room);
+    room.tournamentMatchId = `${t.id}:${match.p1.id}:${match.p2.id}`;
+    roomsDB.set(room.id, room);
+    match.roomId = room.id;
+    // Notify players
+    const s1 = findSocketByUserId(match.p1.id);
+    const s2 = findSocketByUserId(match.p2.id);
+    if(s1) { s1.emit('tournament:match_ready', { roomId: room.id, opponent: match.p2, tournamentName: t.name }); }
+    if(s2) { s2.emit('tournament:match_ready', { roomId: room.id, opponent: match.p1, tournamentName: t.name }); }
+  });
+  console.log(`[Tournament] Started: ${t.name} — Round ${t.round}`);
+  io.emit('tournament:update', sanitizeTournament(t));
+  res.json({ success: true, tournament: sanitizeTournament(t) });
+});
+
+// Report match result (called internally after game:over)
+function reportTournamentResult(tournamentId, winnerId, loserId) {
+  const t = tournamentsDB.get(tournamentId);
+  if(!t) return;
+  const match = t.bracket.find(m => (m.p1.id === winnerId || m.p1.id === loserId) && (m.p2.id === winnerId || m.p2.id === loserId));
+  if(!match || match.winner) return;
+  match.winner = winnerId;
+  const allDone = t.bracket.every(m => m.winner);
+  if(!allDone) { io.emit('tournament:update', sanitizeTournament(t)); return; }
+  // All matches done — check if final
+  const winners = t.bracket.map(m => t.players.find(p => p.id === m.winner)).filter(Boolean);
+  if(winners.length === 1) {
+    // Tournament finished!
+    t.status = 'finished';
+    t.winner = winners[0];
+    const winnerUser = usersDB.get(winners[0].id);
+    if(winnerUser) {
+      winnerUser.coins += t.prizeCoins;
+      winnerUser.tournamentWins = (winnerUser.tournamentWins||0) + 1;
+      saveUsers();
+    }
+    const winnerSock = findSocketByUserId(winners[0].id);
+    if(winnerSock) winnerSock.emit('tournament:won', { name: t.name, prize: t.prizeCoins });
+    io.emit('tournament:finished', { tournamentId: t.id, winner: winners[0], prize: t.prizeCoins });
+    console.log(`[Tournament] ${t.name} finished! Winner: ${winners[0].username} +${t.prizeCoins} coins`);
+  } else {
+    // Next round
+    t.round++;
+    t.bracket = buildBracket(winners);
+    t.bracket.forEach(match => {
+      const room = createRoomRecord(match.p1.id, { maxPlayers: 2, tournamentId: t.id });
+      room.game = new GameManager(room.id, room.settings);
+      attachGameListeners(room);
+      roomsDB.set(room.id, room);
+      match.roomId = room.id;
+      const s1 = findSocketByUserId(match.p1.id);
+      const s2 = findSocketByUserId(match.p2.id);
+      if(s1) s1.emit('tournament:match_ready', { roomId: room.id, opponent: match.p2, tournamentName: t.name, round: t.round });
+      if(s2) s2.emit('tournament:match_ready', { roomId: room.id, opponent: match.p1, tournamentName: t.name, round: t.round });
+    });
+    console.log(`[Tournament] ${t.name} — Round ${t.round}`);
+  }
+  io.emit('tournament:update', sanitizeTournament(t));
+}
+
+function sanitizeTournament(t) {
+  return {
+    id: t.id, name: t.name, maxPlayers: t.maxPlayers,
+    prizeCoins: t.prizeCoins, players: t.players,
+    bracket: t.bracket.map(m => ({
+      p1: m.p1, p2: m.p2, winner: m.winner, roomId: m.roomId
+    })),
+    round: t.round, status: t.status, winner: t.winner,
+  };
+}
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), rooms: roomsDB.size, users: usersDB.size, queue: matchmakingQueue.length });
 });
