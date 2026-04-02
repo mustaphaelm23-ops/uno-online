@@ -1691,7 +1691,7 @@
     const g=S.g,playable=new Set(g.myPlayable),can=canIPlay(),c=document.getElementById('myhand');
     document.getElementById('mycnt').textContent=g.myHand.length;
     // Only re-render if hand actually changed
-    const newKey = g.myHand.map(c=>c.id+(playable.has(c.id)?'p':'')).join(',');
+    const newKey = g.myHand.map(c=>c.id+(playable.has(c.id)?'p':'')).join(',')+'|'+g.turnPhase+'|'+g.currentTurn;
     if(c._lastKey === newKey) return;
     c._lastKey = newKey;
     c.innerHTML=g.myHand.map((card,i)=>{
