@@ -1690,6 +1690,10 @@
   function renderHand(){
     const g=S.g,playable=new Set(g.myPlayable),can=canIPlay(),c=document.getElementById('myhand');
     document.getElementById('mycnt').textContent=g.myHand.length;
+    // Only re-render if hand actually changed
+    const newKey = g.myHand.map(c=>c.id+(playable.has(c.id)?'p':'')).join(',');
+    if(c._lastKey === newKey) return;
+    c._lastKey = newKey;
     c.innerHTML=g.myHand.map((card,i)=>{
       const color=card.chosenColor||card.color,ok=playable.has(card.id)&&can;
       const isDrawn=card.id===g.drawnCardId;
