@@ -119,6 +119,25 @@ const socketToUser = new Map();
 // USER RECORD
 // ─────────────────────────────────────────
 
+// ── ELO & Leagues ──
+const LEAGUES = [
+  { name:'Bronze',  min:0,    max:999,  badge:'🥉', color:'#CD7F32' },
+  { name:'Silver',  min:1000, max:1499, badge:'🥈', color:'#C0C0C0' },
+  { name:'Gold',    min:1500, max:1999, badge:'🥇', color:'#FFD700' },
+  { name:'Diamond', min:2000, max:9999, badge:'💎', color:'#B9F2FF' },
+];
+
+function getLeague(elo) {
+  return LEAGUES.slice().reverse().find(l => elo >= l.min) || LEAGUES[0];
+}
+
+function calcELO(winnerElo, loserElo) {
+  const K = 32;
+  const expected = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+  const change = Math.round(K * (1 - expected));
+  return { gain: Math.max(8, change), loss: Math.max(8, change) };
+}
+
 function createUserRecord({ username, passwordHash }) {
   return {
     id:           uuidv4(),
@@ -127,6 +146,7 @@ function createUserRecord({ username, passwordHash }) {
     coins:        CONFIG.DEFAULT_COINS,
     avatar:       null,
     stats: { gamesPlayed: 0, gamesWon: 0, totalPoints: 0 },
+    elo:          1000,
     createdAt:    Date.now(),
     lastLoginAt:  Date.now(),
   };
@@ -468,6 +488,22 @@ app.post('/api/friends/invite', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/leaderboard/ranked', (req, res) => {
+  const top = [...usersDB.values()]
+    .filter(u => u.elo)
+    .sort((a, b) => (b.elo||1000) - (a.elo||1000))
+    .slice(0, 20)
+    .map((u, i) => {
+      const league = getLeague(u.elo||1000);
+      return {
+        rank: i+1, username: u.username,
+        elo: u.elo||1000, badge: league.badge,
+        league: league.name, color: league.color,
+        gamesWon: u.stats?.gamesWon||0,
+      };
+    });
+  res.json({ leaderboard: top });
+});
 app.get('/api/leaderboard', (req, res) => {
   const top = [...usersDB.values()]
     .sort((a, b) => b.coins - a.coins)
@@ -734,6 +770,16 @@ function attachGameListeners(room) {
     room.status = 'finished';
     const bet = room.settings.bet || 0;
     const winnerData = data.winners?.[0];
+    // ELO calculation
+    const winnerUser = winnerData ? usersDB.get(winnerData.id) : null;
+    const loserUsers = data.players.filter(p => p.id !== winnerData?.id).map(p => usersDB.get(p.id)).filter(Boolean);
+    if(winnerUser && loserUsers.length > 0) {
+      const avgLoserElo = loserUsers.reduce((s,u) => s+(u.elo||1000), 0) / loserUsers.length;
+      const { gain, loss } = calcELO(winnerUser.elo||1000, avgLoserElo);
+      winnerUser.elo = Math.max(0, (winnerUser.elo||1000) + gain);
+      loserUsers.forEach(u => { u.elo = Math.max(0, (u.elo||1000) - loss); });
+    }
+
     data.players.forEach(playerData => {
       const user = usersDB.get(playerData.id);
       if (!user) return;
@@ -787,7 +833,11 @@ function attachGameListeners(room) {
     if (!data.afterDraw) broadcastPrivateStates(room);
   });
 
-  game.on('player:won', (data) => { io.to(roomId).emit('game:player_won', data); });
+  game.on('player:won', (data) => {
+    const winner = usersDB.get(data.winnerId);
+    const eloChange = winner ? Math.abs((winner.elo||1000) - 1000) : 16;
+    io.to(roomId).emit('game:player_won', { ...data, eloChange: eloChange || 16 });
+  });
 }
 
 // ─────────────────────────────────────────
@@ -913,6 +963,8 @@ function handlePlayerLeave(socket, roomId) {
 
 function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
+  const league = getLeague(safe.elo||1000);
+  safe.league = league;
   return safe;
 }
 

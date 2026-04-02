@@ -987,6 +987,53 @@
   .invite-toast.show{display:block;}
   .invite-toast-title{font-weight:800;font-size:14px;margin-bottom:6px;}
   .invite-toast-btns{display:flex;gap:8px;margin-top:10px;}
+/* ═══ RANKED / ELO ═══ */
+  .league-badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;
+    border:1px solid currentColor;
+  }
+  .elo-bar-wrap{margin:8px 0;}
+  .elo-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px;}
+  .elo-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+  .elo-bar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.34,1.56,.64,1);}
+  .ranked-lb-box{
+    position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);
+    display:none;align-items:center;justify-content:center;z-index:110;
+  }
+  .ranked-lb-box.show{display:flex;}
+  .ranked-lb-inner{
+    background:linear-gradient(145deg,var(--bg2),var(--bg3));
+    border:1px solid var(--border);border-radius:22px;
+    padding:32px;width:min(500px,94vw);max-height:85vh;overflow-y:auto;
+  }
+  .ranked-row{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 14px;border-radius:10px;margin-bottom:6px;
+    background:var(--bg);border:1px solid var(--border);
+    transition:.2s;
+  }
+  .ranked-row:hover{border-color:rgba(245,158,11,.3);}
+  .ranked-row.me{border-color:var(--accent);background:rgba(245,158,11,.05);}
+  .ranked-rank{font-family:'Bangers',cursive;font-size:20px;width:28px;text-align:center;color:var(--muted);}
+  .ranked-rank.gold{color:#FFD700;}
+  .ranked-rank.silver{color:#C0C0C0;}
+  .ranked-rank.bronze{color:#CD7F32;}
+  .ranked-name{flex:1;font-weight:700;font-size:13px;}
+  .ranked-elo{font-family:'Bangers',cursive;font-size:18px;color:var(--accent);}
+  /* ELO change popup */
+  .elo-popup{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    z-index:155;font-family:'Bangers',cursive;font-size:48px;
+    pointer-events:none;animation:eloPopup 2.5s ease forwards;
+  }
+  @keyframes eloPopup{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.3);}
+    20%{opacity:1;transform:translate(-50%,-50%) scale(1.2);}
+    50%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+    80%{opacity:1;transform:translate(-50%,-80%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-120%) scale(.8);}
+  }
 </style>
   </head>
   <body>
@@ -1041,6 +1088,7 @@
         <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25);" onclick="showJoinByCode()">🔑 Join by Code</button>
         <button class="btnA btnM" onclick="doMM()">🎯 Quick Match</button>
         <button class="btnA btnD" onclick="doDaily()">🎁 Daily Reward</button>
+        <button class="btnA" style="background:linear-gradient(135deg,#FFD700,#D97706);color:#1a1a1a;box-shadow:0 4px 12px rgba(255,215,0,.25);" onclick="showRankedLb()">🏆 Ranked</button>
         <button class="btnA" style="background:linear-gradient(135deg,#E1306C,#C13584);color:#fff;box-shadow:0 4px 12px rgba(225,48,108,.25)" onclick="doInsta()">📸 Follow + 1000🪙</button>
         <div class="stitle" style="margin-top:14px">Account</div>
         <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25)" onclick="showProfile()">👤 My Profile</button>
@@ -1200,6 +1248,16 @@
   </div>
   <div class="dbar" id="dbar">⚠️ Reconnecting...</div>
   <div class="twrap" id="twrap"></div>
+  <!-- Ranked Leaderboard -->
+  <div class="ranked-lb-box" id="rankedLbOv">
+    <div class="ranked-lb-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-family:'Bangers',cursive;font-size:28px;letter-spacing:2px">🏆 RANKED LEADERBOARD</div>
+        <button onclick="document.getElementById('rankedLbOv').classList.remove('show')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+      </div>
+      <div id="rankedLbList"></div>
+    </div>
+  </div>
   <!-- Join by Code Modal -->
   <div class="modal" id="joinCodeModal">
     <div class="mbox" style="width:min(380px,92vw)">
@@ -1888,6 +1946,8 @@
   /* ═══ WIN ═══ */
   function showWin(data){
     const iWon=data.winnerId===S.user?.id;
+    // Show ELO change
+    if(data.eloChange) showEloPopup(data.eloChange, iWon);
     const bet=data.bet||0;
     const forfeit=data.forfeit||false;
     if(iWon&&data.coinsEarned){S.user.coins=(S.user.coins||0)+data.coinsEarned;localStorage.setItem('uno_user',JSON.stringify(S.user));}
@@ -2261,6 +2321,59 @@
     if(!el) return;
     el.textContent = count;
     el.classList.toggle('show', count > 0);
+  }
+
+  /* ═══ RANKED / ELO ═══ */
+  const LEAGUES = [
+    { name:'Bronze',  min:0,    max:999,  badge:'🥉', color:'#CD7F32' },
+    { name:'Silver',  min:1000, max:1499, badge:'🥈', color:'#C0C0C0' },
+    { name:'Gold',    min:1500, max:1999, badge:'🥇', color:'#FFD700' },
+    { name:'Diamond', min:2000, max:9999, badge:'💎', color:'#B9F2FF' },
+  ];
+
+  function getLeague(elo){
+    return [...LEAGUES].reverse().find(l => elo >= l.min) || LEAGUES[0];
+  }
+
+  function leagueBadgeHTML(elo){
+    const l = getLeague(elo||1000);
+    return `<span class="league-badge" style="color:${l.color};border-color:${l.color}40">${l.badge} ${l.name}</span>`;
+  }
+
+  function eloBarHTML(elo){
+    const l = getLeague(elo||1000);
+    const next = LEAGUES.find(lg => lg.min > (elo||1000));
+    const pct = next ? Math.round(((elo-l.min)/(next.min-l.min))*100) : 100;
+    return `
+      <div class="elo-bar-wrap">
+        <div class="elo-bar-label"><span>${l.badge} ${l.name}</span><span>${elo||1000} ELO${next?` / ${next.min}`:' MAX'}</span></div>
+        <div class="elo-bar"><div class="elo-bar-fill" style="width:${pct}%;background:${l.color}"></div></div>
+      </div>`;
+  }
+
+  async function showRankedLb(){
+    try{
+      const data = await apiFetch('/api/leaderboard/ranked');
+      const list = data.leaderboard || [];
+      const myId = S.user?.id;
+      document.getElementById('rankedLbList').innerHTML = list.map(r => `
+        <div class="ranked-row ${r.username===S.user?.username?'me':''}">
+          <div class="ranked-rank ${r.rank===1?'gold':r.rank===2?'silver':r.rank===3?'bronze':''}">${r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':r.rank}</div>
+          <div class="ranked-name">${esc(r.username)}<br><span style="font-size:10px;color:var(--muted)">${r.badge} ${r.league}</span></div>
+          <div class="ranked-elo">${r.elo}</div>
+        </div>
+      `).join('') || '<div style="text-align:center;color:var(--muted);padding:20px">No ranked games yet</div>';
+      document.getElementById('rankedLbOv').classList.add('show');
+    } catch(e){ toast('Could not load ranked leaderboard','e'); }
+  }
+
+  function showEloPopup(change, won){
+    const el = document.createElement('div');
+    el.className = 'elo-popup';
+    el.style.color = won ? '#4ade80' : '#f87171';
+    el.textContent = (won?'+':'-') + Math.abs(change) + ' ELO';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 2600);
   }
 
   function handleAuthEnter(e){
