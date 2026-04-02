@@ -1116,6 +1116,7 @@
             <div class="game-menu-title">Settings</div>
             <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 Profile</button>
             <button class="game-menu-item" onclick="showLeaderboard();document.getElementById('lobbyMenu').classList.remove('show')">🏆 Leaderboard</button>
+            <button class="game-menu-item" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ Admin Panel</button>
             <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 Logout</button>
           </div>
         </div>
@@ -1315,6 +1316,25 @@
       <div style="font-family:'Bangers',cursive;font-size:28px;letter-spacing:2px;color:var(--accent);margin-bottom:8px">MATCH READY!</div>
       <div id="matchInviteText" style="color:var(--muted);font-size:14px;margin-bottom:24px"></div>
       <button class="btnP" style="width:100%;padding:16px;font-size:16px" onclick="doJoinMatch()">⚔️ Enter Match!</button>
+    </div>
+  </div>
+  <!-- Admin Panel -->
+  <div class="modal" id="adminOv">
+    <div class="mbox" style="width:min(420px,94vw);text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="margin:0">⚙️ ADMIN PANEL</h3>
+        <button onclick="document.getElementById('adminOv').classList.remove('show')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Create Tournament</div>
+      <div class="fg"><label>Name</label><input class="fg input" id="adminTName" placeholder="UNO Championship" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Max Players</label><input id="adminTMax" type="number" value="8" min="2" max="16" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
+        <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Prize Coins</label><input id="adminTPrize" type="number" value="5000" min="100" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
+      </div>
+      <button class="btnP" onclick="adminCreateTournament()" style="width:100%;margin-bottom:20px">🏆 Create Tournament</button>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Start Tournament</div>
+      <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Tournament ID</label><input id="adminTId" placeholder="Paste tournament ID here" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
+      <button class="btnP" onclick="adminStartTournament()" style="width:100%;background:linear-gradient(135deg,#16A34A,#15803D)">⚔️ Start Tournament</button>
     </div>
   </div>
   <!-- Ranked Leaderboard -->
@@ -1911,6 +1931,43 @@
       document.getElementById('profileOv').classList.add('show');
     }catch(e){toast('Could not load profile','e');}
   }
+  async function showAdminPanel(){
+    if(!S.user?.username?.toLowerCase().includes('mustapha')) return toast('Admin only','e');
+    document.getElementById('adminOv').classList.add('show');
+  }
+
+  async function adminCreateTournament(){
+    const name = document.getElementById('adminTName').value.trim() || 'UNO Championship';
+    const maxPlayers = parseInt(document.getElementById('adminTMax').value) || 8;
+    const prizeCoins = parseInt(document.getElementById('adminTPrize').value) || 5000;
+    try{
+      const res = await fetch('/api/tournament/create', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, maxPlayers, prizeCoins, secret:'uno_admin_2024' })
+      });
+      const d = await res.json();
+      if(d.error) return toast(d.error,'e');
+      toast(`Tournament "${d.tournament.name}" created! 🏆`,'s');
+      document.getElementById('adminOv').classList.remove('show');
+    } catch(e){ toast('Error creating tournament','e'); }
+  }
+
+  async function adminStartTournament(){
+    const id = document.getElementById('adminTId').value.trim();
+    if(!id) return toast('Enter tournament ID','e');
+    try{
+      const res = await fetch(`/api/tournaments/${id}/start`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ secret:'uno_admin_2024' })
+      });
+      const d = await res.json();
+      if(d.error) return toast(d.error,'e');
+      toast('Tournament started! ⚔️','s');
+    } catch(e){ toast('Error','e'); }
+  }
+
   async function showLeaderboard(){
     try{
       const d=await api('GET','/leaderboard');
