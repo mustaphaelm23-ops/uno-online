@@ -70,9 +70,10 @@ class Player {
 
   toPublicJSON() {
     return {
-      id:this.id, username:this.username, coins:this.coins, avatar:this.avatar,
+      id:this.id, username:this.username, avatar:this.avatar,
       handSize:this._hand.length, isHost:this.isHost, saidUno:this.saidUno,
       isConnected:this.isConnected, status:this.status,
+      isBot:this.isBot||false,
     };
   }
 

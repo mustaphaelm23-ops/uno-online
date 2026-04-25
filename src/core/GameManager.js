@@ -334,6 +334,15 @@ class GameManager extends EventEmitter {
   _setTurnPhase(phase) {
     this._turnPhase = phase;
     console.log(`[Turn] ${this.current?.username} → ${phase}`);
+    if (phase === TURN_PHASE.MUST_PLAY && this.current?.isBot) {
+      if (this._botTimer) clearTimeout(this._botTimer);
+      const me = this.current;
+      this._botTimer = setTimeout(() => {
+        if (this._phase === PHASE.PLAYING && this.current?.id === me.id && this.current?.isBot) {
+          this._playBotTurn();
+        }
+      }, 1500 + Math.random() * 1200);
+    }
   }
 
   _startTurnTimer() {
@@ -456,6 +465,7 @@ class GameManager extends EventEmitter {
   _clearTimers() {
     if (this._turnTimer) { clearTimeout(this._turnTimer); this._turnTimer = null; }
     if (this._drawTimer) { clearTimeout(this._drawTimer); this._drawTimer = null; }
+    if (this._botTimer)  { clearTimeout(this._botTimer);  this._botTimer  = null; }
   }
 
   _broadcastState(afterDraw = false) {

@@ -373,6 +373,7 @@ app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
 // REST: Leaderboard
 // ─────────────────────────────────────────
 // Instagram follow reward
+const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
 app.post('/api/profile/avatar', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -383,9 +384,16 @@ app.post('/api/profile/avatar', authMiddleware, (req, res) => {
   if (avatar.length > 4 * 1024 * 1024) {
     return res.status(413).json({ error: 'Avatar too large (max ~3MB)' });
   }
+  const now = Date.now();
+  if (user.lastAvatarAt && now - user.lastAvatarAt < AVATAR_COOLDOWN_MS) {
+    const left = AVATAR_COOLDOWN_MS - (now - user.lastAvatarAt);
+    const days = Math.ceil(left / (24*60*60*1000));
+    return res.status(429).json({ error: `You can change your avatar again in ${days} day${days===1?'':'s'}`, retryInDays: days });
+  }
   user.avatar = avatar;
+  user.lastAvatarAt = now;
   saveUsers();
-  res.json({ avatar: user.avatar });
+  res.json({ avatar: user.avatar, lastAvatarAt: user.lastAvatarAt, cooldownDays: 10 });
 });
 
 app.delete('/api/profile/avatar', authMiddleware, (req, res) => {
@@ -758,16 +766,30 @@ io.on('connection', (socket) => {
   // ── Matchmaking ──
   socket.on('matchmaking:join', ({ settings = {} } = {}, ack) => {
     const existingIdx = matchmakingQueue.findIndex(e => e.userId === userId);
-    if (existingIdx !== -1) matchmakingQueue.splice(existingIdx, 1);
-    matchmakingQueue.push({ userId, socketId: socket.id, settings, joinedAt: Date.now() });
+    if (existingIdx !== -1) {
+      const old = matchmakingQueue.splice(existingIdx, 1)[0];
+      if (old?.botTimer) clearTimeout(old.botTimer);
+    }
+    const entry = { userId, socketId: socket.id, settings, joinedAt: Date.now(), botTimer: null };
+    matchmakingQueue.push(entry);
     tryMatchmaking(io, usersDB, roomsDB);
+    // If still waiting after 10s, drop in a bot opponent
+    entry.botTimer = setTimeout(() => {
+      const idx = matchmakingQueue.findIndex(e => e.userId === userId);
+      if (idx === -1) return;
+      const e = matchmakingQueue.splice(idx, 1)[0];
+      spawnBotMatch(e);
+    }, 10000);
     ack?.({ success: true, queueSize: matchmakingQueue.length });
     console.log(`[MM] ${socket.username} joined queue (${matchmakingQueue.length} waiting)`);
   });
 
   socket.on('matchmaking:leave', ({} = {}, ack) => {
     const idx = matchmakingQueue.findIndex(e => e.userId === userId);
-    if (idx !== -1) matchmakingQueue.splice(idx, 1);
+    if (idx !== -1) {
+      const e = matchmakingQueue.splice(idx, 1)[0];
+      if (e?.botTimer) clearTimeout(e.botTimer);
+    }
     ack?.({ success: true });
   });
 
@@ -875,6 +897,8 @@ function attachGameListeners(room) {
 function tryMatchmaking(io, usersDB, roomsDB) {
   if (matchmakingQueue.length < 2) return;
   const toMatch = matchmakingQueue.splice(0, Math.min(4, matchmakingQueue.length));
+  // Cancel any pending bot timers for these entries
+  toMatch.forEach(e => { if (e.botTimer) { clearTimeout(e.botTimer); e.botTimer = null; } });
   const hostEntry = toMatch[0];
   const host = usersDB.get(hostEntry.userId);
   if (!host) return;
@@ -900,6 +924,53 @@ function tryMatchmaking(io, usersDB, roomsDB) {
 
   roomsDB.set(room.id, room);
   console.log(`[MM] Matched ${toMatch.length} players in room ${room.id}`);
+}
+
+const BOT_NAMES = ['UnoBot', 'PixelBot', 'NeoBot', 'CyberBot', 'AceBot', 'ZetaBot', 'NovaBot'];
+function spawnBotMatch(entry) {
+  const user = usersDB.get(entry.userId);
+  if (!user) return;
+  const sock = io.sockets.sockets.get(entry.socketId);
+  if (!sock) return;
+
+  const room = createRoomRecord(user.id, { maxPlayers: 2 });
+  room.game = new GameManager(room.id, room.settings);
+  attachGameListeners(room);
+
+  const player = new Player(user.id, user.username, user.coins);
+  player.avatar = user.avatar;
+  room.game.addPlayer(player);
+  room.playerIds.push(user.id);
+
+  const bot = new Player('bot_' + Date.now(), BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], 0);
+  bot.isBot = true;
+  bot.isConnected = true;
+  bot.status = 'active';
+  room.game.addPlayer(bot);
+  room.playerIds.push(bot.id);
+
+  sock.join(room.id);
+  sock.currentRoomId = room.id;
+  sock.emit('matchmaking:matched', { roomId: room.id, players: room.game.players.map(p => p.toPublicJSON()) });
+
+  roomsDB.set(room.id, room);
+  console.log(`[MM] Bot match: ${user.username} vs ${bot.username} in ${room.id}`);
+
+  // Auto-start the game after a short beat so the player sees the room first
+  setTimeout(() => {
+    const r = roomsDB.get(room.id);
+    if (!r || r.status !== 'lobby') return;
+    const result = r.game.startGame(user.id);
+    if (!result.success) return;
+    r.status = 'playing';
+    r.startedAt = Date.now();
+    r.playerIds.forEach(pid => {
+      const p = r.game.players.find(pp => pp.id === pid);
+      if (!p) return;
+      const ps = findSocketByUserId(pid);
+      if (ps) ps.emit('game:state', r.game._playerState(p));
+    });
+  }, 2200);
 }
 
 // ─────────────────────────────────────────
