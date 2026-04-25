@@ -124,7 +124,61 @@
   /* ═══════════════════════════════════════════
     LOBBY SCREEN
     ═══════════════════════════════════════════ */
-  #lobby-screen{align-items:stretch;justify-content:flex-start;background:var(--bg);}
+  #lobby-screen{
+    align-items:stretch;justify-content:flex-start;
+    background:radial-gradient(ellipse 90% 75% at 50% 45%,#F59E0B 0%,#DC2626 22%,#7F1D1D 50%,#2A0A0A 80%,#0B0E18 100%);
+    overflow:hidden;
+  }
+  #lobby-screen::before{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(circle at 50% 45%,rgba(255,210,120,.45) 0%,rgba(255,160,60,.18) 18%,transparent 38%);
+    animation:lobbyGlowPulse 5s ease-in-out infinite alternate;
+  }
+  @keyframes lobbyGlowPulse{from{opacity:.7;transform:scale(.98)}to{opacity:1;transform:scale(1.04)}}
+  .lobby-bg{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+  .bg-card{
+    position:absolute;width:78px;height:118px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    border:3px solid rgba(255,255,255,.32);
+    font-family:'Bangers',cursive;font-size:34px;color:#fff;
+    text-shadow:2px 3px 6px rgba(0,0,0,.55),-1px -1px 0 rgba(0,0,0,.3);
+    box-shadow:0 14px 38px rgba(0,0,0,.55),0 0 24px rgba(255,140,40,.15);
+    opacity:.92;letter-spacing:1px;
+    animation:bgFloat 9s ease-in-out infinite;
+    transform:rotate(var(--rot,0deg));
+  }
+  .bg-card::after{
+    content:'';position:absolute;width:66%;height:78%;
+    background:rgba(255,255,255,.15);border-radius:50%;
+    transform:rotate(-30deg);
+  }
+  .bg-card .bg-num{position:relative;z-index:2;line-height:1;}
+  .bg-card.red{background:linear-gradient(145deg,#E8324A,#9B1B2E);}
+  .bg-card.yellow{background:linear-gradient(145deg,#F59E0B,#92400E);}
+  .bg-card.green{background:linear-gradient(145deg,#16A34A,#14532D);}
+  .bg-card.blue{background:linear-gradient(145deg,#2563EB,#1E3A8A);}
+  .bg-card.wild{background:radial-gradient(circle,#222 40%,#000);border-color:rgba(255,255,255,.18);}
+  .bg-card.wild::after{
+    background:conic-gradient(#E8324A 0deg 90deg,#2563EB 90deg 180deg,#16A34A 180deg 270deg,#F59E0B 270deg 360deg);
+    opacity:.92;
+  }
+  @keyframes bgFloat{
+    0%,100%{transform:translateY(0) rotate(var(--rot,0deg))}
+    50%{transform:translateY(-16px) rotate(calc(var(--rot,0deg) + 3deg))}
+  }
+  .bg-c1{top:7%;left:6%;--rot:-14deg;animation-delay:-1s;}
+  .bg-c2{top:4%;left:38%;--rot:6deg;animation-delay:-3s;}
+  .bg-c3{top:9%;right:22%;--rot:-12deg;animation-delay:-5s;}
+  .bg-c4{top:16%;right:5%;--rot:18deg;animation-delay:-2s;}
+  .bg-c5{bottom:22%;left:10%;--rot:-22deg;animation-delay:-4s;}
+  .bg-c6{top:52%;right:7%;--rot:14deg;animation-delay:-6s;}
+  .bg-c7{bottom:8%;right:18%;--rot:-8deg;animation-delay:-7s;}
+  .lhdr,.lbody{position:relative;z-index:1;}
+  .lside{background:rgba(19,23,41,.78)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+  @media (max-width:768px){
+    .bg-card{width:60px;height:90px;font-size:26px;}
+    .bg-c2,.bg-c5{display:none;}
+  }
   .lhdr{
     background:linear-gradient(180deg,var(--bg2),transparent);
     border-bottom:1px solid var(--border);padding:14px 22px;
@@ -1104,6 +1158,15 @@
 
   <!-- ═══ LOBBY ═══ -->
   <div id="lobby-screen" class="screen">
+    <div class="lobby-bg" aria-hidden="true">
+      <div class="bg-card red bg-c1"><span class="bg-num">3</span></div>
+      <div class="bg-card yellow bg-c2"><span class="bg-num">⊘</span></div>
+      <div class="bg-card green bg-c3"><span class="bg-num">9</span></div>
+      <div class="bg-card yellow bg-c4"><span class="bg-num">5</span></div>
+      <div class="bg-card red bg-c5"><span class="bg-num">⊘</span></div>
+      <div class="bg-card red bg-c6"><span class="bg-num">1</span></div>
+      <div class="bg-card wild bg-c7"><span class="bg-num">+4</span></div>
+    </div>
     <div class="lhdr">
       <div class="llogo">UNO</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1681,11 +1744,16 @@
       updateTurnUI();
     });
 
-    sk.on('game:drew_card',({card,canPlay})=>{
+    sk.on('game:drew_card',({card,cards,canPlay,wasStack})=>{
       SFX.play('draw');
       S._skipNextSync=true;
       setTimeout(()=>{S._skipNextSync=false;},2000);
-      if(card){
+      if(wasStack && Array.isArray(cards) && cards.length){
+        for(const c of cards){
+          if(!S.g.myHand.find(x=>x.id===c.id)) S.g.myHand.push(c);
+        }
+        S.g.drawnCardId=null;
+      } else if(card){
         S.g.drawnCardId=card.id;
         if(!S.g.myHand.find(c=>c.id===card.id)){
           S.g.myHand.push(card);
@@ -1769,6 +1837,9 @@
   function renderOpps(players){
     S.g.players=players;
     const row=document.getElementById('orow'),others=players.filter(p=>!isMe(p.id));
+    const newKey=others.map(p=>`${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.isConnected?1:0}:${p.id===S.g.currentTurn?1:0}`).join('|');
+    if(row._lastKey===newKey) return;
+    row._lastKey=newKey;
     row.innerHTML=others.map(p=>{
       const max=Math.min(p.handSize,10);
       const cards=Array.from({length:max},(_,i)=>`
