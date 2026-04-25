@@ -133,7 +133,11 @@
     content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
     background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,.05) 35%,rgba(0,0,0,.55) 100%);
   }
-  .lhdr,.lbody{position:relative;z-index:1;}
+  .lhdr{position:relative;z-index:30;}
+  .lbody{position:relative;z-index:1;}
+  .lobby-menu-wrap{position:relative;z-index:40;}
+  #lobbyMenu.game-menu{z-index:60!important;}
+  #gameMenu.game-menu{z-index:60!important;}
   .lside{background:rgba(19,23,41,.78)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
   .lhdr{
     background:linear-gradient(180deg,var(--bg2),transparent);
