@@ -201,7 +201,7 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Serve client files
 const path = require('path');
@@ -373,6 +373,29 @@ app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
 // REST: Leaderboard
 // ─────────────────────────────────────────
 // Instagram follow reward
+app.post('/api/profile/avatar', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { avatar } = req.body;
+  if (typeof avatar !== 'string' || !avatar.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'Invalid avatar payload' });
+  }
+  if (avatar.length > 4 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Avatar too large (max ~3MB)' });
+  }
+  user.avatar = avatar;
+  saveUsers();
+  res.json({ avatar: user.avatar });
+});
+
+app.delete('/api/profile/avatar', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.avatar = null;
+  saveUsers();
+  res.json({ success: true });
+});
+
 app.post('/api/coins/insta-reward', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -864,6 +887,7 @@ function tryMatchmaking(io, usersDB, roomsDB) {
     const user = usersDB.get(entry.userId);
     if (!user) return;
     const player = new Player(user.id, user.username, user.coins);
+    player.avatar = user.avatar;
     room.game.addPlayer(player);
     room.playerIds.push(user.id);
     const sock = io.sockets.sockets.get(entry.socketId);

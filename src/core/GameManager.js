@@ -33,7 +33,7 @@ class GameManager extends EventEmitter {
       maxPlayers:  4,
       minPlayers:  2,
       handSize:    7,
-      turnTimeout: 7000,
+      turnTimeout: 10000,
       ...settings
     };
     this._deck      = new Deck();
