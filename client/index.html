@@ -540,16 +540,30 @@
   .hcard.drawn{animation:cardDraw .5s var(--transition-smooth);}
   .topcard-land{animation:cardLand .3s var(--transition-smooth);}
   .cancel-float{
-    position:absolute;left:50%;top:56%;transform:translateX(-50%);z-index:15;
+    position:absolute;left:50%;top:58%;transform:translateX(-50%);z-index:25;
     animation:fadeIn .3s ease;
   }
-  .cancel-btn{
-    padding:9px 24px;background:rgba(232,50,74,.15);border:1px solid rgba(232,50,74,.35);
-    border-radius:20px;color:#f87171;font-family:'Outfit',sans-serif;font-size:13px;
-    font-weight:700;cursor:pointer;transition:all .2s;
-    backdrop-filter:blur(8px);
+  @keyframes cancelPulse{
+    0%,100%{box-shadow:0 6px 22px rgba(232,50,74,.5),0 0 0 0 rgba(232,50,74,.7),inset 0 1px 0 rgba(255,255,255,.25);transform:scale(1)}
+    50%{box-shadow:0 8px 28px rgba(232,50,74,.65),0 0 0 12px rgba(232,50,74,0),inset 0 1px 0 rgba(255,255,255,.3);transform:scale(1.04)}
   }
-  .cancel-btn:hover{background:rgba(232,50,74,.25);border-color:rgba(232,50,74,.5);}
+  .cancel-btn{
+    padding:14px 32px;
+    background:linear-gradient(135deg,#E8324A,#9B1B2E);
+    border:2px solid rgba(255,255,255,.35);
+    border-radius:30px;color:#fff;
+    font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;letter-spacing:.5px;
+    cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);
+    text-shadow:0 1px 2px rgba(0,0,0,.3);
+    animation:cancelPulse 1.6s ease-in-out infinite;
+    text-transform:uppercase;
+  }
+  .cancel-btn:hover{
+    transform:scale(1.08) translateY(-2px);
+    background:linear-gradient(135deg,#FF5577,#C1192F);
+    border-color:#fff;
+  }
+  .cancel-btn:active{transform:scale(.96);}
 
   /* ── HUD ── */
   .ghud{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}
@@ -1044,7 +1058,14 @@
     border-radius:10px;font-size:20px;cursor:pointer;transition:all .15s;
     display:flex;align-items:center;justify-content:center;
   }
-  .epick:hover{background:rgba(255,255,255,.12);transform:scale(1.2);}
+  .epick:hover:not(:disabled){background:rgba(255,255,255,.12);transform:scale(1.2);}
+  .epick:disabled{opacity:.35;cursor:not-allowed;}
+  .emoji-cooldown{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:9px;color:#FFB87A;font-weight:800;pointer-events:none;}
+  #emojiPicker.cooling .epick{opacity:.4;cursor:not-allowed;pointer-events:none;}
+  #emojiPicker .cooling-label{
+    grid-column:1/-1;text-align:center;font-size:11px;font-weight:700;
+    color:#FFB87A;padding:2px 0;letter-spacing:.5px;
+  }
   .reaction-fly{
     position:fixed;font-size:42px;pointer-events:none;z-index:90;
     animation:reactionFly 1.6s cubic-bezier(.4,0,.2,1) forwards;
@@ -1861,6 +1882,28 @@
       }
     });
 
+    sk.on('game:auto_played',(data)=>{
+      if(data.players)renderOpps(data.players);
+      const who=(data.players||[]).find(p=>p.id===data.playerId);
+      const name=who?.username||'?';
+      if(data.action==='played' && data.card){
+        if(data.topCard)renderTop(data.topCard);
+        SFX.play('play');
+        toast(`🤖 ${name} (auto) played ${fmtV(data.card.value)}`,'i');
+        if(data.playerId !== S.user?.id){
+          const oppPanel = document.querySelector(`.opanel[data-pid="${data.playerId}"]`);
+          const pileEl   = document.getElementById('topCard');
+          AnimLayer.opponentPlay(data.card, oppPanel, pileEl);
+        }
+      } else if(data.action==='drew'){
+        SFX.play('draw');
+        toast(`🤖 ${name} (auto) drew a card`,'i');
+      } else if(data.action==='stack_taken'){
+        SFX.play('draw');
+        toast(`🤖 ${name} (auto) took ${data.count} stack cards`,'i');
+      }
+    });
+
     sk.on('turn:changed',(data)=>{
       S.g.currentTurn=data.currentPlayerId;S.g.direction=data.direction;
       S.g.drawPileSize=data.drawPileSize;S.g.turnPhase=data.turnPhase||'must_play';
@@ -2481,11 +2524,57 @@
     document.getElementById('emojiPicker').classList.toggle('show');
   }
 
+  const EMOJI_COOLDOWN_MS = 5000;
+  let _emojiNextAt = 0;
+  let _emojiCooldownTimer = null;
+
+  function _getCardAreaCenter(){
+    const top = document.getElementById('topcard');
+    const r = top?.getBoundingClientRect();
+    if(r && r.width){
+      return { x: r.left + r.width/2, y: r.top + r.height/2 };
+    }
+    return { x: window.innerWidth/2, y: window.innerHeight/2 };
+  }
+
+  function _renderEmojiCooldown(remainingMs){
+    const picker = document.getElementById('emojiPicker');
+    if(!picker) return;
+    const existing = picker.querySelector('.cooling-label');
+    if(remainingMs <= 0){
+      picker.classList.remove('cooling');
+      if(existing) existing.remove();
+      return;
+    }
+    picker.classList.add('cooling');
+    const txt = `⏳ Wait ${Math.ceil(remainingMs/1000)}s`;
+    if(existing){existing.textContent = txt;return;}
+    const lbl = document.createElement('div');
+    lbl.className='cooling-label';lbl.textContent=txt;
+    picker.appendChild(lbl);
+  }
+
   function sendReaction(emoji){
-    document.getElementById('emojiPicker').classList.remove('show');
     if(!S.socket||!S.roomId) return;
-    showReactionFly(emoji, window.innerWidth/2, window.innerHeight/2, true);
+    const now = Date.now();
+    const remaining = _emojiNextAt - now;
+    if(remaining > 0){
+      toast(`⏳ Wait ${Math.ceil(remaining/1000)}s before next emoji`,'i');
+      _renderEmojiCooldown(remaining);
+      return;
+    }
+    document.getElementById('emojiPicker').classList.remove('show');
+    const center = _getCardAreaCenter();
+    showReactionFly(emoji, center.x, center.y, true);
     S.socket.emit('game:reaction',{emoji});
+    _emojiNextAt = now + EMOJI_COOLDOWN_MS;
+    _renderEmojiCooldown(EMOJI_COOLDOWN_MS);
+    if(_emojiCooldownTimer) clearInterval(_emojiCooldownTimer);
+    _emojiCooldownTimer = setInterval(()=>{
+      const left = _emojiNextAt - Date.now();
+      _renderEmojiCooldown(left);
+      if(left <= 0){clearInterval(_emojiCooldownTimer);_emojiCooldownTimer=null;}
+    }, 250);
   }
 
   function showReactionFly(emoji, x, y, isMine){
@@ -2499,15 +2588,16 @@
 
   function showReactionOnPanel(emoji, playerId){
     const panel = document.querySelector(`.opanel[data-pid="${playerId}"]`);
-    if(!panel) return;
-    const badge = document.createElement('div');
-    badge.className='reaction-badge';
-    badge.textContent=emoji;
-    panel.style.position='relative';
-    panel.appendChild(badge);
-    setTimeout(()=>badge.remove(),2100);
-    const r = panel.getBoundingClientRect();
-    showReactionFly(emoji, r.left+r.width/2, r.top, false);
+    if(panel){
+      const badge = document.createElement('div');
+      badge.className='reaction-badge';
+      badge.textContent=emoji;
+      panel.style.position='relative';
+      panel.appendChild(badge);
+      setTimeout(()=>badge.remove(),2100);
+    }
+    const center = _getCardAreaCenter();
+    showReactionFly(emoji, center.x, center.y, false);
   }
 
   /* ═══ PRIVATE ROOM CODE ═══ */

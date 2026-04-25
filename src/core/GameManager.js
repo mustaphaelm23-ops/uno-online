@@ -33,7 +33,7 @@ class GameManager extends EventEmitter {
       maxPlayers:  4,
       minPlayers:  2,
       handSize:    7,
-      turnTimeout: 30000,
+      turnTimeout: 5000,
       ...settings
     };
     this._deck      = new Deck();
@@ -339,20 +339,118 @@ class GameManager extends EventEmitter {
   _startTurnTimer() {
     this._turnTimer = setTimeout(() => {
       if (this._phase !== PHASE.PLAYING) return;
-      console.log(`[Timeout] ${this.current?.username} timed out`);
+      console.log(`[Timeout] ${this.current?.username} timed out — bot taking over`);
       if (this._turnPhase === TURN_PHASE.DREW_CARD) {
         this._drawnCard = null;
         this._drawnBy   = null;
         this._advance();
       } else {
-        const p = this.current;
-        if (p) {
-          const c = this._deck.draw();
-          if (c) p.addCards([c]);
-        }
-        this._advance();
+        this._playBotTurn();
       }
     }, this.settings.turnTimeout);
+  }
+
+  _playBotTurn() {
+    const player = this.current;
+    if (!player || this._phase !== PHASE.PLAYING) return;
+    const top = this._deck.top();
+
+    if (this._stackDraw > 0) {
+      const need = top?.value === VALUES.WILD_DRAW_FOUR
+        ? [VALUES.WILD_DRAW_FOUR]
+        : top?.value === VALUES.DRAW_TWO
+          ? [VALUES.DRAW_TWO, VALUES.WILD_DRAW_FOUR]
+          : [];
+      const counter = player.handRaw.find(c => need.includes(c.value));
+      if (counter && Math.random() < 0.5) {
+        return this._botPlay(player, counter);
+      }
+      const cards = this._deck.drawMany(this._stackDraw);
+      player.addCards(cards);
+      this._log.unshift(`${player.username} (auto) took ${this._stackDraw} stack cards`);
+      this._stackDraw = 0;
+      this.emit('game:auto_played', {
+        playerId: player.id, action: 'stack_taken', count: cards.length,
+        players: this._players.map(p => p.toPublicJSON()),
+      });
+      this._advance();
+      return;
+    }
+
+    const playable = player.getPlayable(top);
+    if (playable.length > 0) {
+      const card = playable[Math.floor(Math.random() * playable.length)];
+      return this._botPlay(player, card);
+    }
+
+    const drawn = this._deck.draw();
+    if (drawn) {
+      player.addCards([drawn]);
+      this._log.unshift(`${player.username} (auto) drew a card`);
+      this.emit('game:auto_played', {
+        playerId: player.id, action: 'drew', count: 1,
+        players: this._players.map(p => p.toPublicJSON()),
+      });
+      if (this._rules.isPlayable(drawn, top)) {
+        setTimeout(() => {
+          if (this._phase === PHASE.PLAYING && this.current?.id === player.id) {
+            this._botPlay(player, drawn);
+          }
+        }, 500);
+        return;
+      }
+    }
+    this._advance();
+  }
+
+  _botPlay(player, card) {
+    if (card.isWild) card.chosenColor = this._pickBotColor(player);
+    this._clearTimers();
+    this._drawnCard = null;
+    this._drawnBy   = null;
+
+    player.removeCard(card.id);
+    player.saidUno = false;
+    this._deck.discard(card);
+    this._log.unshift(`${player.username} (auto) played ${card.toString()}`);
+
+    if (player.hasWon()) return this._handleWin(player, card);
+
+    const eff = this._rules.resolve(card, this._players.length, this._dir, this._curIdx);
+    if (eff.dirChanged) {
+      this._dir = eff.newDir;
+      this.emit(EV.DIR, { direction: this._dir });
+    } else {
+      this._dir = eff.newDir;
+    }
+    if (eff.draw > 0) this._stackDraw += eff.draw;
+    this._curIdx = eff.nextIdx;
+
+    this.emit('game:auto_played', {
+      playerId: player.id,
+      action: 'played',
+      card: card.toJSON(),
+      topCard: this._deck.top()?.toJSON(),
+      players: this._players.map(p => p.toPublicJSON()),
+    });
+
+    this._setTurnPhase(TURN_PHASE.MUST_PLAY);
+    this._startTurnTimer();
+    this._broadcastState();
+  }
+
+  _pickBotColor(player) {
+    const counts = { red:0, blue:0, green:0, yellow:0 };
+    player.handRaw.forEach(c => {
+      if (counts[c.color] !== undefined) counts[c.color]++;
+    });
+    const max = Math.max(...Object.values(counts));
+    if (max === 0) {
+      const colors = ['red','blue','green','yellow'];
+      return colors[Math.floor(Math.random() * 4)];
+    }
+    const best = Object.keys(counts).filter(k => counts[k] === max);
+    return best[Math.floor(Math.random() * best.length)];
   }
 
   _clearTimers() {
