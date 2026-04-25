@@ -182,6 +182,187 @@
   .rcard:hover::before{opacity:1;}
 
   /* ═══════════════════════════════════════════
+    LOBBY POLISH — animations & premium feel
+    ═══════════════════════════════════════════ */
+  @keyframes lobbyEntry{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes lobbyEntryUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 10px rgba(245,158,11,.4)) drop-shadow(0 0 22px rgba(232,50,74,.25));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(245,158,11,.7)) drop-shadow(0 0 38px rgba(232,50,74,.4));transform:scale(1.05)}}
+  @keyframes shineSweepLobby{0%{transform:translateX(-150%) skewX(-25deg)}100%{transform:translateX(260%) skewX(-25deg)}}
+  @keyframes goldShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  @keyframes coinSparkle{0%,100%{box-shadow:0 4px 16px rgba(245,158,11,.35),inset 0 1px 0 rgba(255,255,255,.4),0 0 0 0 rgba(255,215,0,.55)}50%{box-shadow:0 6px 22px rgba(245,158,11,.55),inset 0 1px 0 rgba(255,255,255,.5),0 0 0 6px rgba(255,215,0,0)}}
+  @keyframes idleBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  /* Animated logo */
+  .llogo{
+    font-size:30px;letter-spacing:4px;
+    background:linear-gradient(110deg,#FFD700 0%,#FB923C 30%,#E8324A 55%,#F59E0B 80%,#FFD700 100%);
+    background-size:200% 200%;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    animation:logoPulse 2.8s ease-in-out infinite, goldShimmer 5s linear infinite;
+  }
+
+  /* Header coin pill — gold themed */
+  .coin-pill-hdr{
+    background:linear-gradient(135deg,#FFD700,#F59E0B,#D97706)!important;
+    border:1px solid rgba(255,255,255,.4)!important;
+    color:#3F1F0A!important;
+    position:relative;overflow:hidden;
+    animation:coinSparkle 2.5s ease-in-out infinite;
+  }
+  .coin-pill-hdr::before{
+    content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);
+    background-size:200% 100%;
+    animation:goldShimmer 3s linear infinite;
+  }
+  .coin-pill-hdr svg,.coin-pill-hdr span{position:relative;z-index:1}
+
+  /* Header username pill */
+  #huser{
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;padding:5px 12px;backdrop-filter:blur(6px);
+    transition:all .25s;
+  }
+  #huser:hover{border-color:var(--accent);background:rgba(245,158,11,.1);transform:translateY(-1px);}
+
+  /* Header buttons polish */
+  .lhdr .btnS{
+    transition:all .3s cubic-bezier(.34,1.56,.64,1);
+    background:rgba(255,255,255,.06)!important;
+    border:1px solid rgba(255,255,255,.15)!important;
+  }
+  .lhdr .btnS:hover{
+    transform:translateY(-2px) rotate(-6deg);
+    box-shadow:0 6px 18px rgba(245,158,11,.3);
+    border-color:var(--accent)!important;
+    background:rgba(245,158,11,.12)!important;
+  }
+
+  /* Sidebar */
+  .lside{
+    border-right:1px solid rgba(255,255,255,.08)!important;
+    box-shadow:8px 0 32px rgba(0,0,0,.4);
+  }
+  .lside .stitle{
+    position:relative;padding-left:14px;margin-top:6px;
+    color:#FFB87A;font-size:11px;
+  }
+  .lside .stitle::before{
+    content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:3px;height:14px;border-radius:2px;
+    background:linear-gradient(180deg,#FFD700,#E8324A);
+    box-shadow:0 0 10px rgba(245,158,11,.6);
+  }
+
+  /* Sidebar items — staggered entrance */
+  .lside > *{animation:lobbyEntry .55s cubic-bezier(.16,1,.3,1) backwards}
+  .lside > *:nth-child(1){animation-delay:.02s}
+  .lside > *:nth-child(2){animation-delay:.06s}
+  .lside > *:nth-child(3){animation-delay:.10s}
+  .lside > *:nth-child(4){animation-delay:.14s}
+  .lside > *:nth-child(5){animation-delay:.18s}
+  .lside > *:nth-child(6){animation-delay:.22s}
+  .lside > *:nth-child(7){animation-delay:.26s}
+  .lside > *:nth-child(8){animation-delay:.30s}
+  .lside > *:nth-child(9){animation-delay:.34s}
+  .lside > *:nth-child(10){animation-delay:.38s}
+  .lside > *:nth-child(11){animation-delay:.42s}
+  .lside > *:nth-child(12){animation-delay:.46s}
+  .lside > *:nth-child(13){animation-delay:.50s}
+
+  /* Sidebar buttons — shine sweep on hover + better hover */
+  .lside .btnA{
+    transition:all .3s cubic-bezier(.34,1.4,.64,1);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .lside .btnA::before{
+    content:'';position:absolute;top:0;left:0;width:55%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+    transform:translateX(-220%) skewX(-25deg);
+    pointer-events:none;
+  }
+  .lside .btnA:hover::before{
+    animation:shineSweepLobby .85s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  .lside .btnA:hover{
+    transform:translateY(-3px) scale(1.025);
+    filter:brightness(1.12) saturate(1.18);
+    box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 28px rgba(255,255,255,.06);
+    border-color:rgba(255,255,255,.18);
+  }
+  .lside .btnA:active{transform:translateY(0) scale(.98);}
+
+  /* Sidebar coins display — gold */
+  .coins-display-side{
+    background:linear-gradient(135deg,rgba(255,215,0,.14),rgba(245,158,11,.05))!important;
+    border:1px solid rgba(255,215,0,.3)!important;
+    position:relative;overflow:hidden;
+    transition:all .3s;
+  }
+  .coins-display-side:hover{
+    border-color:rgba(255,215,0,.6)!important;
+    box-shadow:0 4px 22px rgba(245,158,11,.25);
+    transform:translateY(-2px);
+  }
+  .coins-display-side::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,215,0,.18) 50%,transparent 70%);
+    background-size:200% 100%;
+    animation:goldShimmer 4s linear infinite;
+  }
+  .coins-display-side > *{position:relative;z-index:1}
+  #scoins{
+    background:linear-gradient(135deg,#FFD700,#F59E0B);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    text-shadow:none;letter-spacing:1px;
+  }
+
+  /* Public Rooms area */
+  .lmain{position:relative;z-index:1}
+  .public-title{
+    font-family:'Bangers',cursive;font-size:30px;letter-spacing:2px;
+    background:linear-gradient(135deg,#FFD700,#FB923C,#E8324A);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    margin:0;line-height:1;
+  }
+  .public-info{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;font-weight:600}
+  .btnI{
+    width:46px;height:46px;border-radius:12px;
+    background:linear-gradient(135deg,#2563EB,#1D4ED8);
+    border:1px solid rgba(255,255,255,.2);color:#fff;font-size:20px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 14px rgba(37,99,235,.35);
+    transition:all .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .btnI:hover{transform:rotate(180deg) scale(1.08);box-shadow:0 6px 22px rgba(37,99,235,.5);}
+  .btnI:active{transform:rotate(180deg) scale(.95);}
+
+  /* Empty state */
+  .rooms-empty{
+    grid-column:1/-1;text-align:center;padding:60px 20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+    border:1.5px dashed rgba(255,255,255,.18);border-radius:18px;
+    color:#fff;animation:lobbyEntryUp .6s cubic-bezier(.16,1,.3,1);
+  }
+  .rooms-empty-icon{
+    font-size:64px;display:inline-block;margin-bottom:14px;
+    animation:idleBob 2.6s ease-in-out infinite;
+    filter:drop-shadow(0 8px 18px rgba(0,0,0,.5));
+  }
+  .rooms-empty-title{font-family:'Bangers',cursive;font-size:24px;letter-spacing:2px;color:#fff;margin-bottom:4px}
+  .rooms-empty-sub{font-size:13px;color:rgba(255,255,255,.7)}
+
+  /* Room cards stagger */
+  .rgrid > .rcard{animation:lobbyEntryUp .5s cubic-bezier(.16,1,.3,1) backwards}
+  .rgrid > .rcard:nth-child(1){animation-delay:0s}
+  .rgrid > .rcard:nth-child(2){animation-delay:.06s}
+  .rgrid > .rcard:nth-child(3){animation-delay:.12s}
+  .rgrid > .rcard:nth-child(4){animation-delay:.18s}
+  .rgrid > .rcard:nth-child(5){animation-delay:.24s}
+  .rgrid > .rcard:nth-child(6){animation-delay:.30s}
+  .rgrid > .rcard:nth-child(n+7){animation-delay:.36s}
+
+  /* ═══════════════════════════════════════════
     ROOM WAITING SCREEN
     ═══════════════════════════════════════════ */
   #room-screen{
@@ -1117,7 +1298,7 @@
     <div class="lhdr">
       <div class="llogo">UNO</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-weight:800;font-size:12px;display:flex;align-items:center;gap:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#F59E0B"/><circle cx="12" cy="12" r="7" fill="#D97706" opacity=".3"/><text x="12" y="16" text-anchor="middle" fill="#92400E" font-size="12" font-weight="900" font-family="Arial">$</text></svg><span id="hcoins">0</span></div>
+        <div class="coin-pill-hdr" style="border-radius:20px;padding:6px 14px;font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#FFFBEB" stroke="#92400E" stroke-width="1.5"/><circle cx="12" cy="12" r="7" fill="#FCD34D"/><text x="12" y="16" text-anchor="middle" fill="#78350F" font-size="11" font-weight="900" font-family="Arial">$</text></svg><span id="hcoins">0</span></div>
         <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
         <div class="lobby-menu-wrap" style="position:relative">
           <button class="btnS" onclick="toggleFriendsPanel()" id="friendsLobbyBtn" style="position:relative">👥<span class="friends-notif" id="friendsNotifLobby" style="position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;"></span></button>
@@ -1145,16 +1326,16 @@
         <div class="stitle" style="margin-top:14px">Account</div>
         <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25)" onclick="showProfile()">👤 My Profile</button>
         <button class="btnA" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;box-shadow:0 4px 12px rgba(245,158,11,.25)" onclick="showLeaderboard()">🏆 Leaderboard</button>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Coins</div>
-          <div style="font-size:26px;font-weight:900;color:var(--yellow)" id="scoins">0</div>
+        <div class="coins-display-side" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:6px">
+          <div style="font-size:10px;color:#FFB87A;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px">💰 Coins</div>
+          <div style="font-size:28px;font-weight:900" id="scoins">0</div>
         </div>
       </div>
       <div class="lmain">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
           <div>
-            <div style="font-size:20px;font-weight:900">Public Rooms</div>
-            <div style="font-size:12px;color:var(--muted)" id="rinfo">Loading...</div>
+            <div class="public-title">🃏 Public Rooms</div>
+            <div class="public-info" id="rinfo">Loading...</div>
           </div>
           <button class="btnI" onclick="loadRooms()" title="Refresh">🔄</button>
         </div>
@@ -1851,7 +2032,7 @@
     try{
       const d=await api('GET','/rooms'),g=document.getElementById('rgrid');
       document.getElementById('rinfo').textContent=`${d.rooms.length} room(s) available`;
-      if(!d.rooms.length){g.innerHTML=`<div style="color:var(--muted);padding:40px;text-align:center;grid-column:1/-1;font-weight:700;font-size:14px">No rooms — create one! 🃏</div>`;return;}
+      if(!d.rooms.length){g.innerHTML=`<div class="rooms-empty"><div class="rooms-empty-icon">🃏</div><div class="rooms-empty-title">No rooms yet</div><div class="rooms-empty-sub">Create a room or hit Quick Match to start playing!</div></div>`;return;}
       g.innerHTML=d.rooms.map(r=>`
         <div class="rcard" onclick="doJoin('${r.id}')">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;position:relative;z-index:1">
