@@ -205,7 +205,14 @@ app.use(express.json({ limit: '5mb' }));
 
 // Serve client files
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../client')));
+app.use(express.static(path.join(__dirname, '../client'), {
+  setHeaders(res, filePath) {
+    // Service worker and manifest must always revalidate so updates roll out
+    if (filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 // ─────────────────────────────────────────
 // JWT AUTH

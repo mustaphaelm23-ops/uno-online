@@ -2,8 +2,17 @@
   <html lang="en">
   <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
   <title>UNO Online</title>
+  <meta name="description" content="Play UNO online with friends in real time."/>
+  <meta name="theme-color" content="#E8324A"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="UNO"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="/icon.svg"/>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
   :root{
@@ -1562,6 +1571,7 @@
             <div class="game-menu-title">Settings</div>
             <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 Profile</button>
             <button class="game-menu-item" onclick="showLeaderboard();document.getElementById('lobbyMenu').classList.remove('show')">🏆 Leaderboard</button>
+            <button class="game-menu-item" onclick="pwaInstall();document.getElementById('lobbyMenu').classList.remove('show')">📲 Install App</button>
             <button class="game-menu-item" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ Admin Panel</button>
             <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 Logout</button>
           </div>
@@ -3379,6 +3389,27 @@
     if(e.code==='Space'){e.preventDefault();doDraw();}
     if(e.code==='KeyC')doCancel();
   });
+
+  /* ═══ PWA: Service Worker ═══ */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[PWA] SW registration failed:', e));
+    });
+  }
+  /* Listen for the install prompt so we can offer it from the lobby gear menu later */
+  window._pwaInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window._pwaInstallPrompt = e;
+  });
+  function pwaInstall(){
+    if(!window._pwaInstallPrompt) return toast('Already installed or not supported on this device','i');
+    window._pwaInstallPrompt.prompt();
+    window._pwaInstallPrompt.userChoice.then((c)=>{
+      if(c.outcome==='accepted') toast('App installed! 🎉','s');
+      window._pwaInstallPrompt = null;
+    });
+  }
   </script>
   </body>
   </html>
