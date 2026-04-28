@@ -125,6 +125,7 @@ async function saveUsers() {
 const roomsDB = new Map();
 const matchmakingQueue = [];
 const socketToUser = new Map();
+const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 
 // ─────────────────────────────────────────
 // USER RECORD
@@ -798,13 +799,27 @@ io.on('connection', (socket) => {
   // ── Voice chat: WebRTC signaling (offer/answer/ICE relay) ──
   // Audio itself never touches the server — these events only let peers
   // discover each other and exchange SDP/ICE so they can talk P2P.
+  // Server tracks voice participants per room so the new joiner knows
+  // exactly who to initiate offers to (avoids SDP glare from both sides
+  // trying to be the caller simultaneously).
   socket.on('voice:join', () => {
-    if (!socket.currentRoomId) return;
-    socket.to(socket.currentRoomId).emit('voice:peer_joined', { peerId: userId });
+    const rid = socket.currentRoomId;
+    if (!rid) return;
+    if (!voiceRooms.has(rid)) voiceRooms.set(rid, new Set());
+    const set = voiceRooms.get(rid);
+    const existing = [...set].filter(id => id !== userId);
+    // Tell the new joiner who's already in voice — they'll send offers
+    socket.emit('voice:peers', { peers: existing });
+    set.add(userId);
+    // Notify others that a new peer joined (they wait for the offer)
+    socket.to(rid).emit('voice:peer_joined', { peerId: userId });
   });
   socket.on('voice:leave', () => {
-    if (!socket.currentRoomId) return;
-    socket.to(socket.currentRoomId).emit('voice:peer_left', { peerId: userId });
+    const rid = socket.currentRoomId;
+    if (!rid) return;
+    voiceRooms.get(rid)?.delete(userId);
+    if (voiceRooms.get(rid)?.size === 0) voiceRooms.delete(rid);
+    socket.to(rid).emit('voice:peer_left', { peerId: userId });
   });
   socket.on('voice:signal', ({ to, kind, payload } = {}) => {
     if (!socket.currentRoomId || !to || !kind) return;
@@ -864,6 +879,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
     socketToUser.delete(socket.id);
     const roomId = socket.currentRoomId;
+    // Drop from voice room if applicable so peers can clean up
+    if (roomId && voiceRooms.has(roomId)) {
+      voiceRooms.get(roomId).delete(userId);
+      if (voiceRooms.get(roomId).size === 0) voiceRooms.delete(roomId);
+      socket.to(roomId).emit('voice:peer_left', { peerId: userId });
+    }
     if (roomId) handlePlayerLeave(socket, roomId);
     const idx = matchmakingQueue.findIndex(e => e.userId === userId);
     if (idx !== -1) matchmakingQueue.splice(idx, 1);

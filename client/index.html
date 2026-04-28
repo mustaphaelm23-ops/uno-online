@@ -2311,10 +2311,13 @@
     });
 
     /* Voice chat signaling */
-    sk.on('voice:peer_joined', ({ peerId }) => {
+    sk.on('voice:peers', ({ peers }) => {
+      // Sent only to us right after we join — initiate offers to existing peers
       if (!VoiceChat.isOn) return;
-      // We're already in voice; reach out to the new peer with an offer
-      VoiceChat._ensurePeer(peerId, true);
+      (peers || []).forEach((peerId) => VoiceChat._ensurePeer(peerId, true));
+    });
+    sk.on('voice:peer_joined', () => {
+      // A new peer just joined voice. They will initiate to us — we just wait.
     });
     sk.on('voice:peer_left', ({ peerId }) => {
       VoiceChat._dropPeer(peerId);
@@ -2442,6 +2445,9 @@
     initChatListeners(sk);
 
     sk.on('game:state',(state)=>{
+      // Reset start-button guard so future restarts work
+      const startBtn=document.getElementById('bstart');
+      if(startBtn){startBtn.dataset.starting='';startBtn.disabled=true;startBtn.textContent='Waiting for players...';}
       S.calledUNO=false;applyFullState(state);showScreen('game-screen');
       toast('Game started! 🎮','s');SFX.play('turn');
       showChatFab(true);addActivityMsg('🎮 Game has started!','game');
@@ -2784,10 +2790,22 @@
         ${tag}
       </div>`;
     }).join('');
+    // Don't override the button while the host is mid-start — let doStart manage it
+    if(btn?.dataset.starting==='1') return;
     if(host){btn.disabled=!ok;btn.textContent=ok?'🎮 Start Game!':`Need ${2-players.length} more`;}
     else{btn.disabled=true;btn.textContent='Waiting for host...';}
   }
-  function doStart(){S.socket.emit('game:start',{},(res)=>{if(!res.success)toast(res.reason,'e');});}
+  function doStart(){
+    const btn=document.getElementById('bstart');
+    if(btn?.dataset.starting==='1') return;
+    if(btn){btn.dataset.starting='1';btn.disabled=true;btn.textContent='Starting...';}
+    S.socket.emit('game:start',{},(res)=>{
+      if(!res.success){
+        if(btn){btn.dataset.starting='';btn.disabled=false;btn.textContent='🎮 Start Game!';}
+        toast(res.reason,'e');
+      }
+    });
+  }
   function doLeaveRoom(){S.socket.emit('room:leave',{},()=>{S.roomId=null;goLobby();});}
   async function doDaily(){
     try{const d=await api('POST','/coins/claim-daily');S.user.coins=d.coins;localStorage.setItem('uno_user',JSON.stringify(S.user));goLobby();toast(`🎁 +${d.earned} coins!`,'s');}
