@@ -2021,6 +2021,11 @@
     _stunServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      // Free public TURN relays (Open Relay Project) — needed when both
+      // peers are behind symmetric NAT (mobile carriers, some ISPs)
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
     ],
 
     async toggle(){
@@ -2099,15 +2104,20 @@
 
       // Receive remote audio
       pc.ontrack = (ev) => {
+        console.log('[Voice] ontrack from', remoteId, 'kind:', ev.track.kind);
         let audio = this.audioEls.get(remoteId);
         if (!audio) {
           audio = document.createElement('audio');
           audio.autoplay = true;
           audio.playsInline = true;
+          audio.controls = false;
           document.getElementById('voiceAudios')?.appendChild(audio);
           this.audioEls.set(remoteId, audio);
         }
-        audio.srcObject = ev.streams[0];
+        const stream = ev.streams[0] || new MediaStream([ev.track]);
+        audio.srcObject = stream;
+        // Some browsers/Safari refuse autoplay until we explicitly call play()
+        audio.play().catch((e) => console.warn('[Voice] audio play() blocked:', e?.name));
       };
 
       pc.onicecandidate = (ev) => {
@@ -2116,7 +2126,15 @@
         }
       };
 
+      pc.oniceconnectionstatechange = () => {
+        console.log('[Voice]', remoteId, 'ice state:', pc.iceConnectionState);
+      };
+
       pc.onconnectionstatechange = () => {
+        console.log('[Voice]', remoteId, 'conn state:', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          toast('🎧 Voice connected','s');
+        }
         if (['failed','disconnected','closed'].includes(pc.connectionState)) {
           this._dropPeer(remoteId);
         }
@@ -2468,9 +2486,10 @@
         });
       }, 200);
     });
-    sk.on('game:state_update',(state)=>{applyFullState(state);});
+    sk.on('game:state_update',(state)=>{if(!S.roomId)return;applyFullState(state);});
 
     sk.on('game:card_played',(data)=>{
+      if(!S.roomId)return; // Ignore stale events after leaving the game
       if(data.topCard)renderTop(data.topCard);
       if(data.players)renderOpps(data.players);
       SFX.play('play');
@@ -2486,6 +2505,7 @@
     });
 
     sk.on('game:auto_played',(data)=>{
+      if(!S.roomId)return;
       if(data.players)renderOpps(data.players);
       const who=(data.players||[]).find(p=>p.id===data.playerId);
       const name=who?.username||'?';
@@ -2520,6 +2540,7 @@
     });
 
     sk.on('turn:changed',(data)=>{
+      if(!S.roomId)return;
       S.g.currentTurn=data.currentPlayerId;S.g.direction=data.direction;
       S.g.drawPileSize=data.drawPileSize;S.g.turnPhase=data.turnPhase||'must_play';
       S.g.drawnCardId=data.drawnCardId||null;S.g.stackDraw=data.stackDraw||0;
@@ -2531,6 +2552,7 @@
     });
 
     sk.on('game:drew_card',({card,cards,canPlay,wasStack})=>{
+      if(!S.roomId)return;
       SFX.play('draw');
       S._skipNextSync=true;
       setTimeout(()=>{S._skipNextSync=false;},2000);
@@ -2558,6 +2580,7 @@
     });
 
     sk.on('game:player_drew',({playerId,count})=>{
+      if(!S.roomId)return;
       const p=S.g.players.find(p=>p.id===playerId);
       Voice.sayDraw(count||1);
       if(p&&!isMe(p.id)){
@@ -3103,7 +3126,16 @@
     document.getElementById('winov').classList.add('show');
     if(iWon)confetti();
   }
-  function backLobby(){document.getElementById('winov').classList.remove('show');S.roomId=null;goLobby();}
+  function backLobby(){
+    document.getElementById('winov').classList.remove('show');
+    // Tell the server we're leaving the (already finished) room so it stops
+    // routing any lingering events to us, then go to lobby
+    if(S.roomId && S.socket){
+      S.socket.emit('room:leave',{},()=>{ S.roomId=null; goLobby(); });
+    } else {
+      S.roomId=null; goLobby();
+    }
+  }
 
   function confetti(){
     const cols=['#E8324A','#F59E0B','#16A34A','#2563EB','#7C3AED','#EC4899','#06B6D4','#fff'];
