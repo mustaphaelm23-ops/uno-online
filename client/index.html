@@ -1286,6 +1286,53 @@
   }
   #emojiBtn.visible{display:flex;}
   #emojiBtn:hover{border-color:var(--accent);transform:scale(1.12);}
+
+  /* Voice chat — mic button */
+  #micBtn{
+    position:fixed;right:12px;bottom:184px;z-index:40;
+    width:46px;height:46px;border-radius:50%;
+    background:linear-gradient(135deg,var(--bg2),var(--bg3));
+    border:1px solid var(--border);
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;font-size:20px;transition:all .25s cubic-bezier(.34,1.56,.64,1);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  #micBtn.visible{display:flex;}
+  #micBtn:hover{border-color:var(--accent);transform:scale(1.12);}
+  #micBtn.on{
+    background:linear-gradient(135deg,#16A34A,#15803D);
+    border-color:rgba(255,255,255,.35);
+    box-shadow:0 6px 22px rgba(22,163,74,.55),0 0 0 0 rgba(22,163,74,.6);
+    animation:micPulse 1.6s ease-in-out infinite;
+  }
+  #micBtn.muted{
+    background:linear-gradient(135deg,#7A1F2A,#3F0E15);
+    border-color:rgba(232,50,74,.6);
+    color:#fca5a5;
+  }
+  #micBtn.muted::after{
+    content:'';position:absolute;width:4px;height:28px;
+    background:#fca5a5;transform:rotate(45deg);
+    border-radius:2px;box-shadow:0 0 0 2px rgba(0,0,0,.4);
+  }
+  @keyframes micPulse{
+    0%,100%{box-shadow:0 6px 22px rgba(22,163,74,.55),0 0 0 0 rgba(22,163,74,.6);}
+    50%{box-shadow:0 6px 24px rgba(22,163,74,.7),0 0 0 10px rgba(22,163,74,0);}
+  }
+  /* Speaking indicator on opponent panels */
+  .opp-avatar.speaking{
+    border-color:#22C55E!important;
+    box-shadow:0 0 0 3px rgba(34,197,94,.5),0 2px 8px rgba(0,0,0,.4);
+    animation:oppSpeaking 1.2s ease-in-out infinite;
+  }
+  @keyframes oppSpeaking{
+    0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.5),0 2px 10px rgba(34,197,94,.4);}
+    50%{box-shadow:0 0 0 6px rgba(34,197,94,.25),0 2px 14px rgba(34,197,94,.6);}
+  }
+  .opanel.me-speaking .opp-avatar{
+    border-color:#22C55E!important;
+    animation:oppSpeaking 1.2s ease-in-out infinite;
+  }
   #emojiPicker{
     position:fixed;right:10px;bottom:185px;z-index:41;
     background:linear-gradient(145deg,var(--bg2),var(--bg3));
@@ -1862,6 +1909,8 @@
   </div>
   <!-- Emoji Reactions -->
   <button id="emojiBtn" onclick="toggleEmojiPicker()" title="React">😄</button>
+  <button id="micBtn" onclick="VoiceChat.toggle()" title="Voice chat">🎤</button>
+  <div id="voiceAudios" style="position:absolute;left:-9999px;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
   <div id="emojiPicker">
     <button class="epick" onclick="sendReaction('😂')">😂</button>
     <button class="epick" onclick="sendReaction('🔥')">🔥</button>
@@ -1943,6 +1992,207 @@
       this.say(words[n] || `draw ${n}`);
     }
   };
+
+  /* ═══════════════════════════════════════════
+    VOICE CHAT — peer-to-peer over WebRTC
+    Uses the existing socket.io connection only for SDP/ICE signaling.
+    Audio itself goes directly between players (no server bandwidth).
+    ═══════════════════════════════════════════ */
+  const VoiceChat = {
+    isOn: false,
+    isMuted: false,
+    localStream: null,
+    peers: new Map(),       // remoteUserId -> RTCPeerConnection
+    audioEls: new Map(),    // remoteUserId -> HTMLAudioElement
+    _level: { ctx:null, analyser:null, raf:null, lastSpeaking:false },
+    _stunServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+
+    async toggle(){
+      if (!S.roomId) return toast('Join a game first','i');
+      if (this.isOn) return this.leave();
+      try {
+        await this.join();
+      } catch(e){
+        console.warn('[Voice] join failed', e);
+        toast(e.name === 'NotAllowedError' ? '🎤 Microphone permission denied' : 'Voice chat failed','e');
+      }
+    },
+
+    async join(){
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+        video: false,
+      });
+      this.isOn = true;
+      this.isMuted = false;
+      this._updateBtn();
+      this._startLevelMonitor();
+      // Tell others we joined — they will reach back with offers
+      S.socket?.emit('voice:join');
+      toast('🎤 Voice chat ON','s');
+    },
+
+    leave(){
+      this.isOn = false;
+      this._stopLevelMonitor();
+      // Tell peers we left so they tear down on their side too
+      S.socket?.emit('voice:leave');
+      // Close all peer connections
+      this.peers.forEach((pc) => { try{ pc.close(); }catch(e){} });
+      this.peers.clear();
+      // Remove remote audio elements
+      this.audioEls.forEach((a) => { try{ a.srcObject = null; a.remove(); }catch(e){} });
+      this.audioEls.clear();
+      // Stop local mic
+      if (this.localStream) {
+        this.localStream.getTracks().forEach((t) => t.stop());
+        this.localStream = null;
+      }
+      // Clear any speaking indicators on opponents
+      document.querySelectorAll('.opp-avatar.speaking').forEach(el => el.classList.remove('speaking'));
+      this._updateBtn();
+    },
+
+    toggleMute(){
+      if (!this.isOn || !this.localStream) return;
+      this.isMuted = !this.isMuted;
+      this.localStream.getAudioTracks().forEach((t) => { t.enabled = !this.isMuted; });
+      if (this.isMuted) S.socket?.emit('voice:speaking', { speaking:false });
+      this._updateBtn();
+      toast(this.isMuted ? '🔇 Mic muted' : '🎤 Mic on','i');
+    },
+
+    _updateBtn(){
+      const btn = document.getElementById('micBtn');
+      if (!btn) return;
+      btn.classList.toggle('on', this.isOn && !this.isMuted);
+      btn.classList.toggle('muted', this.isOn && this.isMuted);
+      btn.title = this.isOn ? (this.isMuted ? 'Unmute (long press to leave)' : 'Mute (long press to leave)') : 'Voice chat';
+    },
+
+    _peerConfig(){ return { iceServers: this._stunServers }; },
+
+    _ensurePeer(remoteId, isInitiator){
+      if (this.peers.has(remoteId)) return this.peers.get(remoteId);
+      const pc = new RTCPeerConnection(this._peerConfig());
+
+      // Send our local audio track(s)
+      if (this.localStream) {
+        this.localStream.getTracks().forEach((t) => pc.addTrack(t, this.localStream));
+      }
+
+      // Receive remote audio
+      pc.ontrack = (ev) => {
+        let audio = this.audioEls.get(remoteId);
+        if (!audio) {
+          audio = document.createElement('audio');
+          audio.autoplay = true;
+          audio.playsInline = true;
+          document.getElementById('voiceAudios')?.appendChild(audio);
+          this.audioEls.set(remoteId, audio);
+        }
+        audio.srcObject = ev.streams[0];
+      };
+
+      pc.onicecandidate = (ev) => {
+        if (ev.candidate) {
+          S.socket?.emit('voice:signal', { to: remoteId, kind: 'ice', payload: ev.candidate });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (['failed','disconnected','closed'].includes(pc.connectionState)) {
+          this._dropPeer(remoteId);
+        }
+      };
+
+      this.peers.set(remoteId, pc);
+
+      if (isInitiator) {
+        (async () => {
+          try {
+            const offer = await pc.createOffer({ offerToReceiveAudio: true });
+            await pc.setLocalDescription(offer);
+            S.socket?.emit('voice:signal', { to: remoteId, kind: 'offer', payload: pc.localDescription });
+          } catch(e){ console.warn('[Voice] offer failed', e); }
+        })();
+      }
+      return pc;
+    },
+
+    async _handleSignal({ from, kind, payload }){
+      if (!this.isOn) return; // Ignore if we're not in voice chat
+      let pc = this.peers.get(from);
+      if (!pc && kind === 'offer') pc = this._ensurePeer(from, false);
+      if (!pc) return;
+      try {
+        if (kind === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(payload));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          S.socket?.emit('voice:signal', { to: from, kind: 'answer', payload: pc.localDescription });
+        } else if (kind === 'answer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(payload));
+        } else if (kind === 'ice') {
+          if (payload) await pc.addIceCandidate(new RTCIceCandidate(payload));
+        }
+      } catch(e){ console.warn('[Voice] signal handling failed', e); }
+    },
+
+    _dropPeer(remoteId){
+      const pc = this.peers.get(remoteId);
+      if (pc) { try{ pc.close(); }catch(e){} this.peers.delete(remoteId); }
+      const a = this.audioEls.get(remoteId);
+      if (a) { try{ a.srcObject = null; a.remove(); }catch(e){} this.audioEls.delete(remoteId); }
+      this._setRemoteSpeaking(remoteId, false);
+    },
+
+    _setRemoteSpeaking(remoteId, speaking){
+      const panel = document.querySelector(`.opanel[data-pid="${remoteId}"] .opp-avatar`);
+      if (!panel) return;
+      panel.classList.toggle('speaking', !!speaking);
+    },
+
+    // Local mic level monitor — emits voice:speaking when above/below threshold
+    _startLevelMonitor(){
+      if (!this.localStream) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(this.localStream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        src.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        this._level.ctx = ctx;
+        this._level.analyser = analyser;
+        const tick = () => {
+          if (!this.isOn) return;
+          analyser.getByteTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) {
+            const v = (data[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / data.length);
+          const speaking = !this.isMuted && rms > 0.06;
+          if (speaking !== this._level.lastSpeaking) {
+            this._level.lastSpeaking = speaking;
+            S.socket?.emit('voice:speaking', { speaking });
+          }
+          this._level.raf = requestAnimationFrame(tick);
+        };
+        tick();
+      } catch(e){ console.warn('[Voice] level monitor failed', e); }
+    },
+    _stopLevelMonitor(){
+      if (this._level.raf) cancelAnimationFrame(this._level.raf);
+      try{ this._level.ctx?.close(); }catch(e){}
+      this._level = { ctx:null, analyser:null, raf:null, lastSpeaking:false };
+    },
+  };
   const SFX={
     ctx:null,
     init(){if(!this.ctx)this.ctx=new(window.AudioContext||window.webkitAudioContext)();},
@@ -1977,8 +2227,14 @@
   }
   function showChatFab(show){
     document.getElementById('emojiBtn').classList.toggle('visible', show);
-    if(!show) document.getElementById('emojiPicker').classList.remove('show');
-    if(!show){ document.getElementById('friendsPanel').classList.remove('open'); Friends.open=false; }document.getElementById('chatFab').classList.toggle('visible',show);}
+    document.getElementById('micBtn')?.classList.toggle('visible', show);
+    if(!show){
+      document.getElementById('emojiPicker').classList.remove('show');
+      document.getElementById('friendsPanel').classList.remove('open'); Friends.open=false;
+      if (typeof VoiceChat !== 'undefined' && VoiceChat.isOn) VoiceChat.leave();
+    }
+    document.getElementById('chatFab').classList.toggle('visible',show);
+  }
   function switchChatTab(tab){
     Chat.activeTab=tab;
     document.getElementById('chatMsgs').style.display=tab==='chat'?'flex':'none';
@@ -2039,6 +2295,22 @@
     sk.on('room:player_left',({username})=>{addActivityMsg(`🔴 ${esc(username||'Player')} left`,'leave');toast(`${username||'Player'} left`,'w');refreshRoom();});
     sk.on('game:reaction',(data)=>{
       showReactionOnPanel(data.emoji, data.playerId);
+    });
+
+    /* Voice chat signaling */
+    sk.on('voice:peer_joined', ({ peerId }) => {
+      if (!VoiceChat.isOn) return;
+      // We're already in voice; reach out to the new peer with an offer
+      VoiceChat._ensurePeer(peerId, true);
+    });
+    sk.on('voice:peer_left', ({ peerId }) => {
+      VoiceChat._dropPeer(peerId);
+    });
+    sk.on('voice:signal', (data) => {
+      VoiceChat._handleSignal(data);
+    });
+    sk.on('voice:speaking', ({ peerId, speaking }) => {
+      VoiceChat._setRemoteSpeaking(peerId, speaking);
     });
     sk.on('friend:request',(data)=>{
       Friends.requests.push(data.from);
@@ -2102,7 +2374,7 @@
   };
 
   /* ═══ HELPERS ═══ */
-  function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id)?.classList.add('active');if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');}}
+  function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id)?.classList.add('active');if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
   function toast(msg,type='i'){const w=document.getElementById('twrap'),t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500);}
   async function api(method,path,body){
     const r=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(S.token?{Authorization:`Bearer ${S.token}`}:{})},body:body?JSON.stringify(body):undefined});

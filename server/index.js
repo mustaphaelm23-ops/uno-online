@@ -111,6 +111,17 @@ async function saveUsers() {
   if (changed) saveUsers();
 })();
 
+// One-time +1,000,000 grant for Mustapha
+(function grantMustaphaMillion(){
+  const u = [...usersDB.values()].find(x => x.username && x.username.toLowerCase() === 'mustapha');
+  if (u && !u.grant_million_2026) {
+    u.coins = (u.coins || 0) + 1000000;
+    u.grant_million_2026 = true;
+    saveUsers();
+    console.log(`[Grant] +1,000,000 coins to ${u.username} (total: ${u.coins})`);
+  }
+})();
+
 const roomsDB = new Map();
 const matchmakingQueue = [];
 const socketToUser = new Map();
@@ -205,12 +216,38 @@ app.use(express.json({ limit: '5mb' }));
 
 // Serve client files
 const path = require('path');
+const fs = require('fs');
+const _indexPath = path.join(__dirname, '../client/index.html');
+let _indexHtmlCache = null;
+
+// Dynamically render index.html so Open Graph meta tags (og:image, og:url)
+// resolve against whatever host the request came in on — works for
+// localhost, ngrok, and any future deploy without code changes.
+app.get(['/', '/index.html'], (req, res, next) => {
+  try {
+    if (!_indexHtmlCache || process.env.NODE_ENV !== 'production') {
+      _indexHtmlCache = fs.readFileSync(_indexPath, 'utf8');
+    }
+    const proto = String(req.headers['x-forwarded-proto'] || req.protocol).split(',')[0].trim();
+    const host  = String(req.headers['x-forwarded-host']  || req.headers.host || '').split(',')[0].trim();
+    const base  = `${proto}://${host}`;
+    const out = _indexHtmlCache.replace(/__OG_BASE__/g, base);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'no-cache');
+    res.send(out);
+  } catch (e) {
+    next();
+  }
+});
+
 app.use(express.static(path.join(__dirname, '../client'), {
   setHeaders(res, filePath) {
     // Service worker and manifest must always revalidate so updates roll out
     if (filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
+    // Bypass ngrok's "Visit Site" warning page so link previews work
+    res.setHeader('ngrok-skip-browser-warning', 'true');
   },
 }));
 
@@ -756,6 +793,29 @@ io.on('connection', (socket) => {
     if(!emoji) return;
     const safe = String(emoji).slice(0,4);
     socket.to(socket.currentRoomId).emit('game:reaction', { playerId: userId, emoji: safe });
+  });
+
+  // ── Voice chat: WebRTC signaling (offer/answer/ICE relay) ──
+  // Audio itself never touches the server — these events only let peers
+  // discover each other and exchange SDP/ICE so they can talk P2P.
+  socket.on('voice:join', () => {
+    if (!socket.currentRoomId) return;
+    socket.to(socket.currentRoomId).emit('voice:peer_joined', { peerId: userId });
+  });
+  socket.on('voice:leave', () => {
+    if (!socket.currentRoomId) return;
+    socket.to(socket.currentRoomId).emit('voice:peer_left', { peerId: userId });
+  });
+  socket.on('voice:signal', ({ to, kind, payload } = {}) => {
+    if (!socket.currentRoomId || !to || !kind) return;
+    const targetSock = findSocketByUserId(to);
+    if (targetSock) {
+      targetSock.emit('voice:signal', { from: userId, kind, payload });
+    }
+  });
+  socket.on('voice:speaking', ({ speaking } = {}) => {
+    if (!socket.currentRoomId) return;
+    socket.to(socket.currentRoomId).emit('voice:speaking', { peerId: userId, speaking: !!speaking });
   });
   
   // ── Game: Challenge WD4 ──
