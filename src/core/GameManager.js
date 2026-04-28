@@ -490,10 +490,48 @@ class GameManager extends EventEmitter {
     const totalWin = bet * losers.length + this._rules.calcCoins(score);
     // Don't modify coins here — server game:over handler does it
     this._phase = PHASE.FINISHED;
-    const wd = { winnerId:winner.id, username:winner.username, lastCard:lastCard.toJSON(), score, coinsEarned:totalWin, bet };
+    const mvp = this._pickMVP(winner);
+    const wd = {
+      winnerId:winner.id, username:winner.username, lastCard:lastCard.toJSON(),
+      score, coinsEarned:totalWin, bet,
+      mvp,
+      stats: this._players.map(p => ({
+        id: p.id, username: p.username, avatar: p.avatar,
+        cardsPlayed: p.stats?.cardsPlayed || 0,
+        cardsDrawn:  p.stats?.cardsDrawn || 0,
+        finalHand:   p.handSize,
+      })),
+    };
     this.emit(EV.WON, wd);
-    this.emit(EV.OVER, { winners:this._winners.map(p=>p.toPublicJSON()), players:this._players.map(p=>p.toJSON()) });
+    this.emit(EV.OVER, { winners:this._winners.map(p=>p.toPublicJSON()), players:this._players.map(p=>p.toJSON()), mvp, stats: wd.stats });
     return { success:true, winner:wd };
+  }
+
+  // Man of the Match — picks the player with the best impact score.
+  // The winner gets a fixed bonus, then we add efficiency (cards played
+  // minus cards drawn) so an active winner beats a passive one, and a
+  // cunning loser can still steal the honor.
+  _pickMVP(winner) {
+    let best = null;
+    let bestScore = -Infinity;
+    this._players.forEach(p => {
+      const played = p.stats?.cardsPlayed || 0;
+      const drawn  = p.stats?.cardsDrawn  || 0;
+      const winnerBonus = p.id === winner.id ? 8 : 0;
+      const score = played * 2 - drawn + winnerBonus;
+      if (score > bestScore) { bestScore = score; best = p; }
+    });
+    if (!best) return null;
+    return {
+      id: best.id,
+      username: best.username,
+      avatar: best.avatar,
+      cardsPlayed: best.stats?.cardsPlayed || 0,
+      cardsDrawn:  best.stats?.cardsDrawn  || 0,
+      reason: best.id === winner.id
+        ? `Won the game with ${best.stats?.cardsPlayed || 0} plays`
+        : `Played ${best.stats?.cardsPlayed || 0} cards — most active`,
+    };
   }
 
   _find(id) { return this._players.find(p => p.id === id) || null; }
