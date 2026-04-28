@@ -1300,6 +1300,39 @@
   #emojiBtn.visible{display:flex;}
   #emojiBtn:hover{border-color:var(--accent);transform:scale(1.12);}
 
+  /* Spectator mode visuals */
+  body.spectating .myhand,
+  body.spectating .actbar,
+  body.spectating .myinfo,
+  body.spectating .cancel-float{display:none!important;}
+  body.spectating #drawpile{cursor:default!important;}
+  body.spectating .opanel{padding:8px 10px;}
+  .spec-card{
+    width:42px;height:62px;border-radius:8px;
+    border:2px solid rgba(255,255,255,.4);
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 10px rgba(0,0,0,.5);
+    flex-shrink:0;position:relative;
+  }
+  .spec-card.red{background:linear-gradient(145deg,#E8324A,#9B1B2E);}
+  .spec-card.blue{background:linear-gradient(145deg,#2563EB,#1E3A8A);}
+  .spec-card.green{background:linear-gradient(145deg,#16A34A,#14532D);}
+  .spec-card.yellow{background:linear-gradient(145deg,#F59E0B,#92400E);}
+  .spec-card.wild{background:radial-gradient(circle,#333 40%,#111);}
+  .spec-card-num{
+    font-family:'Outfit',sans-serif;font-weight:900;font-size:16px;color:#fff;
+    text-shadow:1px 2px 0 rgba(0,0,0,.55);
+    -webkit-text-stroke:1px rgba(0,0,0,.5);
+  }
+  /* Spectator chat — separate panel inside the existing chat */
+  .spec-chat-toggle{
+    background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);
+    color:#c4b5fd;font-size:11px;font-weight:700;padding:4px 10px;
+    border-radius:14px;cursor:pointer;transition:all .2s;
+  }
+  .spec-chat-toggle.on{background:rgba(124,58,237,.3);color:#fff;}
+  .spec-chat-toggle:hover{transform:translateY(-1px);}
+
   /* Voice chat — mic button */
   #micBtn{
     position:fixed;right:12px;bottom:184px;z-index:40;
@@ -1630,9 +1663,8 @@
           <div id="lobbyMenu" class="game-menu" style="right:0;left:auto;top:40px;">
             <div class="game-menu-title">Settings</div>
             <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 Profile</button>
-            <button class="game-menu-item" onclick="showLeaderboard();document.getElementById('lobbyMenu').classList.remove('show')">🏆 Leaderboard</button>
             <button class="game-menu-item" onclick="pwaInstall();document.getElementById('lobbyMenu').classList.remove('show')">📲 Install App</button>
-            <button class="game-menu-item" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ Admin Panel</button>
+            <button class="game-menu-item" id="adminPanelMenuItem" style="display:none" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ Admin Panel</button>
             <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 Logout</button>
           </div>
         </div>
@@ -1665,6 +1697,11 @@
           <button class="btnI" onclick="loadRooms();this.querySelector('span').style.animation='none';void this.offsetWidth;this.querySelector('span').style.animation='';" title="Refresh rooms"><span>🔄</span></button>
         </div>
         <div class="rgrid" id="rgrid"></div>
+        <div id="liveSection" style="display:none;margin-top:28px">
+          <div class="public-title" style="font-size:24px;margin-bottom:6px">📺 Live Games</div>
+          <div class="public-info" id="liveinfo" style="margin-bottom:14px">Watch in progress matches</div>
+          <div class="rgrid" id="livegrid"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1952,9 +1989,11 @@
     <div class="chat-tabs">
       <button class="chat-tab active" id="tabChat" onclick="switchChatTab('chat')">Chat</button>
       <button class="chat-tab" id="tabActivity" onclick="switchChatTab('activity')">Activity</button>
+      <button class="chat-tab" id="tabSpec" onclick="switchChatTab('spec')" style="display:none">👁️ Watchers</button>
     </div>
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="chat-msgs" id="activityMsgs" style="display:none"></div>
+    <div class="chat-msgs" id="specMsgs" style="display:none"></div>
     <div class="spam-warn" id="spamWarn">⚠️ Slow down! Wait a moment...</div>
     <div class="chat-input-area" id="chatInputArea">
       <textarea id="chatInput" placeholder="Message... (Enter to send)" rows="1"
@@ -2270,10 +2309,24 @@
     Chat.activeTab=tab;
     document.getElementById('chatMsgs').style.display=tab==='chat'?'flex':'none';
     document.getElementById('activityMsgs').style.display=tab==='activity'?'flex':'none';
-    document.getElementById('chatInputArea').style.display=tab==='chat'?'flex':'none';
+    const sm=document.getElementById('specMsgs'); if(sm) sm.style.display=tab==='spec'?'flex':'none';
+    // Spectators chat in their own channel; players can only read it
+    const inputAreaVisible = tab==='chat' || (tab==='spec' && S.isSpectator);
+    document.getElementById('chatInputArea').style.display=inputAreaVisible?'flex':'none';
     document.getElementById('tabChat').classList.toggle('active',tab==='chat');
     document.getElementById('tabActivity').classList.toggle('active',tab==='activity');
+    const ts=document.getElementById('tabSpec'); if(ts) ts.classList.toggle('active',tab==='spec');
     scrollChatBottom();
+  }
+  function addSpectatorMsg(msg){
+    const c=document.getElementById('specMsgs'); if(!c) return;
+    const isMe=msg.userId===S.user?.id;
+    const d=document.createElement('div');d.className=`chat-msg ${isMe?'mine':'other'}`;
+    d.innerHTML=`<div class="chat-name" style="color:#c4b5fd">👁️ ${esc(msg.username)}</div><div class="chat-text">${esc(msg.text)}</div><div class="chat-time">${fmtTime(msg.createdAt)}</div>`;
+    c.appendChild(d);
+    while(c.children.length>80)c.removeChild(c.firstChild);
+    if(Chat.open&&Chat.activeTab==='spec')scrollChatBottom();
+    else if(!isMe&&S.isSpectator){Chat.unread++;updateChatBadge();}
   }
   function updateChatBadge(){
     const b=document.getElementById('chatBadge');
@@ -2314,7 +2367,10 @@
     if(!raw||!S.roomId||raw.length>200)return;
     if(!checkSpam())return;
     input.value='';input.style.height='38px';
-    S.socket.emit('chat:send',{text:raw},(res)=>{if(!res?.success)toast('Could not send message','e');});
+    // Spectators on the Watchers tab post into the watcher channel
+    const spec = S.isSpectator && Chat.activeTab === 'spec';
+    const evt = spec ? 'chat:spectator_send' : 'chat:send';
+    S.socket.emit(evt,{text:raw},(res)=>{if(!res?.success)toast('Could not send message','e');});
   }
   function handleChatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
   function autoResizeTextarea(el){el.style.height='38px';el.style.height=Math.min(el.scrollHeight,80)+'px';}
@@ -2404,7 +2460,8 @@
     socket:null,roomId:null,
     roomsTimer:null,unoTimer:null,
     pendingWild:null,calledUNO:false,
-    g:{myHand:[],myPlayable:[],players:[],topCard:null,currentTurn:null,direction:1,drawPileSize:108,turnPhase:'waiting',drawnCardId:null,stackDraw:0},
+    g:{myHand:[],myPlayable:[],players:[],topCard:null,currentTurn:null,direction:1,drawPileSize:108,turnPhase:'waiting',drawnCardId:null,stackDraw:0,spectatorHands:{}},
+    isSpectator:false,
   };
 
   /* ═══ HELPERS ═══ */
@@ -2447,6 +2504,10 @@
   function onAuth(token,user){
     S.token=token;S.user=user;
     localStorage.setItem('uno_token',token);localStorage.setItem('uno_user',JSON.stringify(user));
+    // Reveal admin-only menu items for the admin user
+    if(user?.username && user.username.toLowerCase().includes('mustapha')){
+      const m=document.getElementById('adminPanelMenuItem');if(m)m.style.display='';
+    }
     initSock();goLobby();
   }
   function doLogout(){localStorage.removeItem('uno_token');localStorage.removeItem('uno_user');S.token=null;S.user=null;S.socket?.disconnect();clearInterval(S.roomsTimer);showScreen('auth-screen');}
@@ -2462,10 +2523,41 @@
     sk.on('disconnect',()=>document.getElementById('dbar').classList.add('show'));
     initChatListeners(sk);
 
+    sk.on('game:spectator_state',(state)=>{
+      S.isSpectator = true;
+      document.body.classList.add('spectating');
+      // Reveal Watchers tab for spectators (and players-with-toggle)
+      const wt=document.getElementById('tabSpec'); if(wt) wt.style.display='';
+      applySpectatorState(state);
+      showScreen('game-screen');
+      addActivityMsg('👁️ You are spectating','game');
+    });
+    sk.on('game:spectator_state_update',(state)=>{
+      if(!S.isSpectator) return;
+      applySpectatorState(state);
+    });
+    sk.on('chat:spectator_history',({messages})=>{
+      const box=document.getElementById('specMsgs');
+      if(box){box.innerHTML=''; (messages||[]).forEach(m=>addSpectatorMsg(m));}
+    });
+    sk.on('chat:spectator_message',(msg)=>{
+      addSpectatorMsg(msg);
+      // For non-spectator players, surface the watchers tab so they can peek
+      const wt=document.getElementById('tabSpec'); if(wt) wt.style.display='';
+    });
+    sk.on('room:spectator_joined',({username,count})=>{
+      addActivityMsg(`👁️ ${esc(username||'A watcher')} is now watching (${count} total)`,'join');
+    });
+    sk.on('room:spectator_left',({count})=>{
+      addActivityMsg(`👁️ A watcher left (${count} watching)`,'leave');
+    });
+
     sk.on('game:state',(state)=>{
       // Reset start-button guard so future restarts work
       const startBtn=document.getElementById('bstart');
       if(startBtn){startBtn.dataset.starting='';startBtn.disabled=true;startBtn.textContent='Waiting for players...';}
+      S.isSpectator=false;
+      document.body.classList.remove('spectating');
       S.calledUNO=false;applyFullState(state);showScreen('game-screen');
       toast('Game started! 🎮','s');SFX.play('turn');
       showChatFab(true);addActivityMsg('🎮 Game has started!','game');
@@ -2491,7 +2583,10 @@
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game
       if(data.topCard)renderTop(data.topCard);
-      if(data.players)renderOpps(data.players);
+      if(data.players){
+        if(S.isSpectator) renderSpectatorOpps(data.players);
+        else renderOpps(data.players);
+      }
       SFX.play('play');
       const who=(data.players||[]).find(p=>p.id===data.playerId);
       toast(`${who?.username||'?'} played ${fmtV(data.card?.value)}`,'i');
@@ -2506,7 +2601,10 @@
 
     sk.on('game:auto_played',(data)=>{
       if(!S.roomId)return;
-      if(data.players)renderOpps(data.players);
+      if(data.players){
+        if(S.isSpectator) renderSpectatorOpps(data.players);
+        else renderOpps(data.players);
+      }
       const who=(data.players||[]).find(p=>p.id===data.playerId);
       const name=who?.username||'?';
       if(data.action==='played' && data.card){
@@ -2639,6 +2737,71 @@
     updateTurnUI();
   }
 
+  // Spectator: render full game state with every player's hand visible
+  function applySpectatorState(state){
+    const g = S.g;
+    g.players = state.players || [];
+    g.topCard = state.topCard;
+    g.currentTurn = state.currentTurn;
+    g.direction = state.direction;
+    g.drawPileSize = state.drawPileSize;
+    g.turnPhase = state.turnPhase;
+    g.stackDraw = state.stackDraw || 0;
+    g.myHand = []; g.myPlayable = []; g.drawnCardId = null;
+    g.spectatorHands = (state.hands || []).reduce((acc, h) => { acc[h.playerId] = h.cards; return acc; }, {});
+    if (g.topCard) renderTop(g.topCard);
+    renderSpectatorOpps(g.players);
+    document.getElementById('dcnt').textContent = g.drawPileSize;
+    document.getElementById('myhand').innerHTML = '';
+    document.getElementById('cancelArea').style.display = 'none';
+    document.getElementById('myname').textContent = '👁️ Spectating';
+    document.getElementById('mycnt').textContent = `${g.players.length} players`;
+    updateSpectatorTurnUI();
+  }
+
+  // Same opponent row, but every player is shown with face-up cards
+  function renderSpectatorOpps(players){
+    const row = document.getElementById('orow');
+    if (!row) return;
+    const newKey = players.map(p => `${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.id===S.g.currentTurn?1:0}`).join('|') + '|spec';
+    if (row._lastKey === newKey) return;
+    row._lastKey = newKey;
+    const hands = S.g.spectatorHands || {};
+    row.innerHTML = players.map(p => {
+      const cards = (hands[p.id] || []).slice(0, 12);
+      const cardsHtml = cards.map((c,i) => {
+        const color = c.chosenColor || c.color || 'wild';
+        const v = fmtV(c.value);
+        return `<div class="spec-card ${color}" style="margin-left:${i===0?'0':'-18px'};z-index:${i}">
+          <span class="spec-card-num">${v}</span>
+        </div>`;
+      }).join('');
+      const more = (hands[p.id]?.length || 0) > 12 ? `<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:6px;font-weight:700">+${hands[p.id].length - 12}</div>` : '';
+      const avatar = p.avatar
+        ? `<div class="opp-avatar" style="background-image:url('${p.avatar}')"></div>`
+        : `<div class="opp-avatar opp-avatar-letter">${(p.username||'?').charAt(0).toUpperCase()}</div>`;
+      return `<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
+        <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)} ${p.saidUno?'<span class="ouno">UNO!</span>':''}</div></div>
+        <div style="display:flex;align-items:center;height:64px">${cardsHtml}${more}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function updateSpectatorTurnUI(){
+    const g = S.g;
+    const stackEl = document.getElementById('hstack'), stackN = document.getElementById('hstackn');
+    if ((g.stackDraw || 0) > 0) { stackEl.style.display='flex'; stackN.textContent = g.stackDraw + ' cards!'; }
+    else stackEl.style.display = 'none';
+    const cur = g.players.find(p => p.id === g.currentTurn);
+    document.getElementById('tdisp').textContent = `🎬 ${cur?.username || '...'}'s turn`;
+    document.getElementById('tdisp').className = 'turndisp';
+    document.getElementById('hturn').textContent = `🎬 ${cur?.username || '...'}`;
+    document.getElementById('hdir').textContent = g.direction === 1 ? '↻ Clockwise' : '↺ Counter-CW';
+    document.getElementById('hphase').textContent = `👁️ Spectating`;
+    // Hide the UNO button — spectators can't call UNO
+    const u = document.getElementById('btnUNO'); if (u) u.classList.add('disabled');
+  }
+
   function updateTurnUI(){
     const g=S.g;
     const stackEl=document.getElementById('hstack'),stackN=document.getElementById('hstackn');
@@ -2719,6 +2882,13 @@
 
   /* ═══ LOBBY ═══ */
   function goLobby(){
+    // Reset spectator state if we were watching
+    document.body.classList.remove('spectating');
+    S.isSpectator = false;
+    S.g.spectatorHands = {};
+    const wt=document.getElementById('tabSpec'); if(wt) wt.style.display='none';
+    const sm=document.getElementById('specMsgs'); if(sm) sm.innerHTML='';
+    if(Chat.activeTab==='spec') switchChatTab('chat');
     showScreen('lobby-screen');
     if(S.user){document.getElementById('huser').textContent=S.user.username;document.getElementById('hcoins').textContent=S.user.coins||0;document.getElementById('scoins').textContent=S.user.coins||0;}
     loadRooms();clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
@@ -2727,6 +2897,32 @@
     try{
       const d=await api('GET','/rooms'),g=document.getElementById('rgrid');
       document.getElementById('rinfo').textContent=`${d.rooms.length} room(s) available`;
+      // Render live games (spectatable)
+      const live = d.liveGames || [];
+      const liveSec = document.getElementById('liveSection');
+      const liveGrid = document.getElementById('livegrid');
+      const liveInfo = document.getElementById('liveinfo');
+      if(liveSec && liveGrid){
+        if(live.length){
+          liveSec.style.display='';
+          liveInfo.textContent = `${live.length} live game${live.length===1?'':'s'} — watch in progress`;
+          liveGrid.innerHTML = live.map(r => `
+            <div class="rcard" onclick="doWatch('${r.id}')" style="cursor:pointer">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;position:relative;z-index:1">
+                <div style="font-weight:800;font-size:14px">🔴 LIVE</div>
+                <div style="background:rgba(232,50,74,.15);color:#fca5a5;font-size:10px;font-weight:700;padding:3px 8px;border-radius:18px">▶ Watch</div>
+              </div>
+              <div style="font-size:12px;color:rgba(255,255,255,.85);font-weight:700;position:relative;z-index:1;margin-bottom:6px">${(r.playerNames||[]).map(esc).join(' vs ')}</div>
+              <div style="display:flex;gap:10px;font-size:11px;color:rgba(255,255,255,.6);position:relative;z-index:1;font-weight:700">
+                <span>👥 ${r.players}/${r.maxPlayers}</span>
+                <span>👁️ ${r.spectators||0} watching</span>
+                ${r.bet?`<span>🪙 ${r.bet}</span>`:''}
+              </div>
+            </div>`).join('');
+        } else {
+          liveSec.style.display='none';
+        }
+      }
       if(!d.rooms.length){g.innerHTML=`<div class="rooms-empty">
         <div class="rooms-empty-cards">
           <div class="ec red"><span>1</span></div>
@@ -2797,6 +2993,27 @@
       clearInterval(S.roomsTimer);showScreen('room-screen');
       document.getElementById('ridlbl').textContent=`Room: ${roomId.substr(0,8).toUpperCase()}`;
       if(res.state?.players)renderWaiting(res.state.players);refreshRoom();
+    });
+  }
+  function doWatch(roomId){
+    if(!S.socket?.connected) return toast('Not connected','e');
+    S.socket.emit('room:spectate',{roomId},(res)=>{
+      if(!res.success) return toast(res.reason||'Could not join as spectator','e');
+      S.roomId = roomId;
+      S.isSpectator = true;
+      clearInterval(S.roomsTimer);
+      showScreen('game-screen');
+      showChatFab(true);
+      toast('👁️ Watching live!','s');
+    });
+  }
+  function doLeaveSpectate(){
+    if(!S.socket || !S.roomId) return;
+    S.socket.emit('room:spectate_leave',{},()=>{
+      S.roomId = null;
+      S.isSpectator = false;
+      showChatFab(false);
+      goLobby();
     });
   }
   function refreshRoom(){if(!S.roomId)return;api('GET',`/rooms/${S.roomId}`).then(d=>{if(d.players)renderWaiting(d.players);}).catch(()=>{});}
@@ -3098,6 +3315,7 @@
   }
   function confirmLeave(){
     toggleGameMenu();
+    if(S.isSpectator){ doLeaveSpectate(); return; }
     if(confirm('Are you sure? You will lose the bet and your opponent wins!')){doLeaveGame();}
   }
   function doLeaveGame(){

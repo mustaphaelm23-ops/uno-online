@@ -523,6 +523,18 @@ class GameManager extends EventEmitter {
     };
   }
 
+  // Spectator state: public state + every player's full hand visible
+  _spectatorState() {
+    return {
+      ...this._publicState(),
+      isSpectator: true,
+      hands: this._players.map(p => ({
+        playerId: p.id,
+        cards:    p.hand.map(c => c.toJSON()),
+      })),
+    };
+  }
+
   get current()   { return this._players[this._curIdx] || null; }
   get phase()     { return this._phase; }
   get players()   { return this._players; }

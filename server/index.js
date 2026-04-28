@@ -191,6 +191,8 @@ function createRoomRecord(hostId, settings = {}) {
     },
     game:       null,
     playerIds:  [],
+    spectators: new Set(), // userIds currently spectating this room
+    spectatorChat: [],
     chat:       [],
     status:     'lobby',
     createdAt:  Date.now(),
@@ -363,15 +365,25 @@ app.post('/api/coins/claim-daily', authMiddleware, (req, res) => {
 // ─────────────────────────────────────────
 
 app.get('/api/rooms', authMiddleware, (req, res) => {
-  const publicRooms = [...roomsDB.values()]
-    .filter(r => !r.settings.isPrivate && r.status === 'lobby')
+  const all = [...roomsDB.values()].filter(r => !r.settings.isPrivate);
+  const publicRooms = all
+    .filter(r => r.status === 'lobby')
     .map(r => ({
       id: r.id, hostId: r.hostId, players: r.playerIds.length,
       maxPlayers: r.settings.maxPlayers, status: r.status,
       bet: r.settings.bet || 0,
       settings: { maxPlayers: r.settings.maxPlayers, drawStacking: r.settings.drawStacking },
     }));
-  res.json({ rooms: publicRooms });
+  const liveGames = all
+    .filter(r => r.status === 'playing')
+    .map(r => ({
+      id: r.id, players: r.playerIds.length,
+      maxPlayers: r.settings.maxPlayers,
+      bet: r.settings.bet || 0,
+      spectators: r.spectators?.size || 0,
+      playerNames: r.game.players.map(p => p.username),
+    }));
+  res.json({ rooms: publicRooms, liveGames });
 });
 
 app.post('/api/rooms', authMiddleware, (req, res) => {
@@ -651,6 +663,77 @@ io.on('connection', (socket) => {
     ack?.({ success: true });
   });
 
+  // ── Spectator: join an in-progress room as a watcher (read-only) ──
+  socket.on('room:spectate', ({ roomId } = {}, ack) => {
+    if (!roomId) return ack?.({ success: false, reason: 'Missing roomId' });
+    const room = roomsDB.get(roomId);
+    if (!room) return ack?.({ success: false, reason: 'Room not found' });
+    if (room.status !== 'playing') return ack?.({ success: false, reason: 'Game not running yet' });
+    if (room.playerIds.includes(userId)) {
+      return ack?.({ success: false, reason: 'You are already a player in this room' });
+    }
+
+    if (!room.spectators) room.spectators = new Set();
+    room.spectators.add(userId);
+    socket.join(roomId);
+    socket.currentRoomId = roomId;
+    socket.isSpectator = true;
+
+    socket.emit('chat:history', { messages: (room.chat || []).slice(-50) });
+    socket.emit('chat:spectator_history', { messages: (room.spectatorChat || []).slice(-50) });
+    socket.emit('game:spectator_state', room.game._spectatorState());
+
+    socket.to(roomId).emit('room:spectator_joined', {
+      spectatorId: userId, username: socket.username, count: room.spectators.size,
+    });
+    ack?.({ success: true });
+    console.log(`[Spectate] ${socket.username} watching ${roomId} (${room.spectators.size} watchers)`);
+  });
+
+  socket.on('room:spectate_leave', ({} = {}, ack) => {
+    const roomId = socket.currentRoomId;
+    if (!roomId) return ack?.({ success: false });
+    const room = roomsDB.get(roomId);
+    if (room?.spectators) {
+      room.spectators.delete(userId);
+      socket.to(roomId).emit('room:spectator_left', {
+        spectatorId: userId, count: room.spectators.size,
+      });
+    }
+    socket.leave(roomId);
+    delete socket.currentRoomId;
+    socket.isSpectator = false;
+    ack?.({ success: true });
+  });
+
+  // Spectator chat — separate from player chat. Players only see it if
+  // they explicitly toggle the panel; spectators see both their own
+  // channel and the player chat for context.
+  socket.on('chat:spectator_send', ({ text } = {}, ack) => {
+    try {
+      const room = roomsDB.get(socket.currentRoomId);
+      if (!room) return ack?.({ success: false, reason: 'Not in room' });
+      if (!socket.isSpectator) return ack?.({ success: false, reason: 'Players use chat:send' });
+      if (!text?.trim()) return ack?.({ success: false });
+      const clean = text.trim().slice(0, 200);
+      const msg = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+        roomId: room.id, userId,
+        username: socket.username, text: clean, createdAt: Date.now(),
+      };
+      if (!room.spectatorChat) room.spectatorChat = [];
+      room.spectatorChat.push(msg);
+      if (room.spectatorChat.length > 100) room.spectatorChat.shift();
+      // Broadcast to everyone in the room — players will only render
+      // it if they have the spectator-chat panel open
+      io.to(room.id).emit('chat:spectator_message', msg);
+      ack?.({ success: true });
+    } catch(e) {
+      console.error('[SpecChat] Error:', e.message);
+      ack?.({ success: false });
+    }
+  });
+
   // ── Game: Start ──
   socket.on('game:start', ({} = {}, ack) => {
     const roomId = socket.currentRoomId;
@@ -885,7 +968,17 @@ io.on('connection', (socket) => {
       if (voiceRooms.get(roomId).size === 0) voiceRooms.delete(roomId);
       socket.to(roomId).emit('voice:peer_left', { peerId: userId });
     }
-    if (roomId) handlePlayerLeave(socket, roomId);
+    if (roomId) {
+      const room = roomsDB.get(roomId);
+      if (socket.isSpectator && room?.spectators) {
+        room.spectators.delete(userId);
+        socket.to(roomId).emit('room:spectator_left', {
+          spectatorId: userId, count: room.spectators.size,
+        });
+      } else {
+        handlePlayerLeave(socket, roomId);
+      }
+    }
     const idx = matchmakingQueue.findIndex(e => e.userId === userId);
     if (idx !== -1) matchmakingQueue.splice(idx, 1);
     console.log(`[Socket] Disconnected: ${socket.username} (${reason})`);
@@ -1078,6 +1171,14 @@ function broadcastPrivateStates(room) {
     const playerSock = findSocketByUserId(pid);
     if (player && playerSock) playerSock.emit('game:state_update', room.game._playerState(player));
   });
+  // Spectators get the full state (with all hands visible)
+  if (room.spectators && room.spectators.size > 0) {
+    const specState = room.game._spectatorState();
+    room.spectators.forEach(sid => {
+      const sock = findSocketByUserId(sid);
+      if (sock) sock.emit('game:spectator_state_update', specState);
+    });
+  }
 }
 
 // ← FIX: handlePlayerLeave now properly removes from playerIds
