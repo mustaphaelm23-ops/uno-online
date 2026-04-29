@@ -436,50 +436,67 @@ const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
 // LA LIGA — personal season vs 12 bots, round-robin, P/W/D/L/PTS
 // ─────────────────────────────────────────
 
-const LEAGUE_BOT_NAMES = Array.from({ length: 12 }, (_, i) => 'User' + (i + 1));
+// ─────────────────────────────────────────
+// LA LIGA v2 — fixed schedule, best-of-2 rounds, scheduled times
+// ─────────────────────────────────────────
+//
+// 12 players total: the user + 11 bots named User1..User11.
+// Every player plays every other once — 11 matchdays.
+// Each match = best of 2 rounds:
+//   2-0 / 2-1 → win, 3 points
+//   1-1       → draw, 1 point each
+//   0-2 / 1-2 → loss, 0 points
+// Matches happen at fixed scheduled times. Real player gets a 10-minute
+// window to show up; if they don't, a bot plays in their place. Bot-vs-bot
+// fixtures simulate themselves when their scheduled time arrives so the
+// table fills in over the season instead of all at once.
+
+const LEAGUE_BOT_NAMES = ['Karim','Nacer','Yassine','Hamza','Adam','Reda','Ilyas','Anas','Bilal','Mehdi','Othmane'];
+const LEAGUE_MATCHDAY_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes between matchdays
+const LEAGUE_MATCH_OFFSET_MS = 5 * 60 * 1000;       // 5 min between fixtures within a matchday
+const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000;     // user has 10 min after start before bot takes over
+
+function newLeaguePlayer(id, name, opts = {}) {
+  return {
+    id, name,
+    isMe: !!opts.isMe,
+    isBot: !!opts.isBot,
+    skill: opts.skill ?? 0.5,
+    avatar: opts.avatar || null,
+    played: 0, wins: 0, draws: 0, losses: 0,
+    goalsFor: 0, goalsAgainst: 0,
+    points: 0,
+    last5: [], // most recent first: 'W'|'D'|'L'
+  };
+}
 
 function initUserLeague(user) {
-  if (user.league && Array.isArray(user.league.schedule)) return user.league;
+  if (user.league && Array.isArray(user.league.schedule)) {
+    // Existing season — make sure the dynamic state catches up
+    processDueMatches(user);
+    return user.league;
+  }
   const players = [
-    { id: user.id, name: user.username, isMe: true, isBot: false,
-      points: 0, wins: 0, draws: 0, losses: 0, roundsWon: 0 },
-    ...LEAGUE_BOT_NAMES.map((n, i) => ({
-      id: 'lb_' + (i + 1), name: n, isBot: true,
-      skill: 0.35 + Math.random() * 0.55,
-      points: 0, wins: 0, draws: 0, losses: 0, roundsWon: 0,
-    })),
+    newLeaguePlayer(user.id, user.username, { isMe: true, avatar: user.avatar, skill: 0.55 }),
+    ...LEAGUE_BOT_NAMES.map((n, i) =>
+      newLeaguePlayer('lb_' + (i + 1), n, { isBot: true, skill: 0.30 + Math.random() * 0.55 })
+    ),
   ];
-  const schedule = generateRoundRobin(players);
-  // Simulate bot-vs-bot matches for the first ~70% of rounds so the table
-  // already has shape when the user opens the league for the first time.
-  // (User matches always stay 'scheduled' until played.)
-  const totalRounds = Math.max(...schedule.map(m => m.round));
-  const presimRounds = Math.floor(totalRounds * 0.55);
-  schedule.forEach(m => {
-    if (m.round <= presimRounds && m.p1 !== user.id && m.p2 !== user.id) {
-      simulateBotMatch(players, m);
-    }
-  });
-  user.league = {
-    season: 'S1',
-    startedAt: Date.now(),
-    players,
-    schedule,
-  };
+  const startedAt = Date.now();
+  const schedule = generateRoundRobin(players, startedAt);
+  user.league = { season: 'S1', startedAt, players, schedule };
+  // Catch the table up if the host clock somehow already passed scheduled times
+  processDueMatches(user);
   return user.league;
 }
 
-function generateRoundRobin(players) {
-  // Circle method. Odd count → add a BYE so each round still pairs cleanly.
+function generateRoundRobin(players, startTime) {
+  // Circle method — even count, every player plays every other exactly once
   const arr = [...players];
   if (arr.length % 2 === 1) arr.push({ id: 'BYE', name: 'BYE' });
   const N = arr.length;
   const halfN = N / 2;
   const out = [];
-  // Day cycle: 2 matches per day at 20:00 and 21:00 — distribute round
-  // matches across days so the user doesn't play 6 matches on day 1
-  let dayCounter = 1;
-  let matchesToday = 0;
   for (let r = 0; r < N - 1; r++) {
     const roundPairs = [];
     for (let i = 0; i < halfN; i++) {
@@ -489,20 +506,18 @@ function generateRoundRobin(players) {
       roundPairs.push({ p1: a.id, p2: b.id });
     }
     roundPairs.forEach((pair, idx) => {
-      if (matchesToday >= 2) { dayCounter++; matchesToday = 0; }
+      const scheduledAt = startTime + r * LEAGUE_MATCHDAY_INTERVAL_MS + idx * LEAGUE_MATCH_OFFSET_MS;
       out.push({
         id: `m_${r}_${idx}`,
         p1: pair.p1, p2: pair.p2,
-        round: r + 1,
-        day: dayCounter,
-        time: matchesToday === 0 ? '20:00' : '21:00',
+        matchday: r + 1,
+        scheduledAt,
         status: 'scheduled', // scheduled | live | finished
-        winnerId: null,
-        draw: false,
+        rounds: [], // [{ winnerId, draw }] up to 2
+        result: null, // 'p1' | 'p2' | 'draw'
       });
-      matchesToday++;
     });
-    // rotate (keep arr[0] fixed)
+    // Rotate (fix arr[0])
     const fixed = arr[0];
     const rest = arr.slice(1);
     rest.unshift(rest.pop());
@@ -511,64 +526,150 @@ function generateRoundRobin(players) {
   return out;
 }
 
-function simulateBotMatch(players, match) {
-  const p1 = players.find(p => p.id === match.p1);
-  const p2 = players.find(p => p.id === match.p2);
+function simulateRound(p1, p2) {
+  // Single round outcome. ~7% draw chance, otherwise weighted by skill.
+  if (Math.random() < 0.07) return 'draw';
+  const total = (p1.skill || 0.5) + (p2.skill || 0.5);
+  return Math.random() < (p1.skill || 0.5) / total ? 'p1' : 'p2';
+}
+
+function recordMatchResult(league, match) {
+  const p1 = league.players.find(p => p.id === match.p1);
+  const p2 = league.players.find(p => p.id === match.p2);
   if (!p1 || !p2) return;
-  // 12% draw chance, otherwise winner weighted by skill
-  const drawRoll = Math.random();
-  if (drawRoll < 0.12) {
-    match.winnerId = null;
-    match.draw = true;
+  let p1Goals = 0, p2Goals = 0;
+  match.rounds.forEach(r => {
+    if (r === 'draw') { p1Goals++; p2Goals++; }
+    else if (r === 'p1') p1Goals++;
+    else if (r === 'p2') p2Goals++;
+  });
+  p1.played++; p2.played++;
+  p1.goalsFor += p1Goals; p1.goalsAgainst += p2Goals;
+  p2.goalsFor += p2Goals; p2.goalsAgainst += p1Goals;
+  if (p1Goals > p2Goals) {
+    match.result = 'p1';
+    p1.wins++; p2.losses++;
+    p1.points += 3;
+    pushLast5(p1, 'W'); pushLast5(p2, 'L');
+  } else if (p2Goals > p1Goals) {
+    match.result = 'p2';
+    p2.wins++; p1.losses++;
+    p2.points += 3;
+    pushLast5(p2, 'W'); pushLast5(p1, 'L');
+  } else {
+    match.result = 'draw';
     p1.draws++; p2.draws++;
     p1.points++; p2.points++;
-    p1.roundsWon += 1; p2.roundsWon += 1;
-  } else {
-    const total = (p1.skill || 0.5) + (p2.skill || 0.5);
-    const p1WinChance = (p1.skill || 0.5) / total;
-    const p1Win = Math.random() < p1WinChance;
-    const winner = p1Win ? p1 : p2;
-    const loser = p1Win ? p2 : p1;
-    match.winnerId = winner.id;
-    winner.wins++; loser.losses++;
-    winner.points += 3;
-    winner.roundsWon += 2;
-    if (Math.random() < 0.45) loser.roundsWon += 1;
+    pushLast5(p1, 'D'); pushLast5(p2, 'D');
   }
   match.status = 'finished';
+}
+
+function pushLast5(player, mark) {
+  if (!Array.isArray(player.last5)) player.last5 = [];
+  player.last5.unshift(mark);
+  if (player.last5.length > 5) player.last5.length = 5;
+}
+
+// Walk the schedule and resolve any match whose scheduled time has passed
+// without a result yet. Bot-vs-bot resolves with a simulated best-of-2.
+// User matches: if the grace window also expired, a bot plays for them
+// (still simulated, so the table catches up smoothly).
+function processDueMatches(user) {
+  if (!user.league) return;
+  const now = Date.now();
+  let changed = false;
+  for (const match of user.league.schedule) {
+    if (match.status === 'finished') continue;
+    if (match.scheduledAt > now) break; // schedule is in chronological order
+    const involvesUser = match.p1 === user.id || match.p2 === user.id;
+    if (involvesUser && now < match.scheduledAt + LEAGUE_NO_SHOW_GRACE_MS) {
+      // User can still show up — leave match open
+      continue;
+    }
+    const p1 = user.league.players.find(p => p.id === match.p1);
+    const p2 = user.league.players.find(p => p.id === match.p2);
+    if (!p1 || !p2) { match.status = 'finished'; continue; }
+    while (match.rounds.length < 2) {
+      match.rounds.push(simulateRound(p1, p2));
+    }
+    recordMatchResult(user.league, match);
+    changed = true;
+  }
+  if (changed) saveUsers();
 }
 
 function getLeagueStandings(league) {
   return [...league.players].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if ((b.roundsWon || 0) !== (a.roundsWon || 0)) return (b.roundsWon || 0) - (a.roundsWon || 0);
+    const gdA = a.goalsFor - a.goalsAgainst;
+    const gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
     return a.name.localeCompare(b.name);
   });
 }
+
+// Periodic catch-up so bot fixtures auto-resolve as time passes,
+// even when nobody has the league modal open.
+setInterval(() => {
+  for (const user of usersDB.values()) {
+    if (user.league) processDueMatches(user);
+  }
+}, 60 * 1000);
 
 app.get('/api/league/me', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
   const league = initUserLeague(user);
   saveUsers();
+  const now = Date.now();
   const standings = getLeagueStandings(league).map((p, i) => ({
     rank: i + 1,
     id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
-    played: p.wins + p.draws + p.losses,
-    wins: p.wins, draws: p.draws, losses: p.losses,
-    roundsWon: p.roundsWon, points: p.points,
+    played: p.played, wins: p.wins, draws: p.draws, losses: p.losses,
+    goalsFor: p.goalsFor, goalsAgainst: p.goalsAgainst,
+    goalDifference: p.goalsFor - p.goalsAgainst,
+    points: p.points,
+    last5: p.last5 || [],
   }));
   const myMatches = league.schedule
     .filter(m => m.p1 === user.id || m.p2 === user.id)
-    .map(m => ({
-      id: m.id,
-      day: m.day, time: m.time,
-      status: m.status,
-      winnerId: m.winnerId, draw: !!m.draw,
-      opponent: league.players.find(p => p.id === (m.p1 === user.id ? m.p2 : m.p1)),
-    }));
-  res.json({ season: league.season, standings, myMatches });
+    .map(m => {
+      const isP1 = m.p1 === user.id;
+      const oppPlayer = league.players.find(p => p.id === (isP1 ? m.p2 : m.p1));
+      const meEntry = league.players.find(p => p.id === user.id);
+      const userResult = m.status === 'finished'
+        ? (m.result === 'draw' ? 'D' : (m.result === (isP1 ? 'p1' : 'p2') ? 'W' : 'L'))
+        : null;
+      // Score in rounds (best-of-2)
+      const myGoals = m.rounds.filter(r => r === 'draw' ? true : r === (isP1 ? 'p1' : 'p2')).length;
+      const oppGoals = m.rounds.filter(r => r === 'draw' ? true : r === (isP1 ? 'p2' : 'p1')).length;
+      // Time window
+      const inWindow = now >= m.scheduledAt && now < m.scheduledAt + LEAGUE_NO_SHOW_GRACE_MS;
+      const upcoming = now < m.scheduledAt;
+      const startsIn = upcoming ? m.scheduledAt - now : 0;
+      return {
+        id: m.id,
+        matchday: m.matchday,
+        scheduledAt: m.scheduledAt,
+        status: m.status,
+        result: userResult,
+        score: m.status === 'finished' ? `${myGoals}-${oppGoals}` : null,
+        opponent: oppPlayer ? { id: oppPlayer.id, name: oppPlayer.name, isBot: oppPlayer.isBot } : null,
+        playable: m.status === 'scheduled' && inWindow,
+        upcoming,
+        startsIn,
+      };
+    });
+  res.json({
+    season: league.season,
+    startedAt: league.startedAt,
+    totalMatchdays: 11,
+    serverNow: now,
+    standings,
+    myMatches,
+  });
 });
 
 app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
@@ -579,6 +680,14 @@ app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
   if (!match) return res.status(404).json({ error: 'Match not found' });
   if (match.status === 'finished') return res.status(400).json({ error: 'Already played' });
   if (match.p1 !== user.id && match.p2 !== user.id) return res.status(400).json({ error: 'Not your match' });
+  const now = Date.now();
+  if (now < match.scheduledAt) {
+    const minsLeft = Math.ceil((match.scheduledAt - now) / 60000);
+    return res.status(400).json({ error: `Match starts in ${minsLeft}m` });
+  }
+  if (now >= match.scheduledAt + LEAGUE_NO_SHOW_GRACE_MS) {
+    return res.status(400).json({ error: 'Window expired — bot already played for you' });
+  }
 
   const botId = match.p1 === user.id ? match.p2 : match.p1;
   const bot = league.players.find(p => p.id === botId);
@@ -1231,33 +1340,27 @@ function attachGameListeners(room) {
     const bet = room.settings.bet || 0;
     const winnerData = data.winners?.[0];
 
-    // La Liga: if this was a league fixture, update the standings.
-    // Spectators don't earn or lose anything here (they pay nothing
-    // to watch and standings only move for the two participants).
+    // La Liga: if this was a league fixture, record one round of the
+    // best-of-2 here. Round 1 = the real UNO game just played.
+    // Round 2 = simulated immediately (skill-weighted) so the match
+    // resolves in one sitting without needing a second live game.
     if (room.leagueMatchId && room.leagueOwnerId) {
       const owner = usersDB.get(room.leagueOwnerId);
-      if (owner?.league) {
-        const match = owner.league.schedule.find(m => m.id === room.leagueMatchId);
-        if (match && match.status !== 'finished') {
-          const myEntry = owner.league.players.find(p => p.id === owner.id);
-          const oppId = match.p1 === owner.id ? match.p2 : match.p1;
-          const oppEntry = owner.league.players.find(p => p.id === oppId);
-          const userWon = winnerData && winnerData.id === owner.id;
-          if (myEntry && oppEntry) {
-            if (userWon) {
-              match.winnerId = owner.id;
-              myEntry.wins++; oppEntry.losses++;
-              myEntry.points += 3; myEntry.roundsWon += 2;
-              if (Math.random() < 0.4) oppEntry.roundsWon += 1;
-            } else {
-              match.winnerId = oppId;
-              oppEntry.wins++; myEntry.losses++;
-              oppEntry.points += 3; oppEntry.roundsWon += 2;
-              if (Math.random() < 0.4) myEntry.roundsWon += 1;
-            }
-            match.status = 'finished';
-            saveUsers();
-          }
+      const league = owner?.league;
+      const match = league?.schedule.find(m => m.id === room.leagueMatchId);
+      if (match && match.status !== 'finished') {
+        const p1 = league.players.find(p => p.id === match.p1);
+        const p2 = league.players.find(p => p.id === match.p2);
+        if (p1 && p2 && winnerData) {
+          // Round 1 — based on the live game result
+          const r1 = winnerData.id === match.p1 ? 'p1'
+                  : winnerData.id === match.p2 ? 'p2'
+                  : 'draw';
+          match.rounds.push(r1);
+          // Round 2 — simulated to keep flow snappy
+          match.rounds.push(simulateRound(p1, p2));
+          recordMatchResult(league, match);
+          saveUsers();
         }
       }
     }

@@ -1393,24 +1393,34 @@
   /* La Liga — Premier-League style table */
   .liga-table{
     width:100%;border-collapse:separate;border-spacing:0 4px;
-    font-size:12px;
+    font-size:11.5px;
   }
   .liga-table thead th{
-    font-size:10px;font-weight:800;letter-spacing:1.5px;
-    color:#FFB87A;padding:8px 6px;text-align:center;
+    font-size:9.5px;font-weight:800;letter-spacing:1.2px;
+    color:#FFB87A;padding:7px 4px;text-align:center;
     background:rgba(255,255,255,.03);
   }
   .liga-table thead th:nth-child(2){text-align:left;}
-  .liga-table tbody td{padding:9px 6px;text-align:center;}
+  .liga-table tbody td{padding:8px 4px;text-align:center;}
   .liga-table tbody tr{
     background:rgba(255,255,255,.03);
     border-radius:8px;
     transition:background .2s;
   }
   .liga-table tbody tr.me td{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(245,158,11,.06));font-weight:800;}
-  .liga-table tbody td:first-child{border-radius:8px 0 0 8px;font-family:'Bangers',cursive;font-size:14px;width:34px;}
-  .liga-table tbody td:last-child{border-radius:0 8px 8px 0;font-weight:900;color:#FFD700;width:44px;font-size:13px;}
+  .liga-table tbody td:first-child{border-radius:8px 0 0 8px;font-family:'Bangers',cursive;font-size:14px;width:30px;}
+  .liga-table tbody td.pts{font-weight:900;color:#FFD700;width:38px;font-size:13px;}
+  .liga-table tbody td:last-child{border-radius:0 8px 8px 0;}
   .liga-table tbody td:nth-child(2){text-align:left;}
+  .last5-cell{display:inline-flex;gap:3px;justify-content:center;}
+  .last5-dot{
+    width:14px;height:14px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:9px;font-weight:900;color:#fff;
+  }
+  .last5-dot.W{background:#22C55E;box-shadow:0 0 4px rgba(34,197,94,.5);}
+  .last5-dot.L{background:#E8324A;box-shadow:0 0 4px rgba(232,50,74,.5);}
+  .last5-dot.D{background:#6B7280;color:#fff;}
   .liga-pos.gold{color:#FFD700;}
   .liga-pos.silver{color:#C0C0C0;}
   .liga-pos.bronze{color:#CD7F32;}
@@ -3288,21 +3298,31 @@
       const av = p.isMe
         ? `<div class="liga-mini-av me">${(p.name||'?').charAt(0).toUpperCase()}</div>`
         : `<div class="liga-mini-av">${(p.name||'?').charAt(0).toUpperCase()}</div>`;
+      const last5 = (p.last5 || []).map(r =>
+        `<span class="last5-dot ${r}">${r==='W'?'✓':r==='L'?'✕':'−'}</span>`
+      ).join('');
+      const gd = p.goalDifference;
+      const gdStr = gd > 0 ? '+'+gd : gd;
       return `<tr class="${p.isMe?'me':''}">
         <td class="liga-pos ${posClass}">${p.rank}</td>
-        <td><div class="liga-name-cell">${av}<span>${esc(p.name)}${p.isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}${p.isBot?' <span style="font-size:9px;color:#60a5fa">🤖</span>':''}</span></div></td>
+        <td><div class="liga-name-cell">${av}<span>${esc(p.name)}${p.isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}</span></div></td>
+        <td class="pts">${p.points}</td>
         <td>${p.played}</td>
         <td>${p.wins}</td>
-        <td>${p.draws}</td>
         <td>${p.losses}</td>
-        <td>${p.points}</td>
+        <td>${p.draws}</td>
+        <td>${p.goalsFor}</td>
+        <td>${p.goalsAgainst}</td>
+        <td>${gdStr}</td>
+        <td><div class="last5-cell">${last5||'<span style="color:rgba(255,255,255,.3)">—</span>'}</div></td>
       </tr>`;
     }).join('');
     list.innerHTML = `<table class="liga-table">
-      <thead><tr><th>#</th><th>Player</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PTS</th></tr></thead>
+      <thead><tr><th>#</th><th>Team</th><th>PTS</th><th>MP</th><th>W</th><th>L</th><th>D</th><th>GF</th><th>GA</th><th>GD</th><th>Last 5</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
+
   function renderLigaProgramme(list){
     if (!League.liga) {
       list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">Loading…</div>`;
@@ -3313,33 +3333,39 @@
       list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">No fixtures yet</div>`;
       return;
     }
-    // Group by day
+    const now = League.liga.serverNow || Date.now();
     const byDay = {};
-    matches.forEach(m => { (byDay[m.day] = byDay[m.day] || []).push(m); });
+    matches.forEach(m => { (byDay[m.matchday] = byDay[m.matchday] || []).push(m); });
     const days = Object.keys(byDay).sort((a,b)=>+a-+b);
     list.innerHTML = days.map(d => {
-      const dayMatches = byDay[d].sort((a,b)=>a.time.localeCompare(b.time));
+      const dayMatches = byDay[d].sort((a,b)=>a.scheduledAt-b.scheduledAt);
       const rows = dayMatches.map(m => {
         const opp = m.opponent;
         const av = `<div class="liga-mini-av">${(opp?.name||'?').charAt(0).toUpperCase()}</div>`;
+        const date = new Date(m.scheduledAt);
+        const timeStr = date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
         let resultBadge = '';
         let action = '';
         if (m.status === 'finished') {
-          if (m.draw) resultBadge = `<span class="programme-result draw">DRAW</span>`;
-          else if (m.winnerId === S.user?.id) resultBadge = `<span class="programme-result win">WIN</span>`;
-          else resultBadge = `<span class="programme-result loss">LOSS</span>`;
+          const cls = m.result === 'W' ? 'win' : m.result === 'L' ? 'loss' : 'draw';
+          const label = m.result === 'W' ? 'WIN' : m.result === 'L' ? 'LOSS' : 'DRAW';
+          resultBadge = `<span class="programme-result ${cls}">${label} ${m.score||''}</span>`;
         } else if (m.status === 'live') {
           resultBadge = `<span class="programme-result live">🔴 LIVE</span>`;
-        } else {
-          action = `<button class="btn-play-match" onclick="startLeagueMatch('${m.id}')">▶ Play</button>`;
+        } else if (m.playable) {
+          action = `<button class="btn-play-match" onclick="startLeagueMatch('${m.id}')">▶ Play Now</button>`;
+        } else if (m.upcoming) {
+          const mins = Math.ceil(m.startsIn / 60000);
+          const hint = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+          action = `<span class="programme-result" style="background:rgba(124,58,237,.18);color:#c4b5fd">⏳ in ${hint}</span>`;
         }
         return `<div class="programme-row ${m.status}">
-          <div class="programme-time">${m.time}</div>
+          <div class="programme-time">${timeStr}</div>
           <div class="programme-vs">${av}<span>${esc(opp?.name||'?')}${opp?.isBot?' 🤖':''}</span></div>
           ${resultBadge || action}
         </div>`;
       }).join('');
-      return `<div class="programme-day">📅 Day ${d}</div>${rows}`;
+      return `<div class="programme-day">📅 Matchday ${d}</div>${rows}`;
     }).join('');
   }
   async function startLeagueMatch(matchId){
