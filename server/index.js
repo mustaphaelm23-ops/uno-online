@@ -432,6 +432,41 @@ app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
 // ─────────────────────────────────────────
 // Instagram follow reward
 const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
+// League Hub — returns the user's full ranking context: their ELO,
+// their league, their rank in the global classement, neighbours
+// around them (5 above, 5 below), top 10, and their last matches.
+app.get('/api/competitions/me', authMiddleware, (req, res) => {
+  const me = usersDB.get(req.user.userId);
+  if (!me) return res.status(404).json({ error: 'User not found' });
+  const all = [...usersDB.values()]
+    .map(u => ({
+      id: u.id, username: u.username, avatar: u.avatar,
+      elo: u.elo || 1000,
+      gamesPlayed: u.stats?.gamesPlayed || 0,
+      gamesWon: u.stats?.gamesWon || 0,
+    }))
+    .sort((a, b) => b.elo - a.elo);
+  const rank = all.findIndex(u => u.id === me.id) + 1;
+  const myEntry = all[rank - 1];
+  const start = Math.max(0, rank - 6);
+  const end = Math.min(all.length, rank + 5);
+  const neighbours = all.slice(start, end).map((u, i) => ({ ...u, rank: start + i + 1 }));
+  const top = all.slice(0, 10).map((u, i) => ({ ...u, rank: i + 1 }));
+  const league = getLeague(me.elo || 1000);
+  // progress to next league
+  const nextLeague = LEAGUES.find(l => l.min > league.min) || null;
+  const progress = nextLeague
+    ? Math.min(100, Math.round(((me.elo - league.min) / (nextLeague.min - league.min)) * 100))
+    : 100;
+  res.json({
+    me: { ...myEntry, rank, league, nextLeague, progress },
+    neighbours,
+    top,
+    matchHistory: (me.matchHistory || []).slice(0, 10),
+    totalPlayers: all.length,
+  });
+});
+
 app.post('/api/profile/avatar', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -1021,17 +1056,31 @@ function attachGameListeners(room) {
     // ELO calculation
     const winnerUser = winnerData ? usersDB.get(winnerData.id) : null;
     const loserUsers = data.players.filter(p => p.id !== winnerData?.id).map(p => usersDB.get(p.id)).filter(Boolean);
+    let eloGain = 0, eloLoss = 0;
     if(winnerUser && loserUsers.length > 0) {
       const avgLoserElo = loserUsers.reduce((s,u) => s+(u.elo||1000), 0) / loserUsers.length;
-      const { gain, loss } = calcELO(winnerUser.elo||1000, avgLoserElo);
-      winnerUser.elo = Math.max(0, (winnerUser.elo||1000) + gain);
-      loserUsers.forEach(u => { u.elo = Math.max(0, (u.elo||1000) - loss); });
+      const elo = calcELO(winnerUser.elo||1000, avgLoserElo);
+      eloGain = elo.gain; eloLoss = elo.loss;
+      winnerUser.elo = Math.max(0, (winnerUser.elo||1000) + eloGain);
+      loserUsers.forEach(u => { u.elo = Math.max(0, (u.elo||1000) - eloLoss); });
     }
 
     data.players.forEach(playerData => {
       const user = usersDB.get(playerData.id);
       if (!user) return;
       user.stats.gamesPlayed++;
+      // Match history (latest 20 per user) — feeds the League Hub
+      if (!Array.isArray(user.matchHistory)) user.matchHistory = [];
+      const won = winnerData && winnerData.id === playerData.id;
+      const opponents = data.players.filter(p => p.id !== playerData.id).map(p => p.username);
+      user.matchHistory.unshift({
+        at: Date.now(),
+        won,
+        opponents,
+        eloChange: won ? eloGain : -eloLoss,
+        bet,
+      });
+      if (user.matchHistory.length > 20) user.matchHistory.length = 20;
       if (winnerData && winnerData.id === playerData.id) {
         // Winner gets all the bet money from losers
         const totalWin = bet * (data.players.length - 1);
