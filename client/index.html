@@ -1390,6 +1390,53 @@
     text-shadow:1px 2px 0 rgba(0,0,0,.55);
     -webkit-text-stroke:1px rgba(0,0,0,.5);
   }
+  /* Competitions — "Coming Soon" badge */
+  .mode-btn{position:relative;justify-content:flex-start!important;}
+  .mode-btn .soon{
+    margin-left:auto;font-size:9px;font-weight:900;letter-spacing:1.5px;
+    background:rgba(255,215,0,.22);color:#FFD700;
+    padding:2px 7px;border-radius:8px;border:1px solid rgba(255,215,0,.4);
+  }
+
+  /* Spectator voting */
+  .vote-btn{
+    margin-top:6px;padding:4px 10px;border-radius:14px;
+    background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.45);
+    color:#c4b5fd;font-size:11px;font-weight:800;cursor:pointer;
+    transition:all .25s cubic-bezier(.34,1.56,.64,1);
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .vote-btn:hover{transform:translateY(-2px);background:rgba(124,58,237,.3);color:#fff;}
+  .vote-btn.active{
+    background:linear-gradient(135deg,#7C3AED,#5B21B6);
+    border-color:rgba(255,255,255,.35);color:#fff;
+    box-shadow:0 4px 14px rgba(124,58,237,.5);
+  }
+  .vote-count{
+    font-size:10px;color:rgba(255,255,255,.6);font-weight:800;
+    margin-top:2px;letter-spacing:.5px;
+  }
+  .crowd-fav{
+    margin:14px auto 6px;padding:12px 16px;
+    background:linear-gradient(145deg,rgba(124,58,237,.18),rgba(91,33,182,.08));
+    border:2px solid rgba(124,58,237,.5);border-radius:16px;
+    box-shadow:0 6px 20px rgba(124,58,237,.25);
+    max-width:340px;display:flex;align-items:center;gap:12px;
+    animation:mvpBadgeIn .6s cubic-bezier(.34,1.56,.64,1) backwards .55s;
+  }
+  .crowd-fav-avatar{
+    width:46px;height:46px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,#7C3AED,#5B21B6);
+    background-size:cover;background-position:center;
+    border:2.5px solid #c4b5fd;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bangers',cursive;font-size:18px;color:#fff;
+  }
+  .crowd-fav-info{flex:1;text-align:left}
+  .crowd-fav-label{font-family:'Bangers',cursive;letter-spacing:2px;font-size:12px;color:#c4b5fd;}
+  .crowd-fav-name{font-size:16px;font-weight:900;color:#fff;line-height:1.1;margin-top:2px;}
+  .crowd-fav-meta{font-size:10px;color:rgba(255,255,255,.65);font-weight:600;margin-top:2px;}
+
   /* Spectator chat — separate panel inside the existing chat */
   .spec-chat-toggle{
     background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);
@@ -1746,6 +1793,10 @@
         <button class="btnA" style="background:linear-gradient(135deg,#FFD700,#D97706);color:#1a1a1a;box-shadow:0 4px 12px rgba(255,215,0,.25);" onclick="showRankedLb()">🏆 Ranked</button>
         <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#4C1D95);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.3);" onclick="showTournaments()">⚔️ Tournament</button>
         <button class="btnA" style="background:linear-gradient(135deg,#E1306C,#C13584);color:#fff;box-shadow:0 4px 12px rgba(225,48,108,.25)" onclick="doInsta()">📸 Follow + 1000🪙</button>
+        <div class="stitle" style="margin-top:14px">Competitions</div>
+        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#16A34A,#14532D);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)" onclick="comingSoon('League','Win matches → climb the table → seasonal champion. Coming soon.')">🏆 League <span class="soon">SOON</span></button>
+        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#1E3A8A,#0F1F4A);color:#fff;box-shadow:0 4px 12px rgba(30,58,138,.4)" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">⚽ Champions League <span class="soon">SOON</span></button>
+        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#DC2626,#7F1D1D);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.35)" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">🌍 Continental Cups <span class="soon">SOON</span></button>
         <div class="stitle" style="margin-top:14px">Account</div>
         <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25)" onclick="showProfile()">👤 My Profile</button>
         <button class="btnA" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;box-shadow:0 4px 12px rgba(245,158,11,.25)" onclick="showLeaderboard()">🏆 Leaderboard</button>
@@ -1859,6 +1910,14 @@
         <div class="mvp-label">⭐ MAN OF THE MATCH</div>
         <div class="mvp-name" id="mvpName">—</div>
         <div class="mvp-reason" id="mvpReason">—</div>
+      </div>
+    </div>
+    <div id="crowdFav" class="crowd-fav" style="display:none">
+      <div class="crowd-fav-avatar" id="crowdFavAvatar">🗳️</div>
+      <div class="crowd-fav-info">
+        <div class="crowd-fav-label">🎉 CROWD FAVORITE</div>
+        <div class="crowd-fav-name" id="crowdFavName">—</div>
+        <div class="crowd-fav-meta" id="crowdFavMeta">—</div>
       </div>
     </div>
     <button class="btnP" style="width:auto;padding:14px 36px;animation:fadeIn .6s ease .9s backwards" onclick="backLobby()">Back to Lobby</button>
@@ -2541,7 +2600,7 @@
     socket:null,roomId:null,
     roomsTimer:null,unoTimer:null,
     pendingWild:null,calledUNO:false,
-    g:{myHand:[],myPlayable:[],players:[],topCard:null,currentTurn:null,direction:1,drawPileSize:108,turnPhase:'waiting',drawnCardId:null,stackDraw:0,spectatorHands:{}},
+    g:{myHand:[],myPlayable:[],players:[],topCard:null,currentTurn:null,direction:1,drawPileSize:108,turnPhase:'waiting',drawnCardId:null,stackDraw:0,spectatorHands:{},voteTally:{},myVote:null},
     isSpectator:false,
   };
 
@@ -2619,6 +2678,11 @@
       if(!S.isSpectator) return;
       applySpectatorState(state);
       if(state.players) Clutch.check(state.players);
+    });
+    sk.on('vote:tally',({tally,my})=>{
+      S.g.voteTally = tally || {};
+      if(my !== undefined) S.g.myVote = my;
+      if(S.isSpectator && S.g.players?.length) renderSpectatorOpps(S.g.players);
     });
     sk.on('chat:spectator_history',({messages})=>{
       const box=document.getElementById('specMsgs');
@@ -2850,7 +2914,9 @@
   function renderSpectatorOpps(players){
     const row = document.getElementById('orow');
     if (!row) return;
-    const newKey = players.map(p => `${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.id===S.g.currentTurn?1:0}`).join('|') + '|spec';
+    const tally = S.g.voteTally || {};
+    const myVote = S.g.myVote || null;
+    const newKey = players.map(p => `${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.id===S.g.currentTurn?1:0}:${tally[p.id]||0}:${myVote===p.id?'v':''}`).join('|') + '|spec';
     if (row._lastKey === newKey) return;
     row._lastKey = newKey;
     const hands = S.g.spectatorHands || {};
@@ -2867,11 +2933,26 @@
       const avatar = p.avatar
         ? `<div class="opp-avatar" style="background-image:url('${p.avatar}')"></div>`
         : `<div class="opp-avatar opp-avatar-letter">${(p.username||'?').charAt(0).toUpperCase()}</div>`;
+      const votes = tally[p.id] || 0;
+      const isMyVote = myVote === p.id;
+      const voteBtn = `<button class="vote-btn ${isMyVote?'active':''}" onclick="voteFor('${p.id}')" title="${isMyVote?'Your pick':'Cheer for this player'}">${isMyVote?'⭐':'🗳️'} ${isMyVote?'Voted':'Vote'}</button>`;
+      const voteCount = votes > 0 ? `<div class="vote-count">${votes} vote${votes===1?'':'s'}</div>` : '';
       return `<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
         <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)} ${p.saidUno?'<span class="ouno">UNO!</span>':''}</div></div>
         <div style="display:flex;align-items:center;height:64px">${cardsHtml}${more}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">${voteBtn}${voteCount}</div>
       </div>`;
     }).join('');
+  }
+  function voteFor(playerId){
+    if(!S.isSpectator) return;
+    if(!S.socket?.connected) return;
+    S.socket.emit('vote:spectator',{playerId},(res)=>{
+      if(!res?.success) toast(res?.reason||'Vote failed','e');
+    });
+  }
+  function comingSoon(title, body){
+    toast(`🚧 ${title} — ${body}`,'i');
   }
 
   function updateSpectatorTurnUI(){
@@ -2973,6 +3054,8 @@
     document.body.classList.remove('spectating','clutch');
     S.isSpectator = false;
     S.g.spectatorHands = {};
+    S.g.voteTally = {};
+    S.g.myVote = null;
     Clutch.reset();
     const wt=document.getElementById('tabSpec'); if(wt) wt.style.display='none';
     const sm=document.getElementById('specMsgs'); if(sm) sm.innerHTML='';
@@ -3440,6 +3523,20 @@
       mvpBox.style.display='flex';
     } else if(mvpBox){
       mvpBox.style.display='none';
+    }
+    // Crowd favorite — only shown when at least one spectator voted
+    const cfBox=document.getElementById('crowdFav');
+    if(data.crowdFavorite && cfBox){
+      const cf=data.crowdFavorite;
+      const av=document.getElementById('crowdFavAvatar');
+      if(cf.avatar){av.style.backgroundImage=`url('${cf.avatar}')`;av.textContent='';}
+      else{av.style.backgroundImage='';av.textContent=(cf.username||'?').charAt(0).toUpperCase();}
+      document.getElementById('crowdFavName').textContent=cf.username||'—';
+      const pct=cf.total?Math.round((cf.votes/cf.total)*100):0;
+      document.getElementById('crowdFavMeta').textContent=`${cf.votes} of ${cf.total} watcher vote${cf.total===1?'':'s'} (${pct}%)`;
+      cfBox.style.display='flex';
+    } else if(cfBox){
+      cfBox.style.display='none';
     }
     document.getElementById('winov').classList.add('show');
     if(iWon)confetti();

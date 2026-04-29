@@ -193,6 +193,7 @@ function createRoomRecord(hostId, settings = {}) {
     playerIds:  [],
     spectators: new Set(), // userIds currently spectating this room
     spectatorChat: [],
+    spectatorVotes: new Map(), // spectatorUserId -> votedPlayerId
     chat:       [],
     status:     'lobby',
     createdAt:  Date.now(),
@@ -682,6 +683,7 @@ io.on('connection', (socket) => {
     socket.emit('chat:history', { messages: (room.chat || []).slice(-50) });
     socket.emit('chat:spectator_history', { messages: (room.spectatorChat || []).slice(-50) });
     socket.emit('game:spectator_state', room.game._spectatorState());
+    socket.emit('vote:tally', { tally: computeVoteTally(room), my: room.spectatorVotes?.get(userId) || null });
 
     socket.to(roomId).emit('room:spectator_joined', {
       spectatorId: userId, username: socket.username, count: room.spectators.size,
@@ -709,6 +711,26 @@ io.on('connection', (socket) => {
   // Spectator chat — separate from player chat. Players only see it if
   // they explicitly toggle the panel; spectators see both their own
   // channel and the player chat for context.
+  // Spectator voting — watchers cheer for a player, tallies broadcast
+  // back to all watchers in the room. Players never see the votes
+  // (no pressure, no leaks) until the game-over crowd favorite reveal.
+  socket.on('vote:spectator', ({ playerId } = {}, ack) => {
+    const room = roomsDB.get(socket.currentRoomId);
+    if (!room) return ack?.({ success: false, reason: 'Not in room' });
+    if (!socket.isSpectator) return ack?.({ success: false, reason: 'Players cannot vote' });
+    const valid = room.game.players.some(p => p.id === playerId);
+    if (!valid) return ack?.({ success: false, reason: 'Invalid player' });
+    if (!room.spectatorVotes) room.spectatorVotes = new Map();
+    room.spectatorVotes.set(userId, playerId);
+    const tally = computeVoteTally(room);
+    // Broadcast to spectators only — keep it out of the player UI
+    room.spectators.forEach(sid => {
+      const sock = findSocketByUserId(sid);
+      if (sock) sock.emit('vote:tally', { tally, my: playerId });
+    });
+    ack?.({ success: true });
+  });
+
   socket.on('chat:spectator_send', ({ text } = {}, ack) => {
     try {
       const room = roomsDB.get(socket.currentRoomId);
@@ -1062,7 +1084,8 @@ function attachGameListeners(room) {
   game.on('player:won', (data) => {
     const winner = usersDB.get(data.winnerId);
     const eloChange = winner ? Math.abs((winner.elo||1000) - 1000) : 16;
-    io.to(roomId).emit('game:player_won', { ...data, eloChange: eloChange || 16 });
+    const crowdFavorite = pickCrowdFavorite(room);
+    io.to(roomId).emit('game:player_won', { ...data, eloChange: eloChange || 16, crowdFavorite });
     // Tournament result
     if(room.settings?.tournamentId) {
       const loserId = room.game.players.find(p => p.id !== data.winnerId)?.id;
@@ -1163,6 +1186,33 @@ function findSocketByUserId(userId) {
     if (uid === userId) return io.sockets.sockets.get(socketId);
   }
   return null;
+}
+
+function computeVoteTally(room) {
+  const tally = {};
+  if (!room.spectatorVotes) return tally;
+  for (const pid of room.spectatorVotes.values()) {
+    tally[pid] = (tally[pid] || 0) + 1;
+  }
+  return tally;
+}
+
+function pickCrowdFavorite(room) {
+  const tally = computeVoteTally(room);
+  const entries = Object.entries(tally);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => b[1] - a[1]);
+  const [topId, topVotes] = entries[0];
+  const player = room.game.players.find(p => p.id === topId);
+  if (!player) return null;
+  const total = entries.reduce((s, [, n]) => s + n, 0);
+  return {
+    id: player.id,
+    username: player.username,
+    avatar: player.avatar,
+    votes: topVotes,
+    total,
+  };
 }
 
 function broadcastPrivateStates(room) {
