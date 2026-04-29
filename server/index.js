@@ -432,6 +432,183 @@ app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
 // ─────────────────────────────────────────
 // Instagram follow reward
 const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
+// ─────────────────────────────────────────
+// LA LIGA — personal season vs 12 bots, round-robin, P/W/D/L/PTS
+// ─────────────────────────────────────────
+
+const LEAGUE_BOT_NAMES = Array.from({ length: 12 }, (_, i) => 'User' + (i + 1));
+
+function initUserLeague(user) {
+  if (user.league && Array.isArray(user.league.schedule)) return user.league;
+  const players = [
+    { id: user.id, name: user.username, isMe: true, isBot: false,
+      points: 0, wins: 0, draws: 0, losses: 0, roundsWon: 0 },
+    ...LEAGUE_BOT_NAMES.map((n, i) => ({
+      id: 'lb_' + (i + 1), name: n, isBot: true,
+      skill: 0.35 + Math.random() * 0.55,
+      points: 0, wins: 0, draws: 0, losses: 0, roundsWon: 0,
+    })),
+  ];
+  const schedule = generateRoundRobin(players);
+  // Simulate bot-vs-bot matches for the first ~70% of rounds so the table
+  // already has shape when the user opens the league for the first time.
+  // (User matches always stay 'scheduled' until played.)
+  const totalRounds = Math.max(...schedule.map(m => m.round));
+  const presimRounds = Math.floor(totalRounds * 0.55);
+  schedule.forEach(m => {
+    if (m.round <= presimRounds && m.p1 !== user.id && m.p2 !== user.id) {
+      simulateBotMatch(players, m);
+    }
+  });
+  user.league = {
+    season: 'S1',
+    startedAt: Date.now(),
+    players,
+    schedule,
+  };
+  return user.league;
+}
+
+function generateRoundRobin(players) {
+  // Circle method. Odd count → add a BYE so each round still pairs cleanly.
+  const arr = [...players];
+  if (arr.length % 2 === 1) arr.push({ id: 'BYE', name: 'BYE' });
+  const N = arr.length;
+  const halfN = N / 2;
+  const out = [];
+  // Day cycle: 2 matches per day at 20:00 and 21:00 — distribute round
+  // matches across days so the user doesn't play 6 matches on day 1
+  let dayCounter = 1;
+  let matchesToday = 0;
+  for (let r = 0; r < N - 1; r++) {
+    const roundPairs = [];
+    for (let i = 0; i < halfN; i++) {
+      const a = arr[i];
+      const b = arr[N - 1 - i];
+      if (a.id === 'BYE' || b.id === 'BYE') continue;
+      roundPairs.push({ p1: a.id, p2: b.id });
+    }
+    roundPairs.forEach((pair, idx) => {
+      if (matchesToday >= 2) { dayCounter++; matchesToday = 0; }
+      out.push({
+        id: `m_${r}_${idx}`,
+        p1: pair.p1, p2: pair.p2,
+        round: r + 1,
+        day: dayCounter,
+        time: matchesToday === 0 ? '20:00' : '21:00',
+        status: 'scheduled', // scheduled | live | finished
+        winnerId: null,
+        draw: false,
+      });
+      matchesToday++;
+    });
+    // rotate (keep arr[0] fixed)
+    const fixed = arr[0];
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop());
+    arr.splice(0, arr.length, fixed, ...rest);
+  }
+  return out;
+}
+
+function simulateBotMatch(players, match) {
+  const p1 = players.find(p => p.id === match.p1);
+  const p2 = players.find(p => p.id === match.p2);
+  if (!p1 || !p2) return;
+  // 12% draw chance, otherwise winner weighted by skill
+  const drawRoll = Math.random();
+  if (drawRoll < 0.12) {
+    match.winnerId = null;
+    match.draw = true;
+    p1.draws++; p2.draws++;
+    p1.points++; p2.points++;
+    p1.roundsWon += 1; p2.roundsWon += 1;
+  } else {
+    const total = (p1.skill || 0.5) + (p2.skill || 0.5);
+    const p1WinChance = (p1.skill || 0.5) / total;
+    const p1Win = Math.random() < p1WinChance;
+    const winner = p1Win ? p1 : p2;
+    const loser = p1Win ? p2 : p1;
+    match.winnerId = winner.id;
+    winner.wins++; loser.losses++;
+    winner.points += 3;
+    winner.roundsWon += 2;
+    if (Math.random() < 0.45) loser.roundsWon += 1;
+  }
+  match.status = 'finished';
+}
+
+function getLeagueStandings(league) {
+  return [...league.players].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if ((b.roundsWon || 0) !== (a.roundsWon || 0)) return (b.roundsWon || 0) - (a.roundsWon || 0);
+    return a.name.localeCompare(b.name);
+  });
+}
+
+app.get('/api/league/me', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const league = initUserLeague(user);
+  saveUsers();
+  const standings = getLeagueStandings(league).map((p, i) => ({
+    rank: i + 1,
+    id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
+    played: p.wins + p.draws + p.losses,
+    wins: p.wins, draws: p.draws, losses: p.losses,
+    roundsWon: p.roundsWon, points: p.points,
+  }));
+  const myMatches = league.schedule
+    .filter(m => m.p1 === user.id || m.p2 === user.id)
+    .map(m => ({
+      id: m.id,
+      day: m.day, time: m.time,
+      status: m.status,
+      winnerId: m.winnerId, draw: !!m.draw,
+      opponent: league.players.find(p => p.id === (m.p1 === user.id ? m.p2 : m.p1)),
+    }));
+  res.json({ season: league.season, standings, myMatches });
+});
+
+app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const league = initUserLeague(user);
+  const match = league.schedule.find(m => m.id === req.params.matchId);
+  if (!match) return res.status(404).json({ error: 'Match not found' });
+  if (match.status === 'finished') return res.status(400).json({ error: 'Already played' });
+  if (match.p1 !== user.id && match.p2 !== user.id) return res.status(400).json({ error: 'Not your match' });
+
+  const botId = match.p1 === user.id ? match.p2 : match.p1;
+  const bot = league.players.find(p => p.id === botId);
+  if (!bot) return res.status(500).json({ error: 'Opponent not found' });
+
+  const room = createRoomRecord(user.id, { maxPlayers: 2, bet: 0 });
+  room.game = new GameManager(room.id, room.settings);
+  room.leagueMatchId = match.id;
+  room.leagueOwnerId = user.id;
+  attachGameListeners(room);
+
+  const userPlayer = new Player(user.id, user.username, user.coins);
+  userPlayer.avatar = user.avatar;
+  room.game.addPlayer(userPlayer);
+  room.playerIds.push(user.id);
+
+  const botPlayer = new Player(bot.id, bot.name, 0);
+  botPlayer.isBot = true;
+  botPlayer.isConnected = true;
+  botPlayer.status = 'active';
+  room.game.addPlayer(botPlayer);
+  room.playerIds.push(bot.id);
+
+  match.status = 'live';
+  roomsDB.set(room.id, room);
+  saveUsers();
+
+  res.json({ roomId: room.id, opponent: bot.name });
+});
+
 // League Hub — returns the user's full ranking context: their ELO,
 // their league, their rank in the global classement, neighbours
 // around them (5 above, 5 below), top 10, and their last matches.
@@ -1053,6 +1230,37 @@ function attachGameListeners(room) {
     room.status = 'finished';
     const bet = room.settings.bet || 0;
     const winnerData = data.winners?.[0];
+
+    // La Liga: if this was a league fixture, update the standings.
+    // Spectators don't earn or lose anything here (they pay nothing
+    // to watch and standings only move for the two participants).
+    if (room.leagueMatchId && room.leagueOwnerId) {
+      const owner = usersDB.get(room.leagueOwnerId);
+      if (owner?.league) {
+        const match = owner.league.schedule.find(m => m.id === room.leagueMatchId);
+        if (match && match.status !== 'finished') {
+          const myEntry = owner.league.players.find(p => p.id === owner.id);
+          const oppId = match.p1 === owner.id ? match.p2 : match.p1;
+          const oppEntry = owner.league.players.find(p => p.id === oppId);
+          const userWon = winnerData && winnerData.id === owner.id;
+          if (myEntry && oppEntry) {
+            if (userWon) {
+              match.winnerId = owner.id;
+              myEntry.wins++; oppEntry.losses++;
+              myEntry.points += 3; myEntry.roundsWon += 2;
+              if (Math.random() < 0.4) oppEntry.roundsWon += 1;
+            } else {
+              match.winnerId = oppId;
+              oppEntry.wins++; myEntry.losses++;
+              oppEntry.points += 3; oppEntry.roundsWon += 2;
+              if (Math.random() < 0.4) myEntry.roundsWon += 1;
+            }
+            match.status = 'finished';
+            saveUsers();
+          }
+        }
+      }
+    }
     // ELO calculation
     const winnerUser = winnerData ? usersDB.get(winnerData.id) : null;
     const loserUsers = data.players.filter(p => p.id !== winnerData?.id).map(p => usersDB.get(p.id)).filter(Boolean);

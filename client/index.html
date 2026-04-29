@@ -1390,6 +1390,96 @@
     text-shadow:1px 2px 0 rgba(0,0,0,.55);
     -webkit-text-stroke:1px rgba(0,0,0,.5);
   }
+  /* La Liga — Premier-League style table */
+  .liga-table{
+    width:100%;border-collapse:separate;border-spacing:0 4px;
+    font-size:12px;
+  }
+  .liga-table thead th{
+    font-size:10px;font-weight:800;letter-spacing:1.5px;
+    color:#FFB87A;padding:8px 6px;text-align:center;
+    background:rgba(255,255,255,.03);
+  }
+  .liga-table thead th:nth-child(2){text-align:left;}
+  .liga-table tbody td{padding:9px 6px;text-align:center;}
+  .liga-table tbody tr{
+    background:rgba(255,255,255,.03);
+    border-radius:8px;
+    transition:background .2s;
+  }
+  .liga-table tbody tr.me td{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(245,158,11,.06));font-weight:800;}
+  .liga-table tbody td:first-child{border-radius:8px 0 0 8px;font-family:'Bangers',cursive;font-size:14px;width:34px;}
+  .liga-table tbody td:last-child{border-radius:0 8px 8px 0;font-weight:900;color:#FFD700;width:44px;font-size:13px;}
+  .liga-table tbody td:nth-child(2){text-align:left;}
+  .liga-pos.gold{color:#FFD700;}
+  .liga-pos.silver{color:#C0C0C0;}
+  .liga-pos.bronze{color:#CD7F32;}
+  .liga-pos.relegate{color:#f87171;}
+  .liga-name-cell{display:flex;align-items:center;gap:8px;}
+  .liga-mini-av{
+    width:24px;height:24px;border-radius:50%;
+    background:linear-gradient(135deg,#7C3AED,#5B21B6);
+    background-size:cover;background-position:center;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bangers',cursive;font-size:11px;color:#fff;
+    border:1.5px solid rgba(255,255,255,.15);flex-shrink:0;
+  }
+  .liga-mini-av.me{background:linear-gradient(135deg,#E8324A,#F59E0B);border-color:#FFD700;}
+  /* Programme — match cards */
+  .programme-day{
+    font-family:'Bangers',cursive;font-size:14px;color:#FFB87A;
+    letter-spacing:2px;margin:14px 0 8px;padding-bottom:4px;
+    border-bottom:1px solid rgba(255,215,0,.18);
+  }
+  .programme-day:first-child{margin-top:0;}
+  .programme-row{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 14px;margin-bottom:6px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);border-radius:10px;
+  }
+  .programme-row.live{border-color:rgba(232,50,74,.5);background:rgba(232,50,74,.08);}
+  .programme-row.finished{opacity:.78;}
+  .programme-time{
+    font-family:'Bangers',cursive;font-size:14px;letter-spacing:1.5px;
+    color:#FFD700;width:54px;flex-shrink:0;
+  }
+  .programme-vs{flex:1;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .programme-vs .vs-sep{color:rgba(255,255,255,.4);font-weight:900;font-size:11px;letter-spacing:2px;}
+  .programme-result{
+    font-size:11px;font-weight:900;letter-spacing:.5px;
+    padding:3px 9px;border-radius:12px;
+  }
+  .programme-result.win{background:rgba(34,197,94,.18);color:#4ade80;}
+  .programme-result.loss{background:rgba(232,50,74,.18);color:#fca5a5;}
+  .programme-result.draw{background:rgba(255,215,0,.18);color:#FFD700;}
+  .programme-result.live{background:rgba(232,50,74,.25);color:#fff;animation:livePulse 1.4s ease-in-out infinite;}
+  @keyframes livePulse{0%,100%{opacity:.85}50%{opacity:1}}
+  .btn-play-match{
+    padding:7px 14px;border:none;border-radius:10px;
+    background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;
+    font-weight:800;font-size:12px;cursor:pointer;
+    box-shadow:0 4px 12px rgba(22,163,74,.35);
+    transition:all .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .btn-play-match:hover{transform:translateY(-2px) scale(1.04);}
+
+  /* Per-player mic mute (in-game) */
+  .opanel{position:relative;}
+  .mute-toggle{
+    position:absolute;top:6px;right:6px;
+    width:24px;height:24px;border-radius:50%;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    color:#fff;font-size:12px;cursor:pointer;
+    display:none;align-items:center;justify-content:center;
+    transition:all .2s;z-index:5;
+  }
+  .opanel:hover .mute-toggle{display:flex;}
+  .mute-toggle.muted{
+    display:flex;background:rgba(232,50,74,.4);border-color:rgba(232,50,74,.7);
+  }
+  .mute-toggle:hover{transform:scale(1.15);}
+
   /* League Hub modal */
   .league-ov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:200;}
   .league-ov.show{display:flex;animation:screenIn .3s ease;}
@@ -2173,9 +2263,10 @@
         </div>
       </div>
       <div class="league-tabs">
-        <button class="league-tab on" id="leagueTabRank" onclick="switchLeagueTab('rank')">My Rank</button>
-        <button class="league-tab" id="leagueTabTop" onclick="switchLeagueTab('top')">Top 10</button>
-        <button class="league-tab" id="leagueTabHist" onclick="switchLeagueTab('history')">My Matches</button>
+        <button class="league-tab on" id="leagueTabLiga" onclick="switchLeagueTab('liga')">🏆 Liga</button>
+        <button class="league-tab" id="leagueTabProg" onclick="switchLeagueTab('programme')">📅 Programme</button>
+        <button class="league-tab" id="leagueTabTop" onclick="switchLeagueTab('top')">🌍 Top 10</button>
+        <button class="league-tab" id="leagueTabHist" onclick="switchLeagueTab('history')">📊 History</button>
       </div>
       <div class="league-list" id="leagueList"></div>
     </div>
@@ -2313,6 +2404,7 @@
     localStream: null,
     peers: new Map(),       // remoteUserId -> RTCPeerConnection
     audioEls: new Map(),    // remoteUserId -> HTMLAudioElement
+    mutedPeers: new Set(),  // remote users we silenced locally
     _level: { ctx:null, analyser:null, raf:null, lastSpeaking:false },
     _stunServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -2347,6 +2439,8 @@
       // Tell others we joined — they will reach back with offers
       S.socket?.emit('voice:join');
       toast('🎤 Voice chat ON','s');
+      // Refresh panels so the per-peer mute buttons can appear (3+ players only)
+      if (S.g?.players?.length) renderOpps(S.g.players);
     },
 
     leave(){
@@ -2360,6 +2454,7 @@
       // Remove remote audio elements
       this.audioEls.forEach((a) => { try{ a.srcObject = null; a.remove(); }catch(e){} });
       this.audioEls.clear();
+      this.mutedPeers.clear();
       // Stop local mic
       if (this.localStream) {
         this.localStream.getTracks().forEach((t) => t.stop());
@@ -2368,6 +2463,8 @@
       // Clear any speaking indicators on opponents
       document.querySelectorAll('.opp-avatar.speaking').forEach(el => el.classList.remove('speaking'));
       this._updateBtn();
+      // Refresh panels so mute buttons disappear
+      if (S.g?.players?.length) renderOpps(S.g.players);
     },
 
     toggleMute(){
@@ -2377,6 +2474,23 @@
       if (this.isMuted) S.socket?.emit('voice:speaking', { speaking:false });
       this._updateBtn();
       toast(this.isMuted ? '🔇 Mic muted' : '🎤 Mic on','i');
+    },
+
+    // Per-peer local mute — silences a specific player on YOUR end only.
+    // The other player keeps their mic open and doesn't know you muted
+    // them; the rest of the room still hears them normally.
+    toggleMutePeer(peerId){
+      if (this.mutedPeers.has(peerId)) {
+        this.mutedPeers.delete(peerId);
+        const a = this.audioEls.get(peerId); if (a) a.muted = false;
+        toast('🔊 Unmuted player','i');
+      } else {
+        this.mutedPeers.add(peerId);
+        const a = this.audioEls.get(peerId); if (a) a.muted = true;
+        toast('🔇 Muted player on your end','i');
+      }
+      // Re-render opponent panels so the button reflects the new state
+      if (S.g?.players?.length) renderOpps(S.g.players);
     },
 
     _updateBtn(){
@@ -2412,6 +2526,8 @@
         }
         const stream = ev.streams[0] || new MediaStream([ev.track]);
         audio.srcObject = stream;
+        // Honor any prior local mute decision for this peer
+        audio.muted = this.mutedPeers.has(remoteId);
         // Some browsers/Safari refuse autoplay until we explicitly call play()
         audio.play().catch((e) => console.warn('[Voice] audio play() blocked:', e?.name));
       };
@@ -3073,15 +3189,21 @@
   }
 
   /* ═══ LEAGUE HUB ═══ */
-  const League = { data: null, tab: 'rank' };
+  const League = { data: null, liga: null, tab: 'liga' };
   async function showLeague(){
     const ov = document.getElementById('leagueOv');
     ov.classList.add('show');
+    document.getElementById('leagueList').innerHTML =
+      `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">Loading...</div>`;
     try {
-      const d = await api('GET','/competitions/me');
-      League.data = d;
-      renderLeagueHero(d);
-      switchLeagueTab(League.tab || 'rank');
+      const [elo, liga] = await Promise.all([
+        api('GET','/competitions/me'),
+        api('GET','/league/me'),
+      ]);
+      League.data = elo;
+      League.liga = liga;
+      renderLeagueHero(elo);
+      switchLeagueTab(League.tab || 'liga');
     } catch(e) {
       document.getElementById('leagueList').innerHTML =
         `<div style="color:rgba(255,255,255,.7);text-align:center;padding:30px;font-weight:700">Could not load league data</div>`;
@@ -3109,11 +3231,14 @@
   }
   function switchLeagueTab(tab){
     League.tab = tab;
-    document.getElementById('leagueTabRank').classList.toggle('on', tab==='rank');
+    document.getElementById('leagueTabLiga').classList.toggle('on', tab==='liga');
+    document.getElementById('leagueTabProg').classList.toggle('on', tab==='programme');
     document.getElementById('leagueTabTop').classList.toggle('on', tab==='top');
     document.getElementById('leagueTabHist').classList.toggle('on', tab==='history');
-    if (!League.data) return;
     const list = document.getElementById('leagueList');
+    if (tab === 'liga') return renderLigaTable(list);
+    if (tab === 'programme') return renderLigaProgramme(list);
+    if (!League.data) return;
     if (tab === 'history') {
       const hist = League.data.matchHistory || [];
       if (!hist.length) { list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">No matches yet — go play!</div>`; return; }
@@ -3149,6 +3274,83 @@
           <div class="league-row-elo">${u.elo}</div>
         </div>`;
       }).join('');
+    }
+  }
+  function renderLigaTable(list){
+    if (!League.liga) {
+      list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">Loading…</div>`;
+      return;
+    }
+    const standings = League.liga.standings || [];
+    const total = standings.length;
+    const rows = standings.map(p => {
+      const posClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : (p.rank === total ? 'relegate' : '');
+      const av = p.isMe
+        ? `<div class="liga-mini-av me">${(p.name||'?').charAt(0).toUpperCase()}</div>`
+        : `<div class="liga-mini-av">${(p.name||'?').charAt(0).toUpperCase()}</div>`;
+      return `<tr class="${p.isMe?'me':''}">
+        <td class="liga-pos ${posClass}">${p.rank}</td>
+        <td><div class="liga-name-cell">${av}<span>${esc(p.name)}${p.isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}${p.isBot?' <span style="font-size:9px;color:#60a5fa">🤖</span>':''}</span></div></td>
+        <td>${p.played}</td>
+        <td>${p.wins}</td>
+        <td>${p.draws}</td>
+        <td>${p.losses}</td>
+        <td>${p.points}</td>
+      </tr>`;
+    }).join('');
+    list.innerHTML = `<table class="liga-table">
+      <thead><tr><th>#</th><th>Player</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PTS</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+  function renderLigaProgramme(list){
+    if (!League.liga) {
+      list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">Loading…</div>`;
+      return;
+    }
+    const matches = League.liga.myMatches || [];
+    if (!matches.length) {
+      list.innerHTML = `<div style="color:rgba(255,255,255,.6);text-align:center;padding:30px">No fixtures yet</div>`;
+      return;
+    }
+    // Group by day
+    const byDay = {};
+    matches.forEach(m => { (byDay[m.day] = byDay[m.day] || []).push(m); });
+    const days = Object.keys(byDay).sort((a,b)=>+a-+b);
+    list.innerHTML = days.map(d => {
+      const dayMatches = byDay[d].sort((a,b)=>a.time.localeCompare(b.time));
+      const rows = dayMatches.map(m => {
+        const opp = m.opponent;
+        const av = `<div class="liga-mini-av">${(opp?.name||'?').charAt(0).toUpperCase()}</div>`;
+        let resultBadge = '';
+        let action = '';
+        if (m.status === 'finished') {
+          if (m.draw) resultBadge = `<span class="programme-result draw">DRAW</span>`;
+          else if (m.winnerId === S.user?.id) resultBadge = `<span class="programme-result win">WIN</span>`;
+          else resultBadge = `<span class="programme-result loss">LOSS</span>`;
+        } else if (m.status === 'live') {
+          resultBadge = `<span class="programme-result live">🔴 LIVE</span>`;
+        } else {
+          action = `<button class="btn-play-match" onclick="startLeagueMatch('${m.id}')">▶ Play</button>`;
+        }
+        return `<div class="programme-row ${m.status}">
+          <div class="programme-time">${m.time}</div>
+          <div class="programme-vs">${av}<span>${esc(opp?.name||'?')}${opp?.isBot?' 🤖':''}</span></div>
+          ${resultBadge || action}
+        </div>`;
+      }).join('');
+      return `<div class="programme-day">📅 Day ${d}</div>${rows}`;
+    }).join('');
+  }
+  async function startLeagueMatch(matchId){
+    try {
+      const d = await api('POST','/league/match/'+matchId+'/start');
+      toast(`Match started vs ${d.opponent}!`,'s');
+      document.getElementById('leagueOv').classList.remove('show');
+      // Auto-join the room
+      doJoin(d.roomId);
+    } catch(e) {
+      toast(e.message || 'Could not start match','e');
     }
   }
   function timeAgo(ts){
@@ -3194,7 +3396,8 @@
   function renderOpps(players){
     S.g.players=players;
     const row=document.getElementById('orow'),others=players.filter(p=>!isMe(p.id));
-    const newKey=others.map(p=>`${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.isConnected?1:0}:${p.id===S.g.currentTurn?1:0}:${p.avatar?'a':'n'}`).join('|');
+    const showMute = VoiceChat.isOn && players.length >= 3;
+    const newKey=others.map(p=>`${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.isConnected?1:0}:${p.id===S.g.currentTurn?1:0}:${p.avatar?'a':'n'}:${showMute?(VoiceChat.mutedPeers?.has(p.id)?'m':'u'):'-'}`).join('|');
     if(row._lastKey===newKey) return;
     row._lastKey=newKey;
     row.innerHTML=others.map(p=>{
@@ -3214,7 +3417,12 @@
       const avatar = p.avatar
         ? `<div class="opp-avatar" style="background-image:url('${p.avatar}')"></div>`
         : `<div class="opp-avatar opp-avatar-letter">${(p.username||'?').charAt(0).toUpperCase()}</div>`;
+      const isMuted = VoiceChat.mutedPeers?.has(p.id);
+      const muteBtn = showMute
+        ? `<button class="mute-toggle ${isMuted?'muted':''}" onclick="VoiceChat.toggleMutePeer('${p.id}')" title="${isMuted?'Unmute':'Mute'} ${esc(p.username)}'s mic">${isMuted?'🔇':'🔊'}</button>`
+        : '';
       return`<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
+          ${muteBtn}
           <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)}${p.saidUno?'<span class="ouno">UNO!</span>':''}</div></div>
           <div style="display:flex;align-items:center;height:70px;min-width:${Math.min(max*20+44,190)}px">${cards}${p.handSize>10?`<div style="font-size:11px;color:var(--muted);margin-left:6px;font-weight:700">+${p.handSize-10}</div>`:''}</div>
           ${!p.isConnected?'<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ Offline</div>':''}
