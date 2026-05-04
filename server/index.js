@@ -451,10 +451,20 @@ const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
 // fixtures simulate themselves when their scheduled time arrives so the
 // table fills in over the season instead of all at once.
 
-const LEAGUE_BOT_NAMES = ['Karim','Nacer','Yassine','Hamza','Adam','Reda','Ilyas','Anas','Bilal','Mehdi','Othmane'];
-const LEAGUE_MATCHDAY_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes between matchdays
-const LEAGUE_MATCH_OFFSET_MS = 5 * 60 * 1000;       // 5 min between fixtures within a matchday
-const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000;     // user has 10 min after start before bot takes over
+// 13 bot opponents → 14 players total in the season
+const LEAGUE_BOT_NAMES = ['Karim','Nacer','Yassine','Hamza','Adam','Reda','Ilyas','Anas','Bilal','Mehdi','Othmane','Salim','Driss'];
+const LEAGUE_TOTAL_PLAYERS = 14;
+// Double round-robin → each player faces every other twice = 26 matchdays
+const LEAGUE_TOTAL_MATCHDAYS = 26;
+// Time scale — DEV-friendly: 1 matchday every 30 minutes, fixtures
+// staggered 5 min apart within a matchday. Flip MATCHDAY_INTERVAL_MS
+// to 24*60*60*1000 for a real 26-day season once you're done iterating.
+const LEAGUE_MATCHDAY_INTERVAL_MS = 30 * 60 * 1000;
+const LEAGUE_MATCH_OFFSET_MS = 5 * 60 * 1000;
+const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000; // 10-min play window before bot takes over
+const LEAGUE_SEASON_BREAK_MS = 3 * 60 * 60 * 1000; // 3-hour break in dev (3 days in prod)
+// End-of-season payouts (places 10-14 get nothing → relegation)
+const LEAGUE_PRIZES = { 1:10000, 2:9000, 3:8000, 4:7000, 5:6000, 6:5000, 7:4000, 8:3000, 9:1000 };
 
 function newLeaguePlayer(id, name, opts = {}) {
   return {
@@ -472,8 +482,8 @@ function newLeaguePlayer(id, name, opts = {}) {
 
 function initUserLeague(user) {
   if (user.league && Array.isArray(user.league.schedule)) {
-    // Existing season — make sure the dynamic state catches up
     processDueMatches(user);
+    maybeFinishSeason(user);
     return user.league;
   }
   const players = [
@@ -483,47 +493,145 @@ function initUserLeague(user) {
     ),
   ];
   const startedAt = Date.now();
-  const schedule = generateRoundRobin(players, startedAt);
-  user.league = { season: 'S1', startedAt, players, schedule };
-  // Catch the table up if the host clock somehow already passed scheduled times
+  const schedule = generateDoubleRoundRobin(players, startedAt);
+  user.league = {
+    seasonNumber: 1,
+    season: 'S1',
+    startedAt,
+    players,
+    schedule,
+    finishedAt: null,
+    nextSeasonAt: null,
+    podium: null,
+    prizesPaid: false,
+  };
   processDueMatches(user);
   return user.league;
 }
 
-function generateRoundRobin(players, startTime) {
-  // Circle method — even count, every player plays every other exactly once
+// Double round-robin (home + away). Circle method twice, second pass
+// flips home/away. 14 players → 26 matchdays, 7 fixtures per matchday.
+function generateDoubleRoundRobin(players, startTime) {
   const arr = [...players];
   if (arr.length % 2 === 1) arr.push({ id: 'BYE', name: 'BYE' });
   const N = arr.length;
   const halfN = N / 2;
   const out = [];
+  // Build first leg
+  const firstLeg = [];
+  const ringStart = arr.slice();
+  let ring = arr.slice();
   for (let r = 0; r < N - 1; r++) {
-    const roundPairs = [];
+    const pairs = [];
     for (let i = 0; i < halfN; i++) {
-      const a = arr[i];
-      const b = arr[N - 1 - i];
+      const a = ring[i];
+      const b = ring[N - 1 - i];
       if (a.id === 'BYE' || b.id === 'BYE') continue;
-      roundPairs.push({ p1: a.id, p2: b.id });
+      pairs.push({ p1: a.id, p2: b.id });
     }
+    firstLeg.push(pairs);
+    // Rotate (fix ring[0])
+    const fixed = ring[0];
+    const rest = ring.slice(1);
+    rest.unshift(rest.pop());
+    ring = [fixed, ...rest];
+  }
+  // Second leg = first leg with home/away swapped
+  const secondLeg = firstLeg.map(round => round.map(pair => ({ p1: pair.p2, p2: pair.p1 })));
+  const allRounds = firstLeg.concat(secondLeg);
+  // Time slots — 7 fixtures per matchday at staggered times
+  allRounds.forEach((roundPairs, r) => {
     roundPairs.forEach((pair, idx) => {
       const scheduledAt = startTime + r * LEAGUE_MATCHDAY_INTERVAL_MS + idx * LEAGUE_MATCH_OFFSET_MS;
       out.push({
-        id: `m_${r}_${idx}`,
+        id: `s1_m_${r}_${idx}`,
         p1: pair.p1, p2: pair.p2,
         matchday: r + 1,
         scheduledAt,
-        status: 'scheduled', // scheduled | live | finished
-        rounds: [], // [{ winnerId, draw }] up to 2
-        result: null, // 'p1' | 'p2' | 'draw'
+        status: 'scheduled',
+        rounds: [],
+        result: null,
       });
     });
-    // Rotate (fix arr[0])
-    const fixed = arr[0];
-    const rest = arr.slice(1);
-    rest.unshift(rest.pop());
-    arr.splice(0, arr.length, fixed, ...rest);
-  }
+  });
   return out;
+}
+
+// When all 26 matchdays finish, hand out prizes, tag promotion zones,
+// and queue the next season after the inter-season break.
+function maybeFinishSeason(user) {
+  const lg = user.league;
+  if (!lg || lg.finishedAt) {
+    // Already finalized — check if it's time to start a new season
+    if (lg && lg.nextSeasonAt && Date.now() >= lg.nextSeasonAt) {
+      startNewSeason(user);
+    }
+    return;
+  }
+  const allDone = lg.schedule.every(m => m.status === 'finished');
+  if (!allDone) return;
+  const standings = getLeagueStandings(lg);
+  // Pay coin prizes (once)
+  if (!lg.prizesPaid) {
+    const myFinish = standings.findIndex(p => p.id === user.id) + 1;
+    const prize = LEAGUE_PRIZES[myFinish] || 0;
+    if (prize > 0) {
+      user.coins = (user.coins || 0) + prize;
+      console.log(`[League] ${user.username} finished #${myFinish} → +${prize} coins`);
+    }
+    lg.prizesPaid = true;
+  }
+  lg.finishedAt = Date.now();
+  lg.nextSeasonAt = lg.finishedAt + LEAGUE_SEASON_BREAK_MS;
+  lg.podium = standings.slice(0, 3).map(p => ({
+    id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
+    points: p.points, prize: LEAGUE_PRIZES[standings.findIndex(s => s.id === p.id) + 1] || 0,
+  }));
+  // Tag promotion zones for the standings tab
+  lg.zones = standings.map((p, i) => ({
+    id: p.id,
+    rank: i + 1,
+    zone: i < 4 ? 'champions' : i < 8 ? 'europa' : i < 9 ? 'safe' : 'relegation',
+  }));
+  saveUsers();
+}
+
+function startNewSeason(user) {
+  const old = user.league;
+  if (!old) return;
+  // Carry forward top 9 (4 to CL, 4 to Europa, 1 safe), refill the
+  // bottom 5 with fresh randomly-skilled bots
+  const standings = getLeagueStandings(old).slice(0, 9);
+  const newBots = LEAGUE_BOT_NAMES.slice(0, 5).map((n, i) =>
+    newLeaguePlayer('s' + (old.seasonNumber + 1) + '_b_' + i,
+      n + ' II',
+      { isBot: true, skill: 0.30 + Math.random() * 0.55 })
+  );
+  const carry = standings.map(p => newLeaguePlayer(p.id, p.name, {
+    isMe: !!p.isMe, isBot: !!p.isBot, avatar: p.avatar || null,
+    skill: p.skill || 0.5,
+  }));
+  // If user wasn't in top 9 they get a fresh shot too (relegated)
+  if (!carry.find(p => p.isMe)) {
+    carry.push(newLeaguePlayer(user.id, user.username, { isMe: true, avatar: user.avatar, skill: 0.55 }));
+  }
+  const players = carry.concat(newBots).slice(0, LEAGUE_TOTAL_PLAYERS);
+  const startedAt = Date.now();
+  const schedule = generateDoubleRoundRobin(players, startedAt);
+  user.league = {
+    seasonNumber: old.seasonNumber + 1,
+    season: 'S' + (old.seasonNumber + 1),
+    startedAt,
+    players,
+    schedule,
+    finishedAt: null,
+    nextSeasonAt: null,
+    podium: null,
+    prizesPaid: false,
+    previousSeasonPodium: old.podium,
+  };
+  console.log(`[League] ${user.username} → new season ${user.league.season}`);
+  saveUsers();
 }
 
 function simulateRound(p1, p2) {
@@ -610,11 +718,15 @@ function getLeagueStandings(league) {
   });
 }
 
-// Periodic catch-up so bot fixtures auto-resolve as time passes,
-// even when nobody has the league modal open.
+// Periodic catch-up so bot fixtures auto-resolve as time passes, prizes
+// drop the moment the season ends, and the next season starts on its own
+// after the inter-season break.
 setInterval(() => {
   for (const user of usersDB.values()) {
-    if (user.league) processDueMatches(user);
+    if (user.league) {
+      processDueMatches(user);
+      maybeFinishSeason(user);
+    }
   }
 }, 60 * 1000);
 
@@ -624,15 +736,19 @@ app.get('/api/league/me', authMiddleware, (req, res) => {
   const league = initUserLeague(user);
   saveUsers();
   const now = Date.now();
-  const standings = getLeagueStandings(league).map((p, i) => ({
-    rank: i + 1,
-    id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
-    played: p.played, wins: p.wins, draws: p.draws, losses: p.losses,
-    goalsFor: p.goalsFor, goalsAgainst: p.goalsAgainst,
-    goalDifference: p.goalsFor - p.goalsAgainst,
-    points: p.points,
-    last5: p.last5 || [],
-  }));
+  const standings = getLeagueStandings(league).map((p, i) => {
+    const rank = i + 1;
+    const zone = rank <= 4 ? 'champions' : rank <= 8 ? 'europa' : rank === 9 ? 'safe' : 'relegation';
+    return {
+      rank, zone,
+      id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
+      played: p.played, wins: p.wins, draws: p.draws, losses: p.losses,
+      goalsFor: p.goalsFor, goalsAgainst: p.goalsAgainst,
+      goalDifference: p.goalsFor - p.goalsAgainst,
+      points: p.points,
+      last5: p.last5 || [],
+    };
+  });
   const myMatches = league.schedule
     .filter(m => m.p1 === user.id || m.p2 === user.id)
     .map(m => {
@@ -664,8 +780,15 @@ app.get('/api/league/me', authMiddleware, (req, res) => {
     });
   res.json({
     season: league.season,
+    seasonNumber: league.seasonNumber || 1,
     startedAt: league.startedAt,
-    totalMatchdays: 11,
+    totalMatchdays: LEAGUE_TOTAL_MATCHDAYS,
+    totalPlayers: LEAGUE_TOTAL_PLAYERS,
+    finishedAt: league.finishedAt || null,
+    nextSeasonAt: league.nextSeasonAt || null,
+    podium: league.podium || null,
+    previousSeasonPodium: league.previousSeasonPodium || null,
+    prizes: LEAGUE_PRIZES,
     serverNow: now,
     standings,
     myMatches,
