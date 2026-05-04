@@ -451,28 +451,37 @@ const AVATAR_COOLDOWN_MS = 10 * 24 * 60 * 60 * 1000;
 // fixtures simulate themselves when their scheduled time arrives so the
 // table fills in over the season instead of all at once.
 
-// 13 bot opponents → 14 players total in the season
-const LEAGUE_BOT_NAMES = ['Karim','Nacer','Yassine','Hamza','Adam','Reda','Ilyas','Anas','Bilal','Mehdi','Othmane','Salim','Driss'];
+// SHARED LEAGUE — one global table that every real user joins. 14 slots,
+// initially all bots. When a real user logs in for the first time, they
+// take a random bot's slot (keeping its standings). New users keep
+// replacing bots until the table is full of humans.
+const LEAGUE_BOT_NAMES = ['Karim','Nacer','Yassine','Hamza','Adam','Reda','Ilyas','Anas','Bilal','Mehdi','Othmane','Salim','Driss','Mounir'];
 const LEAGUE_TOTAL_PLAYERS = 14;
-// Double round-robin → each player faces every other twice = 26 matchdays
-const LEAGUE_TOTAL_MATCHDAYS = 26;
-// Time scale — DEV-friendly: 1 matchday every 30 minutes, fixtures
-// staggered 5 min apart within a matchday. Flip MATCHDAY_INTERVAL_MS
-// to 24*60*60*1000 for a real 26-day season once you're done iterating.
-const LEAGUE_MATCHDAY_INTERVAL_MS = 30 * 60 * 1000;
-const LEAGUE_MATCH_OFFSET_MS = 5 * 60 * 1000;
-const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000; // 10-min play window before bot takes over
-const LEAGUE_SEASON_BREAK_MS = 3 * 60 * 60 * 1000; // 3-hour break in dev (3 days in prod)
-// End-of-season payouts (places 10-14 get nothing → relegation)
+// 14 players × double round-robin = 26 fixtures per player.
+// Each player gets 2 fixtures per day → 13-day season.
+const LEAGUE_DAYS_PER_SEASON = 13;
+const LEAGUE_FIXTURES_PER_DAY = 2; // per player; 14 fixtures total per day across the league
+// DEV-friendly time scale: 1 day = 1 hour, fixture 1 at +0 min, fixture 2
+// at +30 min. Flip DAY_MS to 24*60*60*1000 + slot offsets to 20:00/21:00
+// when ready to ship.
+const LEAGUE_DAY_MS = 60 * 60 * 1000;
+const LEAGUE_FIXTURE_SLOT_OFFSETS_MS = [0, 30 * 60 * 1000];
+const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000; // play window before bot takes over
+const LEAGUE_SEASON_BREAK_MS = 3 * 60 * 60 * 1000; // 3-hour break (3 days in prod)
 const LEAGUE_PRIZES = { 1:10000, 2:9000, 3:8000, 4:7000, 5:6000, 6:5000, 7:4000, 8:3000, 9:1000 };
 
-function newLeaguePlayer(id, name, opts = {}) {
+// A "slot" is a permanent seat in the league. slotId never changes; the
+// userId field decides whether the slot is currently a bot or a real
+// user. Stats stay attached to the slot, so when a user takes a bot's
+// slot they inherit its standings.
+function newLeagueSlot(slotId, name, opts = {}) {
   return {
-    id, name,
-    isMe: !!opts.isMe,
-    isBot: !!opts.isBot,
-    skill: opts.skill ?? 0.5,
+    slotId,
+    userId: opts.userId || null,
+    name,
     avatar: opts.avatar || null,
+    skill: opts.skill ?? 0.5,
+    isBot: opts.userId ? false : true,
     played: 0, wins: 0, draws: 0, losses: 0,
     goalsFor: 0, goalsAgainst: 0,
     points: 0,
@@ -480,158 +489,187 @@ function newLeaguePlayer(id, name, opts = {}) {
   };
 }
 
-function initUserLeague(user) {
-  if (user.league && Array.isArray(user.league.schedule)) {
-    processDueMatches(user);
-    maybeFinishSeason(user);
-    return user.league;
+// Global singleton — every real user shares this league
+let globalLeague = null;
+
+function initGlobalLeague() {
+  if (globalLeague && Array.isArray(globalLeague.schedule)) {
+    processDueMatchesGlobal();
+    maybeFinishSeasonGlobal();
+    return globalLeague;
   }
-  const players = [
-    newLeaguePlayer(user.id, user.username, { isMe: true, avatar: user.avatar, skill: 0.55 }),
-    ...LEAGUE_BOT_NAMES.map((n, i) =>
-      newLeaguePlayer('lb_' + (i + 1), n, { isBot: true, skill: 0.30 + Math.random() * 0.55 })
-    ),
-  ];
+  const slots = LEAGUE_BOT_NAMES.slice(0, LEAGUE_TOTAL_PLAYERS).map((n, i) =>
+    newLeagueSlot('s_' + (i + 1), n, { skill: 0.30 + Math.random() * 0.55 })
+  );
   const startedAt = Date.now();
-  const schedule = generateDoubleRoundRobin(players, startedAt);
-  user.league = {
+  const schedule = generateLeagueSchedule(slots, startedAt);
+  globalLeague = {
     seasonNumber: 1,
     season: 'S1',
     startedAt,
-    players,
+    slots,
     schedule,
     finishedAt: null,
     nextSeasonAt: null,
     podium: null,
+    previousSeasonPodium: null,
     prizesPaid: false,
   };
-  processDueMatches(user);
-  return user.league;
+  processDueMatchesGlobal();
+  return globalLeague;
 }
 
-// Double round-robin (home + away). Circle method twice, second pass
-// flips home/away. 14 players → 26 matchdays, 7 fixtures per matchday.
-function generateDoubleRoundRobin(players, startTime) {
-  const arr = [...players];
-  if (arr.length % 2 === 1) arr.push({ id: 'BYE', name: 'BYE' });
+// Whenever a real user shows up, make sure they hold a slot in the
+// shared league. If they don't, they take a random bot's seat — keeping
+// that seat's existing standings, schedule, history. Returns the slot
+// they own (or null if the table is somehow full of other humans).
+function ensureUserInLeague(user) {
+  const lg = initGlobalLeague();
+  // Already seated?
+  let mine = lg.slots.find(s => s.userId === user.id);
+  if (mine) {
+    // Make sure the slot's display matches the user's current avatar/name
+    mine.name = user.username;
+    mine.avatar = user.avatar || null;
+    return mine;
+  }
+  // Find a random bot to replace
+  const bots = lg.slots.filter(s => !s.userId);
+  if (bots.length === 0) return null; // table is full of humans
+  const target = bots[Math.floor(Math.random() * bots.length)];
+  target.userId = user.id;
+  target.isBot = false;
+  target.name = user.username;
+  target.avatar = user.avatar || null;
+  // Keep stats — user inherits the bot's run so far
+  console.log(`[League] ${user.username} took ${target.slotId}'s seat (was a bot)`);
+  return target;
+}
+
+// Build the season schedule:
+//   1. Double round-robin via circle method = 26 single-round-robin rounds
+//   2. Pair consecutive rounds into 13 days; each day has 2 fixture
+//      slots (20:00 and 21:00 in prod). Every player plays exactly
+//      one fixture in each slot.
+function generateLeagueSchedule(slots, startTime, seasonNumber = 1) {
+  const arr = [...slots];
+  if (arr.length % 2 === 1) arr.push({ slotId: 'BYE' });
   const N = arr.length;
   const halfN = N / 2;
-  const out = [];
-  // Build first leg
+  // First leg
   const firstLeg = [];
-  const ringStart = arr.slice();
   let ring = arr.slice();
   for (let r = 0; r < N - 1; r++) {
     const pairs = [];
     for (let i = 0; i < halfN; i++) {
       const a = ring[i];
       const b = ring[N - 1 - i];
-      if (a.id === 'BYE' || b.id === 'BYE') continue;
-      pairs.push({ p1: a.id, p2: b.id });
+      if (a.slotId === 'BYE' || b.slotId === 'BYE') continue;
+      pairs.push({ p1: a.slotId, p2: b.slotId });
     }
     firstLeg.push(pairs);
-    // Rotate (fix ring[0])
+    // Rotate (keep ring[0] fixed)
     const fixed = ring[0];
     const rest = ring.slice(1);
     rest.unshift(rest.pop());
     ring = [fixed, ...rest];
   }
-  // Second leg = first leg with home/away swapped
   const secondLeg = firstLeg.map(round => round.map(pair => ({ p1: pair.p2, p2: pair.p1 })));
-  const allRounds = firstLeg.concat(secondLeg);
-  // Time slots — 7 fixtures per matchday at staggered times
-  allRounds.forEach((roundPairs, r) => {
-    roundPairs.forEach((pair, idx) => {
-      const scheduledAt = startTime + r * LEAGUE_MATCHDAY_INTERVAL_MS + idx * LEAGUE_MATCH_OFFSET_MS;
-      out.push({
-        id: `s1_m_${r}_${idx}`,
-        p1: pair.p1, p2: pair.p2,
-        matchday: r + 1,
-        scheduledAt,
-        status: 'scheduled',
-        rounds: [],
-        result: null,
+  const allRounds = firstLeg.concat(secondLeg); // 26 rounds total
+  const out = [];
+  // Pair consecutive rounds into days: day 1 = rounds 0+1, day 2 = 2+3...
+  for (let d = 0; d < LEAGUE_DAYS_PER_SEASON; d++) {
+    for (let slot = 0; slot < LEAGUE_FIXTURES_PER_DAY; slot++) {
+      const roundIdx = d * LEAGUE_FIXTURES_PER_DAY + slot;
+      const pairs = allRounds[roundIdx] || [];
+      const slotOffset = LEAGUE_FIXTURE_SLOT_OFFSETS_MS[slot] || 0;
+      const scheduledAt = startTime + d * LEAGUE_DAY_MS + slotOffset;
+      pairs.forEach((pair, idx) => {
+        out.push({
+          id: `s${seasonNumber}_d${d+1}_t${slot+1}_f${idx}`,
+          p1: pair.p1, p2: pair.p2, // these are slotIds
+          day: d + 1,
+          slot: slot + 1, // 1 = "20:00 game", 2 = "21:00 game"
+          scheduledAt,
+          status: 'scheduled',
+          rounds: [],
+          result: null,
+        });
       });
-    });
-  });
+    }
+  }
   return out;
 }
 
-// When all 26 matchdays finish, hand out prizes, tag promotion zones,
-// and queue the next season after the inter-season break.
-function maybeFinishSeason(user) {
-  const lg = user.league;
-  if (!lg || lg.finishedAt) {
-    // Already finalized — check if it's time to start a new season
-    if (lg && lg.nextSeasonAt && Date.now() >= lg.nextSeasonAt) {
-      startNewSeason(user);
+// When the global season ends, pay every real user their prize, build
+// the podium, and queue the next season.
+function maybeFinishSeasonGlobal() {
+  if (!globalLeague) return;
+  const lg = globalLeague;
+  if (lg.finishedAt) {
+    if (lg.nextSeasonAt && Date.now() >= lg.nextSeasonAt) {
+      startNewSeasonGlobal();
     }
     return;
   }
   const allDone = lg.schedule.every(m => m.status === 'finished');
   if (!allDone) return;
   const standings = getLeagueStandings(lg);
-  // Pay coin prizes (once)
   if (!lg.prizesPaid) {
-    const myFinish = standings.findIndex(p => p.id === user.id) + 1;
-    const prize = LEAGUE_PRIZES[myFinish] || 0;
-    if (prize > 0) {
-      user.coins = (user.coins || 0) + prize;
-      console.log(`[League] ${user.username} finished #${myFinish} → +${prize} coins`);
-    }
+    standings.forEach((slot, i) => {
+      const finish = i + 1;
+      const prize = LEAGUE_PRIZES[finish] || 0;
+      if (slot.userId && prize > 0) {
+        const u = usersDB.get(slot.userId);
+        if (u) {
+          u.coins = (u.coins || 0) + prize;
+          console.log(`[League] ${u.username} finished #${finish} → +${prize} coins`);
+        }
+      }
+    });
     lg.prizesPaid = true;
   }
   lg.finishedAt = Date.now();
   lg.nextSeasonAt = lg.finishedAt + LEAGUE_SEASON_BREAK_MS;
-  lg.podium = standings.slice(0, 3).map(p => ({
-    id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
-    points: p.points, prize: LEAGUE_PRIZES[standings.findIndex(s => s.id === p.id) + 1] || 0,
+  lg.podium = standings.slice(0, 3).map((slot, i) => ({
+    slotId: slot.slotId, userId: slot.userId,
+    name: slot.name, avatar: slot.avatar, isBot: slot.isBot,
+    points: slot.points,
+    prize: LEAGUE_PRIZES[i + 1] || 0,
   }));
-  // Tag promotion zones for the standings tab
-  lg.zones = standings.map((p, i) => ({
-    id: p.id,
-    rank: i + 1,
-    zone: i < 4 ? 'champions' : i < 8 ? 'europa' : i < 9 ? 'safe' : 'relegation',
-  }));
-  saveUsers();
+  saveLeague();
 }
 
-function startNewSeason(user) {
-  const old = user.league;
+function startNewSeasonGlobal() {
+  const old = globalLeague;
   if (!old) return;
-  // Carry forward top 9 (4 to CL, 4 to Europa, 1 safe), refill the
-  // bottom 5 with fresh randomly-skilled bots
-  const standings = getLeagueStandings(old).slice(0, 9);
+  // Top 9 keep their seats (with stats reset), bottom 5 get fresh bots
+  const standings = getLeagueStandings(old);
+  const carry = standings.slice(0, 9).map((slot, i) => newLeagueSlot(
+    's_' + (i + 1), slot.name,
+    { userId: slot.userId, avatar: slot.avatar, skill: slot.skill }
+  ));
   const newBots = LEAGUE_BOT_NAMES.slice(0, 5).map((n, i) =>
-    newLeaguePlayer('s' + (old.seasonNumber + 1) + '_b_' + i,
-      n + ' II',
-      { isBot: true, skill: 0.30 + Math.random() * 0.55 })
+    newLeagueSlot('s_' + (10 + i), n + ' II', { skill: 0.30 + Math.random() * 0.55 })
   );
-  const carry = standings.map(p => newLeaguePlayer(p.id, p.name, {
-    isMe: !!p.isMe, isBot: !!p.isBot, avatar: p.avatar || null,
-    skill: p.skill || 0.5,
-  }));
-  // If user wasn't in top 9 they get a fresh shot too (relegated)
-  if (!carry.find(p => p.isMe)) {
-    carry.push(newLeaguePlayer(user.id, user.username, { isMe: true, avatar: user.avatar, skill: 0.55 }));
-  }
-  const players = carry.concat(newBots).slice(0, LEAGUE_TOTAL_PLAYERS);
+  const slots = carry.concat(newBots).slice(0, LEAGUE_TOTAL_PLAYERS);
+  const seasonNumber = old.seasonNumber + 1;
   const startedAt = Date.now();
-  const schedule = generateDoubleRoundRobin(players, startedAt);
-  user.league = {
-    seasonNumber: old.seasonNumber + 1,
-    season: 'S' + (old.seasonNumber + 1),
+  const schedule = generateLeagueSchedule(slots, startedAt, seasonNumber);
+  globalLeague = {
+    seasonNumber,
+    season: 'S' + seasonNumber,
     startedAt,
-    players,
+    slots,
     schedule,
     finishedAt: null,
     nextSeasonAt: null,
     podium: null,
-    prizesPaid: false,
     previousSeasonPodium: old.podium,
+    prizesPaid: false,
   };
-  console.log(`[League] ${user.username} → new season ${user.league.season}`);
-  saveUsers();
+  console.log(`[League] New season ${globalLeague.season} started`);
+  saveLeague();
 }
 
 function simulateRound(p1, p2) {
@@ -642,8 +680,8 @@ function simulateRound(p1, p2) {
 }
 
 function recordMatchResult(league, match) {
-  const p1 = league.players.find(p => p.id === match.p1);
-  const p2 = league.players.find(p => p.id === match.p2);
+  const p1 = league.slots.find(s => s.slotId === match.p1);
+  const p2 = league.slots.find(s => s.slotId === match.p2);
   if (!p1 || !p2) return;
   let p1Goals = 0, p2Goals = 0;
   match.rounds.forEach(r => {
@@ -679,36 +717,37 @@ function pushLast5(player, mark) {
   if (player.last5.length > 5) player.last5.length = 5;
 }
 
-// Walk the schedule and resolve any match whose scheduled time has passed
-// without a result yet. Bot-vs-bot resolves with a simulated best-of-2.
-// User matches: if the grace window also expired, a bot plays for them
-// (still simulated, so the table catches up smoothly).
-function processDueMatches(user) {
-  if (!user.league) return;
+// Walk the schedule and resolve any match whose scheduled time has passed.
+// Both bots, or a missing real user past their grace window, get simulated.
+// If a slot belongs to a real user who's currently in a live league room
+// (room.leagueMatchId === match.id), we don't auto-resolve; that match is
+// being played live.
+function processDueMatchesGlobal() {
+  if (!globalLeague) return;
   const now = Date.now();
   let changed = false;
-  for (const match of user.league.schedule) {
+  for (const match of globalLeague.schedule) {
     if (match.status === 'finished') continue;
+    if (match.status === 'live') continue; // someone is playing it right now
     if (match.scheduledAt > now) break; // schedule is in chronological order
-    const involvesUser = match.p1 === user.id || match.p2 === user.id;
+    const s1 = globalLeague.slots.find(s => s.slotId === match.p1);
+    const s2 = globalLeague.slots.find(s => s.slotId === match.p2);
+    if (!s1 || !s2) { match.status = 'finished'; continue; }
+    const involvesUser = s1.userId || s2.userId;
     if (involvesUser && now < match.scheduledAt + LEAGUE_NO_SHOW_GRACE_MS) {
-      // User can still show up — leave match open
-      continue;
+      continue; // grace window — let the user show up
     }
-    const p1 = user.league.players.find(p => p.id === match.p1);
-    const p2 = user.league.players.find(p => p.id === match.p2);
-    if (!p1 || !p2) { match.status = 'finished'; continue; }
     while (match.rounds.length < 2) {
-      match.rounds.push(simulateRound(p1, p2));
+      match.rounds.push(simulateRound(s1, s2));
     }
-    recordMatchResult(user.league, match);
+    recordMatchResult(globalLeague, match);
     changed = true;
   }
-  if (changed) saveUsers();
+  if (changed) saveLeague();
 }
 
 function getLeagueStandings(league) {
-  return [...league.players].sort((a, b) => {
+  return [...league.slots].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     const gdA = a.goalsFor - a.goalsAgainst;
     const gdB = b.goalsFor - b.goalsAgainst;
@@ -718,77 +757,96 @@ function getLeagueStandings(league) {
   });
 }
 
-// Periodic catch-up so bot fixtures auto-resolve as time passes, prizes
-// drop the moment the season ends, and the next season starts on its own
-// after the inter-season break.
+// League state lives in memory + (best-effort) on disk via the same
+// users-db.json mechanism users use. We don't have a separate store yet;
+// for now persistence happens through saveUsers via globalLeague being
+// referenced from a sentinel "league" key in usersDB.
+function saveLeague() {
+  // Tag the league onto a sentinel key so saveUsers serializes it
+  if (globalLeague) usersDB.set('__league__', { id: '__league__', league: globalLeague });
+  saveUsers();
+}
+// Restore on boot if present
+(function restoreLeague() {
+  const sentinel = usersDB.get('__league__');
+  if (sentinel?.league?.schedule) globalLeague = sentinel.league;
+})();
+
+// Periodic global catch-up: bot fixtures auto-resolve, prizes pay out
+// when the season ends, and the next season auto-starts after the break.
 setInterval(() => {
-  for (const user of usersDB.values()) {
-    if (user.league) {
-      processDueMatches(user);
-      maybeFinishSeason(user);
-    }
-  }
+  if (!globalLeague) return;
+  processDueMatchesGlobal();
+  maybeFinishSeasonGlobal();
 }, 60 * 1000);
 
 app.get('/api/league/me', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const league = initUserLeague(user);
-  saveUsers();
+  const league = initGlobalLeague();
+  const mySlot = ensureUserInLeague(user);
+  saveLeague();
   const now = Date.now();
-  const standings = getLeagueStandings(league).map((p, i) => {
+  const standings = getLeagueStandings(league).map((slot, i) => {
     const rank = i + 1;
     const zone = rank <= 4 ? 'champions' : rank <= 8 ? 'europa' : rank === 9 ? 'safe' : 'relegation';
     return {
       rank, zone,
-      id: p.id, name: p.name, isMe: !!p.isMe, isBot: !!p.isBot,
-      played: p.played, wins: p.wins, draws: p.draws, losses: p.losses,
-      goalsFor: p.goalsFor, goalsAgainst: p.goalsAgainst,
-      goalDifference: p.goalsFor - p.goalsAgainst,
-      points: p.points,
-      last5: p.last5 || [],
+      slotId: slot.slotId, name: slot.name, avatar: slot.avatar,
+      isMe: slot.userId === user.id,
+      isBot: !slot.userId,
+      isOtherUser: !!slot.userId && slot.userId !== user.id,
+      played: slot.played, wins: slot.wins, draws: slot.draws, losses: slot.losses,
+      goalsFor: slot.goalsFor, goalsAgainst: slot.goalsAgainst,
+      goalDifference: slot.goalsFor - slot.goalsAgainst,
+      points: slot.points,
+      last5: slot.last5 || [],
     };
   });
-  const myMatches = league.schedule
-    .filter(m => m.p1 === user.id || m.p2 === user.id)
+  const mySlotId = mySlot?.slotId;
+  const myMatches = mySlotId ? league.schedule
+    .filter(m => m.p1 === mySlotId || m.p2 === mySlotId)
     .map(m => {
-      const isP1 = m.p1 === user.id;
-      const oppPlayer = league.players.find(p => p.id === (isP1 ? m.p2 : m.p1));
-      const meEntry = league.players.find(p => p.id === user.id);
+      const isP1 = m.p1 === mySlotId;
+      const oppSlot = league.slots.find(s => s.slotId === (isP1 ? m.p2 : m.p1));
       const userResult = m.status === 'finished'
         ? (m.result === 'draw' ? 'D' : (m.result === (isP1 ? 'p1' : 'p2') ? 'W' : 'L'))
         : null;
-      // Score in rounds (best-of-2)
       const myGoals = m.rounds.filter(r => r === 'draw' ? true : r === (isP1 ? 'p1' : 'p2')).length;
       const oppGoals = m.rounds.filter(r => r === 'draw' ? true : r === (isP1 ? 'p2' : 'p1')).length;
-      // Time window
       const inWindow = now >= m.scheduledAt && now < m.scheduledAt + LEAGUE_NO_SHOW_GRACE_MS;
       const upcoming = now < m.scheduledAt;
       const startsIn = upcoming ? m.scheduledAt - now : 0;
       return {
         id: m.id,
-        matchday: m.matchday,
+        day: m.day,
+        slot: m.slot,
         scheduledAt: m.scheduledAt,
         status: m.status,
         result: userResult,
         score: m.status === 'finished' ? `${myGoals}-${oppGoals}` : null,
-        opponent: oppPlayer ? { id: oppPlayer.id, name: oppPlayer.name, isBot: oppPlayer.isBot } : null,
+        opponent: oppSlot ? {
+          slotId: oppSlot.slotId, name: oppSlot.name, avatar: oppSlot.avatar,
+          isBot: !oppSlot.userId,
+        } : null,
         playable: m.status === 'scheduled' && inWindow,
         upcoming,
         startsIn,
       };
-    });
+    }) : [];
   res.json({
     season: league.season,
     seasonNumber: league.seasonNumber || 1,
     startedAt: league.startedAt,
-    totalMatchdays: LEAGUE_TOTAL_MATCHDAYS,
+    daysPerSeason: LEAGUE_DAYS_PER_SEASON,
+    fixturesPerDay: LEAGUE_FIXTURES_PER_DAY,
     totalPlayers: LEAGUE_TOTAL_PLAYERS,
     finishedAt: league.finishedAt || null,
     nextSeasonAt: league.nextSeasonAt || null,
     podium: league.podium || null,
     previousSeasonPodium: league.previousSeasonPodium || null,
     prizes: LEAGUE_PRIZES,
+    mySlotId,
     serverNow: now,
     standings,
     myMatches,
@@ -798,11 +856,13 @@ app.get('/api/league/me', authMiddleware, (req, res) => {
 app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const league = initUserLeague(user);
+  const league = initGlobalLeague();
+  const mySlot = ensureUserInLeague(user);
+  if (!mySlot) return res.status(400).json({ error: 'No league seat available' });
   const match = league.schedule.find(m => m.id === req.params.matchId);
   if (!match) return res.status(404).json({ error: 'Match not found' });
   if (match.status === 'finished') return res.status(400).json({ error: 'Already played' });
-  if (match.p1 !== user.id && match.p2 !== user.id) return res.status(400).json({ error: 'Not your match' });
+  if (match.p1 !== mySlot.slotId && match.p2 !== mySlot.slotId) return res.status(400).json({ error: 'Not your match' });
   const now = Date.now();
   if (now < match.scheduledAt) {
     const minsLeft = Math.ceil((match.scheduledAt - now) / 60000);
@@ -812,9 +872,9 @@ app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Window expired — bot already played for you' });
   }
 
-  const botId = match.p1 === user.id ? match.p2 : match.p1;
-  const bot = league.players.find(p => p.id === botId);
-  if (!bot) return res.status(500).json({ error: 'Opponent not found' });
+  const oppSlotId = match.p1 === mySlot.slotId ? match.p2 : match.p1;
+  const oppSlot = league.slots.find(s => s.slotId === oppSlotId);
+  if (!oppSlot) return res.status(500).json({ error: 'Opponent not found' });
 
   const room = createRoomRecord(user.id, { maxPlayers: 2, bet: 0 });
   room.game = new GameManager(room.id, room.settings);
@@ -827,18 +887,21 @@ app.post('/api/league/match/:matchId/start', authMiddleware, (req, res) => {
   room.game.addPlayer(userPlayer);
   room.playerIds.push(user.id);
 
-  const botPlayer = new Player(bot.id, bot.name, 0);
-  botPlayer.isBot = true;
-  botPlayer.isConnected = true;
-  botPlayer.status = 'active';
-  room.game.addPlayer(botPlayer);
-  room.playerIds.push(bot.id);
+  // Opponent: always AI in the live match (even if their slot belongs to
+  // another real user — they'll see the result async). Phase 2 = live PvP.
+  const oppPlayer = new Player(oppSlot.slotId, oppSlot.name, 0);
+  oppPlayer.isBot = true;
+  oppPlayer.isConnected = true;
+  oppPlayer.status = 'active';
+  oppPlayer.avatar = oppSlot.avatar;
+  room.game.addPlayer(oppPlayer);
+  room.playerIds.push(oppSlot.slotId);
 
   match.status = 'live';
   roomsDB.set(room.id, room);
-  saveUsers();
+  saveLeague();
 
-  res.json({ roomId: room.id, opponent: bot.name });
+  res.json({ roomId: room.id, opponent: oppSlot.name });
 });
 
 // League Hub — returns the user's full ranking context: their ELO,
@@ -1463,27 +1526,22 @@ function attachGameListeners(room) {
     const bet = room.settings.bet || 0;
     const winnerData = data.winners?.[0];
 
-    // La Liga: if this was a league fixture, record one round of the
-    // best-of-2 here. Round 1 = the real UNO game just played.
-    // Round 2 = simulated immediately (skill-weighted) so the match
-    // resolves in one sitting without needing a second live game.
-    if (room.leagueMatchId && room.leagueOwnerId) {
-      const owner = usersDB.get(room.leagueOwnerId);
-      const league = owner?.league;
-      const match = league?.schedule.find(m => m.id === room.leagueMatchId);
+    // La Liga: shared league fixture. Round 1 = the live game just
+    // played, round 2 = simulated immediately so the fixture resolves
+    // in one sitting. Standings update for both slots.
+    if (room.leagueMatchId && globalLeague) {
+      const match = globalLeague.schedule.find(m => m.id === room.leagueMatchId);
       if (match && match.status !== 'finished') {
-        const p1 = league.players.find(p => p.id === match.p1);
-        const p2 = league.players.find(p => p.id === match.p2);
-        if (p1 && p2 && winnerData) {
-          // Round 1 — based on the live game result
+        const s1 = globalLeague.slots.find(s => s.slotId === match.p1);
+        const s2 = globalLeague.slots.find(s => s.slotId === match.p2);
+        if (s1 && s2 && winnerData) {
           const r1 = winnerData.id === match.p1 ? 'p1'
                   : winnerData.id === match.p2 ? 'p2'
                   : 'draw';
           match.rounds.push(r1);
-          // Round 2 — simulated to keep flow snappy
-          match.rounds.push(simulateRound(p1, p2));
-          recordMatchResult(league, match);
-          saveUsers();
+          match.rounds.push(simulateRound(s1, s2));
+          recordMatchResult(globalLeague, match);
+          saveLeague();
         }
       }
     }

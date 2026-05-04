@@ -3381,15 +3381,18 @@
   function renderLigaSeasonBar(){
     const liga = League.liga;
     if (!liga) return '';
-    const finished = liga.standings.every(p => p.played === (liga.totalPlayers - 1) * 2);
     let metaRight;
     if (liga.finishedAt && liga.nextSeasonAt) {
       const left = Math.max(0, liga.nextSeasonAt - (liga.serverNow || Date.now()));
       const mins = Math.ceil(left / 60000);
       metaRight = `🏁 Finished — next season in ${mins > 60 ? Math.floor(mins/60)+'h '+(mins%60)+'m' : mins+'m'}`;
     } else {
-      const playedMatchdays = Math.max(0, ...liga.standings.map(p => p.played));
-      metaRight = `Matchday ${playedMatchdays}/${liga.totalMatchdays} • ${liga.totalPlayers} players`;
+      const playedMax = Math.max(0, ...liga.standings.map(p => p.played));
+      const totalDays = liga.daysPerSeason || 13;
+      const fixturesPerDay = liga.fixturesPerDay || 2;
+      const dayNum = Math.min(totalDays, Math.ceil(playedMax / fixturesPerDay) || 1);
+      const realUsers = liga.standings.filter(p => !p.isBot).length;
+      metaRight = `Day ${dayNum}/${totalDays} • ${realUsers}/${liga.totalPlayers} real players`;
     }
     return `<div class="liga-season-bar">
       <div class="liga-season-num">${liga.season || 'S1'}</div>
@@ -3430,7 +3433,7 @@
     }
     const now = League.liga.serverNow || Date.now();
     const byDay = {};
-    matches.forEach(m => { (byDay[m.matchday] = byDay[m.matchday] || []).push(m); });
+    matches.forEach(m => { (byDay[m.day] = byDay[m.day] || []).push(m); });
     const days = Object.keys(byDay).sort((a,b)=>+a-+b);
     list.innerHTML = days.map(d => {
       const dayMatches = byDay[d].sort((a,b)=>a.scheduledAt-b.scheduledAt);
@@ -3460,7 +3463,7 @@
           ${resultBadge || action}
         </div>`;
       }).join('');
-      return `<div class="programme-day">📅 Matchday ${d}</div>${rows}`;
+      return `<div class="programme-day">📅 Day ${d}</div>${rows}`;
     }).join('');
   }
   async function startLeagueMatch(matchId){
