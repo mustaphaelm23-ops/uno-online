@@ -536,6 +536,27 @@ class GameManager extends EventEmitter {
 
   _find(id) { return this._players.find(p => p.id === id) || null; }
 
+  // Reset everything game-state-related so a fresh round can start in
+  // the same room with the same players (used by League best-of-2).
+  // Players keep their identities; deck, hands, turn, direction reset.
+  resetForNextGame() {
+    this._clearTimers();
+    this._deck = new Deck();
+    this._winners = [];
+    this._phase = PHASE.LOBBY;
+    this._curIdx = 0;
+    this._dir = DIR.CW;
+    this._turnPhase = TURN_PHASE.WAITING;
+    this._stackDraw = 0;
+    this._drawnCard = null;
+    this._drawnBy = null;
+    this._players.forEach(p => {
+      p.setHand([]);
+      p.saidUno = false;
+      p.status = 'active';
+    });
+  }
+
   _publicState() {
     return {
       roomId:       this.roomId,

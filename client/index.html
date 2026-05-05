@@ -1300,6 +1300,38 @@
   #emojiBtn.visible{display:flex;}
   #emojiBtn:hover{border-color:var(--accent);transform:scale(1.12);}
 
+  /* League round intermission */
+  .round-intermission{
+    position:fixed;inset:0;z-index:170;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(ellipse at center,rgba(124,58,237,.45) 0%,rgba(0,0,0,.85) 70%);
+    backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;
+  }
+  .round-intermission.show{opacity:1;}
+  .round-intermission .ri-title{
+    font-family:'Bangers',cursive;font-size:42px;letter-spacing:6px;color:#FFD700;
+    text-shadow:0 6px 20px rgba(0,0,0,.7),0 0 50px rgba(255,215,0,.5);
+    margin-bottom:8px;animation:fadeInScale .5s ease;
+  }
+  .round-intermission .ri-score{
+    font-family:'Outfit',sans-serif;font-weight:900;font-size:32px;color:#fff;
+    margin-bottom:14px;letter-spacing:1px;
+    animation:fadeInScale .5s ease .15s backwards;
+  }
+  .round-intermission .ri-next{
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;color:#c4b5fd;
+    letter-spacing:2px;animation:fadeIn .5s ease .35s backwards;
+  }
+  .round-badge{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:30;
+    padding:5px 12px;border-radius:12px;
+    background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;
+    font-family:'Bangers',cursive;letter-spacing:2px;font-size:13px;
+    box-shadow:0 4px 14px rgba(124,58,237,.5);
+    display:none;
+  }
+  body.in-league-game .round-badge{display:block;}
+
   /* CLUTCH MOMENT — fired when a player drops to a single card */
   .clutch-overlay{
     position:fixed;inset:0;z-index:170;pointer-events:none;
@@ -2327,6 +2359,12 @@
     </div>
   </div>
   <div id="cardAnimLayer"></div>
+  <div class="round-intermission" id="roundIntermission" aria-hidden="true">
+    <div class="ri-title" id="riTitle">ROUND 1 DONE</div>
+    <div class="ri-score" id="riScore">—</div>
+    <div class="ri-next" id="riNext">Round 2 starting…</div>
+  </div>
+  <div class="round-badge" id="roundBadge">ROUND 1 / 2</div>
   <div class="clutch-overlay" id="clutchOv" aria-hidden="true">
     <div class="clutch-text" id="clutchTxt">
       <span class="ct-line1">🔥 CLUTCH MOMENT 🔥</span>
@@ -2967,6 +3005,41 @@
       applySpectatorState(state);
       if(state.players) Clutch.check(state.players);
     });
+    sk.on('league:round_ended', ({ round, winnerSlotId, nextRoundIn })=>{
+      const ov = document.getElementById('roundIntermission');
+      if (!ov) return;
+      const title = document.getElementById('riTitle');
+      const score = document.getElementById('riScore');
+      const nextEl = document.getElementById('riNext');
+      if (title) title.textContent = `ROUND ${round} DONE`;
+      // Try to label the round-1 winner so it doesn't feel ambiguous
+      const myName = S.user?.username || 'You';
+      if (score) {
+        const players = S.g?.players || [];
+        const winnerPlayer = players.find(p => p.id === winnerSlotId) || null;
+        if (winnerSlotId === 'draw') score.textContent = '🤝 Round drawn';
+        else if (winnerPlayer) score.textContent = `🏁 ${winnerPlayer.username || 'Unknown'} won round ${round}`;
+        else score.textContent = `🏁 Round ${round} done`;
+      }
+      const secs = Math.max(1, Math.round((nextRoundIn || 4500) / 1000));
+      if (nextEl) nextEl.textContent = `Round 2 starting in ${secs}s…`;
+      ov.classList.add('show');
+      // Live countdown
+      let left = secs;
+      const t = setInterval(() => {
+        left--;
+        if (left <= 0) { clearInterval(t); return; }
+        if (nextEl) nextEl.textContent = `Round 2 starting in ${left}s…`;
+      }, 1000);
+    });
+    sk.on('league:round_started', ({ round })=>{
+      const ov = document.getElementById('roundIntermission');
+      if (ov) ov.classList.remove('show');
+      const badge = document.getElementById('roundBadge');
+      if (badge) badge.textContent = `ROUND ${round} / 2`;
+      toast(`🔔 Round ${round} started`, 'i');
+    });
+
     sk.on('vote:tally',({tally,my})=>{
       S.g.voteTally = tally || {};
       if(my !== undefined) S.g.myVote = my;
@@ -3471,7 +3544,9 @@
       const d = await api('POST','/league/match/'+matchId+'/start');
       toast(`Match started vs ${d.opponent}!`,'s');
       document.getElementById('leagueOv').classList.remove('show');
-      // Auto-join the room
+      document.body.classList.add('in-league-game');
+      const badge = document.getElementById('roundBadge');
+      if (badge) badge.textContent = 'ROUND 1 / 2';
       doJoin(d.roomId);
     } catch(e) {
       toast(e.message || 'Could not start match','e');
@@ -3589,8 +3664,9 @@
 
   /* ═══ LOBBY ═══ */
   function goLobby(){
-    // Reset spectator + clutch state when returning to lobby
-    document.body.classList.remove('spectating','clutch');
+    // Reset spectator + clutch + league-game state when returning to lobby
+    document.body.classList.remove('spectating','clutch','in-league-game');
+    document.getElementById('roundIntermission')?.classList.remove('show');
     S.isSpectator = false;
     S.g.spectatorHands = {};
     S.g.voteTally = {};

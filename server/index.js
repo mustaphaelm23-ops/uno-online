@@ -460,12 +460,14 @@ const LEAGUE_TOTAL_PLAYERS = 14;
 // 14 players × double round-robin = 26 fixtures per player.
 // Each player gets 2 fixtures per day → 13-day season.
 const LEAGUE_DAYS_PER_SEASON = 13;
-const LEAGUE_FIXTURES_PER_DAY = 2; // per player; 14 fixtures total per day across the league
-// DEV-friendly time scale: 1 day = 1 hour, fixture 1 at +0 min, fixture 2
-// at +30 min. Flip DAY_MS to 24*60*60*1000 + slot offsets to 20:00/21:00
-// when ready to ship.
-const LEAGUE_DAY_MS = 60 * 60 * 1000;
-const LEAGUE_FIXTURE_SLOT_OFFSETS_MS = [0, 30 * 60 * 1000];
+const LEAGUE_FIXTURES_PER_DAY = 2;
+// Real cycle: 24-hour days, fixture 1 at +20h, fixture 2 at +21h
+// (so they line up with 20:00 / 21:00 local once startedAt is aligned
+// to the start of the day). Override with env LEAGUE_DAY_MS for testing.
+const LEAGUE_DAY_MS = parseInt(process.env.LEAGUE_DAY_MS) || 24 * 60 * 60 * 1000;
+const LEAGUE_FIXTURE_SLOT_OFFSETS_MS = (process.env.LEAGUE_DAY_MS && parseInt(process.env.LEAGUE_DAY_MS) < 3600000)
+  ? [0, parseInt(process.env.LEAGUE_DAY_MS) / 2]    // dev: split the short day in half
+  : [20 * 60 * 60 * 1000, 21 * 60 * 60 * 1000];     // prod: 20:00 + 21:00 from day start
 const LEAGUE_NO_SHOW_GRACE_MS = 10 * 60 * 1000; // play window before bot takes over
 const LEAGUE_SEASON_BREAK_MS = 3 * 60 * 60 * 1000; // 3-hour break (3 days in prod)
 const LEAGUE_PRIZES = { 1:10000, 2:9000, 3:8000, 4:7000, 5:6000, 6:5000, 7:4000, 8:3000, 9:1000 };
@@ -1522,27 +1524,80 @@ function attachGameListeners(room) {
   const game = room.game, roomId = room.id;
 
   game.on('game:over', (data) => {
-    room.status = 'finished';
     const bet = room.settings.bet || 0;
     const winnerData = data.winners?.[0];
 
-    // La Liga: shared league fixture. Round 1 = the live game just
-    // played, round 2 = simulated immediately so the fixture resolves
-    // in one sitting. Standings update for both slots.
-    if (room.leagueMatchId && globalLeague) {
+    // ── La Liga best-of-2: handle round 1 end BEFORE the room is
+    //    finalized. We bail out without flipping room.status, without
+    //    paying coins, without emitting game:over to clients. The room
+    //    stays alive, the GameManager resets, and round 2 begins fresh
+    //    in the same room with the same players. ──
+    if (room.leagueMatchId && globalLeague && winnerData) {
       const match = globalLeague.schedule.find(m => m.id === room.leagueMatchId);
-      if (match && match.status !== 'finished') {
-        const s1 = globalLeague.slots.find(s => s.slotId === match.p1);
-        const s2 = globalLeague.slots.find(s => s.slotId === match.p2);
-        if (s1 && s2 && winnerData) {
-          const r1 = winnerData.id === match.p1 ? 'p1'
-                  : winnerData.id === match.p2 ? 'p2'
-                  : 'draw';
-          match.rounds.push(r1);
-          match.rounds.push(simulateRound(s1, s2));
-          recordMatchResult(globalLeague, match);
-          saveLeague();
-        }
+      if (match && match.status !== 'finished' && match.rounds.length === 0) {
+        const ownerSlot = globalLeague.slots.find(s => s.userId === room.leagueOwnerId);
+        const winnerSlotId = winnerData.id === room.leagueOwnerId
+          ? (ownerSlot?.slotId || null)
+          : winnerData.id;
+        const r1 = winnerSlotId === match.p1 ? 'p1'
+                 : winnerSlotId === match.p2 ? 'p2'
+                 : 'draw';
+        match.rounds.push(r1);
+        saveLeague();
+
+        io.to(roomId).emit('league:round_ended', {
+          round: 1,
+          winnerSlotId,
+          nextRoundIn: 4500,
+        });
+
+        setTimeout(() => {
+          const r = roomsDB.get(roomId);
+          if (!r || !r.game) return;
+          r.game.resetForNextGame();
+          const start = r.game.startGame(r.playerIds[0]);
+          if (!start.success) {
+            console.warn('[League] Round 2 start failed:', start.reason);
+            return;
+          }
+          r.playerIds.forEach(pid => {
+            const player = r.game.players.find(p => p.id === pid);
+            if (!player) return;
+            const sock = findSocketByUserId(pid);
+            if (sock) sock.emit('game:state', r.game._playerState(player));
+          });
+          if (r.spectators?.size) {
+            const specState = r.game._spectatorState();
+            r.spectators.forEach(sid => {
+              const sock = findSocketByUserId(sid);
+              if (sock) sock.emit('game:spectator_state', specState);
+            });
+          }
+          io.to(roomId).emit('league:round_started', { round: 2 });
+        }, 4500);
+
+        return; // skip the rest of the normal game-over flow
+      }
+    }
+
+    // From here on: this is a real game ending (non-league or league
+    // round 2 finishing). Mark the room finished and run the usual flow.
+    room.status = 'finished';
+
+    // Round 2 of a league match — record the second result + finalize
+    if (room.leagueMatchId && globalLeague && winnerData) {
+      const match = globalLeague.schedule.find(m => m.id === room.leagueMatchId);
+      if (match && match.status !== 'finished' && match.rounds.length === 1) {
+        const ownerSlot = globalLeague.slots.find(s => s.userId === room.leagueOwnerId);
+        const winnerSlotId = winnerData.id === room.leagueOwnerId
+          ? (ownerSlot?.slotId || null)
+          : winnerData.id;
+        const r2 = winnerSlotId === match.p1 ? 'p1'
+                 : winnerSlotId === match.p2 ? 'p2'
+                 : 'draw';
+        match.rounds.push(r2);
+        recordMatchResult(globalLeague, match);
+        saveLeague();
       }
     }
     // ELO calculation
@@ -1623,6 +1678,12 @@ function attachGameListeners(room) {
   });
 
   game.on('player:won', (data) => {
+    // Suppress the win modal at the end of round 1 of a league match —
+    // the match isn't really over until both rounds are played.
+    if (room.leagueMatchId && globalLeague) {
+      const match = globalLeague.schedule.find(m => m.id === room.leagueMatchId);
+      if (match && match.rounds.length === 0) return;
+    }
     const winner = usersDB.get(data.winnerId);
     const eloChange = winner ? Math.abs((winner.elo||1000) - 1000) : 16;
     const crowdFavorite = pickCrowdFavorite(room);
