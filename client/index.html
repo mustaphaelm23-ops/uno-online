@@ -1424,14 +1424,38 @@
   }
   /* La Liga season header + podium */
   .liga-season-bar{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:10px 14px;margin-bottom:12px;
-    background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(245,158,11,.04));
-    border:1px solid rgba(255,215,0,.3);border-radius:12px;
-    font-weight:800;
+    display:flex;align-items:center;gap:14px;
+    padding:12px 16px;margin-bottom:14px;
+    background:linear-gradient(135deg,rgba(255,215,0,.14) 0%,rgba(245,158,11,.04) 60%,rgba(124,58,237,.06) 100%);
+    border:1px solid rgba(255,215,0,.28);border-radius:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.05);
   }
-  .liga-season-num{font-family:'Bangers',cursive;font-size:18px;color:#FFD700;letter-spacing:2px;}
-  .liga-season-meta{font-size:11px;color:rgba(255,255,255,.7);font-weight:700;}
+  .liga-season-trophy{
+    width:38px;height:38px;border-radius:10px;flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 55%),
+               linear-gradient(145deg,#FFD700,#92400E);
+    display:flex;align-items:center;justify-content:center;font-size:20px;
+    box-shadow:0 4px 12px rgba(245,158,11,.4);
+  }
+  .liga-season-text{flex:1;min-width:0;}
+  .liga-season-num{
+    font-family:'Outfit',sans-serif;font-weight:900;font-size:18px;
+    background:linear-gradient(135deg,#FFD700,#FB923C);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    letter-spacing:.5px;line-height:1.1;
+  }
+  .liga-season-meta{font-size:11px;color:rgba(255,255,255,.62);font-weight:600;margin-top:2px;letter-spacing:.3px;}
+  .liga-season-progress{
+    flex:0 0 110px;height:6px;border-radius:3px;
+    background:rgba(255,255,255,.07);overflow:hidden;
+  }
+  .liga-season-progress-fill{
+    height:100%;border-radius:3px;
+    background:linear-gradient(90deg,#FB923C,#FFD700);
+    box-shadow:0 0 10px rgba(255,215,0,.4);
+    transition:width .8s cubic-bezier(.4,0,.2,1);
+  }
+  @media (max-width:560px){.liga-season-progress{display:none;}}
   .liga-podium{
     background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(91,33,182,.05));
     border:1px solid rgba(124,58,237,.4);border-radius:12px;
@@ -1454,64 +1478,177 @@
     font-size:11px;color:#c4b5fd;font-weight:800;letter-spacing:.5px;
     margin-top:8px;text-align:center;
   }
-  /* Zone color stripes on the table */
-  .liga-zone-champs{box-shadow:inset 4px 0 0 #2563EB;}
-  .liga-zone-europa{box-shadow:inset 4px 0 0 #F59E0B;}
-  .liga-zone-relegate{box-shadow:inset 4px 0 0 #E8324A;}
+  /* Slim left-edge zone marker (table looks calmer than a heavy stripe) */
+  .liga-zone-champs td:first-child{box-shadow:inset 3px 0 0 #2563EB;}
+  .liga-zone-europa td:first-child{box-shadow:inset 3px 0 0 #F59E0B;}
+  .liga-zone-relegate td:first-child{box-shadow:inset 3px 0 0 #E8324A;}
   .liga-zone-legend{
-    display:flex;gap:14px;margin-top:10px;padding-top:10px;
-    border-top:1px solid rgba(255,255,255,.05);
-    font-size:10px;color:rgba(255,255,255,.6);font-weight:700;
-    flex-wrap:wrap;
+    display:flex;gap:18px;margin-top:14px;padding-top:12px;
+    border-top:1px solid rgba(255,255,255,.06);
+    font-size:10.5px;color:rgba(255,255,255,.55);font-weight:700;
+    flex-wrap:wrap;letter-spacing:.4px;
   }
-  .liga-zone-legend span{display:flex;align-items:center;gap:4px;}
-  .liga-zone-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+  .liga-zone-legend span{display:flex;align-items:center;gap:5px;}
+  .liga-zone-legend i{
+    width:3px;height:14px;border-radius:1.5px;display:inline-block;
+  }
 
-  /* La Liga — Premier-League style table */
+  /* La Liga — pro standings table */
+  .liga-table-wrap{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;overflow:hidden;
+    box-shadow:0 8px 22px rgba(0,0,0,.22);
+  }
   .liga-table{
-    width:100%;border-collapse:separate;border-spacing:0 4px;
-    font-size:11.5px;
+    width:100%;border-collapse:collapse;
+    font-family:'Outfit',sans-serif;
+    font-size:12px;
   }
   .liga-table thead th{
-    font-size:9.5px;font-weight:800;letter-spacing:1.2px;
-    color:#FFB87A;padding:7px 4px;text-align:center;
-    background:rgba(255,255,255,.03);
+    font-size:9.5px;font-weight:800;letter-spacing:1.4px;
+    color:rgba(255,184,122,.85);padding:11px 6px;text-align:right;
+    background:rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.07);
+    text-transform:uppercase;
+    position:sticky;top:0;z-index:1;
   }
+  .liga-table thead th:nth-child(1),
   .liga-table thead th:nth-child(2){text-align:left;}
-  .liga-table tbody td{padding:8px 4px;text-align:center;}
+  .liga-table thead th:nth-child(2){padding-left:14px;}
+  .liga-table thead th.col-pts{color:#FFD700;}
+  .liga-table thead th.col-last5{text-align:center;}
+
   .liga-table tbody tr{
-    background:rgba(255,255,255,.03);
-    border-radius:8px;
-    transition:background .2s;
+    border-bottom:1px solid rgba(255,255,255,.04);
+    transition:background .18s,transform .18s;
   }
-  .liga-table tbody tr.me td{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(245,158,11,.06));font-weight:800;}
-  .liga-table tbody td:first-child{border-radius:8px 0 0 8px;font-family:'Bangers',cursive;font-size:14px;width:30px;}
-  .liga-table tbody td.pts{font-weight:900;color:#FFD700;width:38px;font-size:13px;}
-  .liga-table tbody td:last-child{border-radius:0 8px 8px 0;}
+  .liga-table tbody tr:last-child{border-bottom:none;}
+  .liga-table tbody tr:hover{background:rgba(255,255,255,.04);}
+  .liga-table tbody tr.me{
+    background:linear-gradient(90deg,rgba(255,215,0,.16) 0%,rgba(255,215,0,.04) 60%,transparent 100%);
+  }
+  .liga-table tbody tr.me:hover{background:linear-gradient(90deg,rgba(255,215,0,.20) 0%,rgba(255,215,0,.06) 60%,rgba(255,255,255,.03) 100%);}
+
+  .liga-table tbody td{padding:11px 6px;text-align:right;vertical-align:middle;}
+  .liga-table tbody td:nth-child(1),
   .liga-table tbody td:nth-child(2){text-align:left;}
+  .liga-table tbody td:nth-child(2){padding-left:14px;}
+  .liga-table tbody td:nth-child(1){width:42px;padding-left:14px;font-weight:800;color:rgba(255,255,255,.65);font-size:13px;}
+  .liga-table tbody td.pts{
+    font-weight:900;color:#FFD700;font-size:14px;
+    width:42px;letter-spacing:.5px;
+  }
+  .liga-table tbody td.col-w,
+  .liga-table tbody td.col-l,
+  .liga-table tbody td.col-d,
+  .liga-table tbody td.col-gf,
+  .liga-table tbody td.col-ga,
+  .liga-table tbody td.col-mp{
+    color:rgba(255,255,255,.7);font-weight:600;
+  }
+  .liga-table tbody td.col-gd{font-weight:800;}
+  .liga-table tbody td.col-gd.pos{color:#4ade80;}
+  .liga-table tbody td.col-gd.neg{color:#fca5a5;}
+  .liga-table tbody td.col-gd.zero{color:rgba(255,255,255,.55);}
+  .liga-table tbody td.col-last5{text-align:center;padding-right:14px;}
+
+  /* Animated stagger entry */
+  .liga-table tbody tr{animation:ligaRowIn .35s cubic-bezier(.16,1,.3,1) backwards;}
+  .liga-table tbody tr:nth-child(1){animation-delay:.02s}
+  .liga-table tbody tr:nth-child(2){animation-delay:.05s}
+  .liga-table tbody tr:nth-child(3){animation-delay:.08s}
+  .liga-table tbody tr:nth-child(4){animation-delay:.11s}
+  .liga-table tbody tr:nth-child(5){animation-delay:.14s}
+  .liga-table tbody tr:nth-child(6){animation-delay:.17s}
+  .liga-table tbody tr:nth-child(7){animation-delay:.20s}
+  .liga-table tbody tr:nth-child(8){animation-delay:.23s}
+  .liga-table tbody tr:nth-child(9){animation-delay:.26s}
+  .liga-table tbody tr:nth-child(10){animation-delay:.29s}
+  .liga-table tbody tr:nth-child(11){animation-delay:.32s}
+  .liga-table tbody tr:nth-child(12){animation-delay:.35s}
+  .liga-table tbody tr:nth-child(13){animation-delay:.38s}
+  .liga-table tbody tr:nth-child(14){animation-delay:.41s}
+  @keyframes ligaRowIn{
+    from{opacity:0;transform:translateY(6px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  /* Position pill — leaders get a colored chip, rest stay subtle */
+  .liga-pos{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:8px;
+    font-family:'Outfit',sans-serif;font-weight:900;font-size:12px;
+    color:rgba(255,255,255,.6);background:rgba(255,255,255,.04);
+  }
+  .liga-pos.gold{background:linear-gradient(135deg,#FFD700,#D97706);color:#1a0a04;box-shadow:0 3px 10px rgba(255,215,0,.35);}
+  .liga-pos.silver{background:linear-gradient(135deg,#E2E8F0,#94A3B8);color:#1a0a04;box-shadow:0 3px 10px rgba(226,232,240,.25);}
+  .liga-pos.bronze{background:linear-gradient(135deg,#FB923C,#92400E);color:#fff;box-shadow:0 3px 10px rgba(251,146,60,.3);}
+
+  /* Name cell typography */
+  .liga-name-cell{
+    display:flex;align-items:center;gap:10px;
+    min-width:140px;
+  }
+  .liga-name{
+    font-weight:700;font-size:13px;color:rgba(255,255,255,.95);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .liga-table tbody tr.me .liga-name{color:#fff;font-weight:800;}
+  .liga-you-tag{
+    margin-left:6px;font-size:9px;font-weight:900;letter-spacing:1px;
+    color:#1a0a04;background:#FFD700;padding:1px 5px;border-radius:4px;
+  }
+  .liga-bot-tag{
+    margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.5px;
+    color:rgba(96,165,250,.85);background:rgba(96,165,250,.12);
+    padding:1px 5px;border-radius:4px;
+  }
+
+  /* Last 5 dots — calmer */
   .last5-cell{display:inline-flex;gap:3px;justify-content:center;}
   .last5-dot{
-    width:14px;height:14px;border-radius:50%;
+    width:16px;height:16px;border-radius:5px;
     display:inline-flex;align-items:center;justify-content:center;
     font-size:9px;font-weight:900;color:#fff;
+    border:1px solid rgba(255,255,255,.08);
   }
-  .last5-dot.W{background:#22C55E;box-shadow:0 0 4px rgba(34,197,94,.5);}
-  .last5-dot.L{background:#E8324A;box-shadow:0 0 4px rgba(232,50,74,.5);}
-  .last5-dot.D{background:#6B7280;color:#fff;}
+  .last5-dot.W{background:rgba(34,197,94,.85);border-color:rgba(34,197,94,.4);}
+  .last5-dot.L{background:rgba(232,50,74,.85);border-color:rgba(232,50,74,.4);}
+  .last5-dot.D{background:rgba(107,114,128,.6);border-color:rgba(107,114,128,.4);}
+
+  /* Mobile: hide secondary columns to keep table readable */
+  @media (max-width:640px){
+    .liga-table thead th.col-mp,
+    .liga-table thead th.col-d,
+    .liga-table thead th.col-gf,
+    .liga-table thead th.col-ga,
+    .liga-table tbody td.col-mp,
+    .liga-table tbody td.col-d,
+    .liga-table tbody td.col-gf,
+    .liga-table tbody td.col-ga{display:none;}
+    .liga-table tbody td{padding:9px 4px;}
+    .liga-name{font-size:12px;}
+  }
   .liga-pos.gold{color:#FFD700;}
   .liga-pos.silver{color:#C0C0C0;}
   .liga-pos.bronze{color:#CD7F32;}
   .liga-pos.relegate{color:#f87171;}
   .liga-name-cell{display:flex;align-items:center;gap:8px;}
   .liga-mini-av{
-    width:24px;height:24px;border-radius:50%;
+    width:30px;height:30px;border-radius:50%;
     background:linear-gradient(135deg,#7C3AED,#5B21B6);
     background-size:cover;background-position:center;
     display:flex;align-items:center;justify-content:center;
-    font-family:'Bangers',cursive;font-size:11px;color:#fff;
-    border:1.5px solid rgba(255,255,255,.15);flex-shrink:0;
+    font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;color:#fff;
+    border:1.5px solid rgba(255,255,255,.18);flex-shrink:0;
+    box-shadow:0 2px 6px rgba(0,0,0,.3);
   }
-  .liga-mini-av.me{background:linear-gradient(135deg,#E8324A,#F59E0B);border-color:#FFD700;}
+  .liga-mini-av.me{
+    background:linear-gradient(135deg,#E8324A,#F59E0B);
+    border-color:#FFD700;
+    box-shadow:0 2px 8px rgba(255,215,0,.35);
+  }
   /* Programme — match cards */
   .programme-day{
     font-family:'Bangers',cursive;font-size:14px;color:#FFB87A;
@@ -3414,7 +3551,7 @@
     const seasonHeader = renderLigaSeasonBar();
     const podiumBlock = renderLigaPodiumBlock();
     const rows = standings.map(p => {
-      const posClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : (p.zone === 'relegation' ? 'relegate' : '');
+      const posClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : '';
       const zoneClass = p.zone === 'champions' ? 'liga-zone-champs'
                       : p.zone === 'europa'    ? 'liga-zone-europa'
                       : p.zone === 'relegation' ? 'liga-zone-relegate' : '';
@@ -3422,28 +3559,42 @@
         ? `<div class="liga-mini-av me">${(p.name||'?').charAt(0).toUpperCase()}</div>`
         : `<div class="liga-mini-av">${(p.name||'?').charAt(0).toUpperCase()}</div>`;
       const last5 = (p.last5 || []).map(r =>
-        `<span class="last5-dot ${r}">${r==='W'?'✓':r==='L'?'✕':'−'}</span>`
+        `<span class="last5-dot ${r}">${r==='W'?'W':r==='L'?'L':'D'}</span>`
       ).join('');
       const gd = p.goalDifference;
-      const gdStr = gd > 0 ? '+'+gd : gd;
+      const gdStr = gd > 0 ? '+'+gd : (gd < 0 ? gd : '0');
+      const gdClass = gd > 0 ? 'pos' : gd < 0 ? 'neg' : 'zero';
+      const youTag = p.isMe ? '<span class="liga-you-tag">YOU</span>' : '';
+      const botTag = p.isBot ? '<span class="liga-bot-tag">BOT</span>' : '';
       return `<tr class="${p.isMe?'me':''} ${zoneClass}">
-        <td class="liga-pos ${posClass}">${p.rank}</td>
-        <td><div class="liga-name-cell">${av}<span>${esc(p.name)}${p.isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}</span></div></td>
+        <td><span class="liga-pos ${posClass}">${p.rank}</span></td>
+        <td><div class="liga-name-cell">${av}<span class="liga-name">${esc(p.name)}${youTag}${botTag}</span></div></td>
         <td class="pts">${p.points}</td>
-        <td>${p.played}</td>
-        <td>${p.wins}</td>
-        <td>${p.losses}</td>
-        <td>${p.draws}</td>
-        <td>${p.goalsFor}</td>
-        <td>${p.goalsAgainst}</td>
-        <td>${gdStr}</td>
-        <td><div class="last5-cell">${last5||'<span style="color:rgba(255,255,255,.3)">—</span>'}</div></td>
+        <td class="col-mp">${p.played}</td>
+        <td class="col-w">${p.wins}</td>
+        <td class="col-l">${p.losses}</td>
+        <td class="col-d">${p.draws}</td>
+        <td class="col-gf">${p.goalsFor}</td>
+        <td class="col-ga">${p.goalsAgainst}</td>
+        <td class="col-gd ${gdClass}">${gdStr}</td>
+        <td class="col-last5"><div class="last5-cell">${last5||'<span style="color:rgba(255,255,255,.25)">—</span>'}</div></td>
       </tr>`;
     }).join('');
-    list.innerHTML = `${seasonHeader}${podiumBlock}<table class="liga-table">
-      <thead><tr><th>#</th><th>Team</th><th>PTS</th><th>MP</th><th>W</th><th>L</th><th>D</th><th>GF</th><th>GA</th><th>GD</th><th>Last 5</th></tr></thead>
+    list.innerHTML = `${seasonHeader}${podiumBlock}<div class="liga-table-wrap"><table class="liga-table">
+      <thead><tr>
+        <th>#</th><th>Team</th>
+        <th class="col-pts">PTS</th>
+        <th class="col-mp">MP</th>
+        <th class="col-w">W</th>
+        <th class="col-l">L</th>
+        <th class="col-d">D</th>
+        <th class="col-gf">GF</th>
+        <th class="col-ga">GA</th>
+        <th>GD</th>
+        <th class="col-last5">Last 5</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
-    </table>
+    </table></div>
     <div class="liga-zone-legend">
       <span><i style="background:#2563EB"></i> Champions League (1-4)</span>
       <span><i style="background:#F59E0B"></i> Dawri Abtal (5-8)</span>
@@ -3454,22 +3605,31 @@
   function renderLigaSeasonBar(){
     const liga = League.liga;
     if (!liga) return '';
-    let metaRight;
+    const totalDays = liga.daysPerSeason || 13;
+    const fixturesPerDay = liga.fixturesPerDay || 2;
+    let label, meta, pct;
     if (liga.finishedAt && liga.nextSeasonAt) {
       const left = Math.max(0, liga.nextSeasonAt - (liga.serverNow || Date.now()));
       const mins = Math.ceil(left / 60000);
-      metaRight = `🏁 Finished — next season in ${mins > 60 ? Math.floor(mins/60)+'h '+(mins%60)+'m' : mins+'m'}`;
+      const human = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+      label = `${liga.season || 'S1'} · Finished`;
+      meta = `🏁 Next season in ${human}`;
+      pct = 100;
     } else {
       const playedMax = Math.max(0, ...liga.standings.map(p => p.played));
-      const totalDays = liga.daysPerSeason || 13;
-      const fixturesPerDay = liga.fixturesPerDay || 2;
       const dayNum = Math.min(totalDays, Math.ceil(playedMax / fixturesPerDay) || 1);
       const realUsers = liga.standings.filter(p => !p.isBot).length;
-      metaRight = `Day ${dayNum}/${totalDays} • ${realUsers}/${liga.totalPlayers} real players`;
+      label = `${liga.season || 'S1'} · Matchday ${dayNum}/${totalDays}`;
+      meta = `${realUsers}/${liga.totalPlayers} real players · best-of-2 rounds`;
+      pct = Math.min(100, Math.round((dayNum / totalDays) * 100));
     }
     return `<div class="liga-season-bar">
-      <div class="liga-season-num">${liga.season || 'S1'}</div>
-      <div class="liga-season-meta">${metaRight}</div>
+      <div class="liga-season-trophy">🏆</div>
+      <div class="liga-season-text">
+        <div class="liga-season-num">${label}</div>
+        <div class="liga-season-meta">${meta}</div>
+      </div>
+      <div class="liga-season-progress" title="Season progress"><div class="liga-season-progress-fill" style="width:${pct}%"></div></div>
     </div>`;
   }
 
