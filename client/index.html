@@ -1497,7 +1497,7 @@
   .liga-table-wrap{
     background:rgba(255,255,255,.02);
     border:1px solid rgba(255,255,255,.06);
-    border-radius:14px;overflow:hidden;
+    border-radius:14px;overflow:auto;
     box-shadow:0 8px 22px rgba(0,0,0,.22);
   }
   .liga-table{
@@ -1507,11 +1507,11 @@
   }
   .liga-table thead th{
     font-size:9.5px;font-weight:800;letter-spacing:1.4px;
-    color:rgba(255,184,122,.85);padding:11px 6px;text-align:right;
-    background:rgba(255,255,255,.04);
-    border-bottom:1px solid rgba(255,255,255,.07);
+    color:rgba(255,184,122,.85);padding:9px 5px;text-align:right;
+    background:#1A0E04;
+    border-bottom:1px solid rgba(255,255,255,.08);
     text-transform:uppercase;
-    position:sticky;top:0;z-index:1;
+    position:sticky;top:0;z-index:2;
   }
   .liga-table thead th:nth-child(1),
   .liga-table thead th:nth-child(2){text-align:left;}
@@ -1530,7 +1530,7 @@
   }
   .liga-table tbody tr.me:hover{background:linear-gradient(90deg,rgba(255,215,0,.20) 0%,rgba(255,215,0,.06) 60%,rgba(255,255,255,.03) 100%);}
 
-  .liga-table tbody td{padding:11px 6px;text-align:right;vertical-align:middle;}
+  .liga-table tbody td{padding:7px 5px;text-align:right;vertical-align:middle;}
   .liga-table tbody td:nth-child(1),
   .liga-table tbody td:nth-child(2){text-align:left;}
   .liga-table tbody td:nth-child(2){padding-left:14px;}
@@ -1577,8 +1577,8 @@
   /* Position pill — leaders get a colored chip, rest stay subtle */
   .liga-pos{
     display:inline-flex;align-items:center;justify-content:center;
-    width:26px;height:26px;border-radius:8px;
-    font-family:'Outfit',sans-serif;font-weight:900;font-size:12px;
+    width:22px;height:22px;border-radius:6px;
+    font-family:'Outfit',sans-serif;font-weight:900;font-size:11.5px;
     color:rgba(255,255,255,.6);background:rgba(255,255,255,.04);
   }
   .liga-pos.gold{background:linear-gradient(135deg,#FFD700,#D97706);color:#1a0a04;box-shadow:0 3px 10px rgba(255,215,0,.35);}
@@ -1636,11 +1636,11 @@
   .liga-pos.relegate{color:#f87171;}
   .liga-name-cell{display:flex;align-items:center;gap:8px;}
   .liga-mini-av{
-    width:30px;height:30px;border-radius:50%;
+    width:24px;height:24px;border-radius:50%;
     background:linear-gradient(135deg,#7C3AED,#5B21B6);
     background-size:cover;background-position:center;
     display:flex;align-items:center;justify-content:center;
-    font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;color:#fff;
+    font-family:'Outfit',sans-serif;font-weight:800;font-size:11px;color:#fff;
     border:1.5px solid rgba(255,255,255,.18);flex-shrink:0;
     box-shadow:0 2px 6px rgba(0,0,0,.3);
   }
@@ -1710,8 +1710,8 @@
   .league-box{
     background:linear-gradient(160deg,#1A0E04 0%,#3F1F0A 50%,#1A0E04 100%);
     border:2px solid rgba(255,215,0,.35);
-    border-radius:22px;padding:26px;
-    width:min(640px,94vw);max-height:88vh;
+    border-radius:22px;padding:22px;
+    width:min(720px,96vw);max-height:94vh;
     display:flex;flex-direction:column;
     box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(245,158,11,.15);
   }
@@ -3665,11 +3665,33 @@
       return;
     }
     const now = League.liga.serverNow || Date.now();
-    const byDay = {};
-    matches.forEach(m => { (byDay[m.day] = byDay[m.day] || []).push(m); });
-    const days = Object.keys(byDay).sort((a,b)=>+a-+b);
-    list.innerHTML = days.map(d => {
-      const dayMatches = byDay[d].sort((a,b)=>a.scheduledAt-b.scheduledAt);
+    const today = new Date(now); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today.getTime() + 86400000);
+    const yesterday = new Date(today.getTime() - 86400000);
+    // Group by real calendar date (YYYY-MM-DD)
+    const byDate = {};
+    matches.forEach(m => {
+      const d = new Date(m.scheduledAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      (byDate[key] = byDate[key] || []).push(m);
+    });
+    const dateKeys = Object.keys(byDate).sort();
+    const dateLabel = (key) => {
+      const [y, mo, d] = key.split('-').map(Number);
+      const dt = new Date(y, mo - 1, d);
+      const sameDay = (a, b) => a.getTime() === b.getTime();
+      let prefix = '';
+      if (sameDay(dt, today))      prefix = 'TODAY · ';
+      else if (sameDay(dt, tomorrow))  prefix = 'TOMORROW · ';
+      else if (sameDay(dt, yesterday)) prefix = 'YESTERDAY · ';
+      const weekday = dt.toLocaleDateString([], { weekday: 'long' });
+      const dayNum  = dt.getDate();
+      const month   = dt.toLocaleDateString([], { month: 'long' });
+      const year    = dt.getFullYear();
+      return `${prefix}${weekday}, ${dayNum} ${month} ${year}`;
+    };
+    list.innerHTML = dateKeys.map(key => {
+      const dayMatches = byDate[key].sort((a,b)=>a.scheduledAt-b.scheduledAt);
       const rows = dayMatches.map(m => {
         const opp = m.opponent;
         const av = `<div class="liga-mini-av">${(opp?.name||'?').charAt(0).toUpperCase()}</div>`;
@@ -3687,7 +3709,10 @@
           action = `<button class="btn-play-match" onclick="startLeagueMatch('${m.id}')">▶ Play Now</button>`;
         } else if (m.upcoming) {
           const mins = Math.ceil(m.startsIn / 60000);
-          const hint = mins > 60 ? `${Math.floor(mins/60)}h ${mins%60}m` : `${mins}m`;
+          let hint;
+          if (mins < 60) hint = mins + 'm';
+          else if (mins < 60*24) hint = Math.floor(mins/60) + 'h ' + (mins%60) + 'm';
+          else hint = Math.floor(mins/(60*24)) + 'd ' + Math.floor((mins%(60*24))/60) + 'h';
           action = `<span class="programme-result" style="background:rgba(124,58,237,.18);color:#c4b5fd">⏳ in ${hint}</span>`;
         }
         return `<div class="programme-row ${m.status}">
@@ -3696,7 +3721,7 @@
           ${resultBadge || action}
         </div>`;
       }).join('');
-      return `<div class="programme-day">📅 Day ${d}</div>${rows}`;
+      return `<div class="programme-day">📅 ${dateLabel(key)}</div>${rows}`;
     }).join('');
   }
   async function startLeagueMatch(matchId){
