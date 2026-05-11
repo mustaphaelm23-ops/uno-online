@@ -3921,41 +3921,491 @@
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
   }
 
-  function showBetPicker(){
+  // ── Cinematic Arena Setup ───────────────────────────────────────────────
+  // Replaces the old bet picker with a full-screen "forge your arena" flow.
+  // Returns: { bet, maxPlayers, isPrivate } or null on cancel.
+  function showArenaSetup(){
     return new Promise(resolve=>{
-      const old=document.getElementById('bet-picker');if(old)old.remove();
-      const amounts=[100,200,500,1000,2000,4000,8000];
-      const ov=document.createElement('div');ov.id='bet-picker';
-      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;z-index:200;';
-      ov.innerHTML=`
-        <div style="background:linear-gradient(145deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:22px;padding:36px;text-align:center;width:min(430px,90vw);animation:fadeInScale .3s ease;box-shadow:0 30px 80px rgba(0,0,0,.6)">
-          <div style="font-family:'Bangers',cursive;font-size:30px;letter-spacing:3px;margin-bottom:6px">Choose Bet 🪙</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:22px">Winner takes everything!</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px">
-            ${amounts.map(a=>`<button onclick="document.getElementById('bet-picker').dataset.val='${a}';document.querySelectorAll('.bet-opt').forEach(b=>{b.style.background='var(--bg)';b.style.borderColor='var(--border)';b.style.color='var(--text)'});this.style.background='rgba(245,158,11,.15)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)';" class="bet-opt" style="padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s">🪙 ${a.toLocaleString()}</button>`).join('')}
+      const old=document.getElementById('arena-setup');if(old)old.remove();
+      _ensureArenaStyles();
+
+      const cfg = { maxPlayers:4, bet:1000, isPrivate:false };
+      const userCoins = S.user?.coins || 0;
+
+      // Stake tiers — rarity tiers like a card game
+      const tiers = [
+        {val:100,    name:'STARTER', rarity:'Common',    color:'#9CA3AF', glow:'rgba(156,163,175,.55)',  icon:'🪙'},
+        {val:500,    name:'BRONZE',  rarity:'Common',    color:'#D97706', glow:'rgba(217,119,6,.55)',    icon:'🥉'},
+        {val:2000,   name:'SILVER',  rarity:'Rare',      color:'#D1D5DB', glow:'rgba(209,213,219,.6)',   icon:'🥈'},
+        {val:8000,   name:'GOLD',    rarity:'Epic',      color:'#FBBF24', glow:'rgba(251,191,36,.7)',    icon:'🥇'},
+        {val:25000,  name:'DIAMOND', rarity:'Legendary', color:'#67E8F9', glow:'rgba(103,232,249,.75)',  icon:'💎'},
+        {val:100000, name:'MYTHIC',  rarity:'Mythic',    color:'#F472B6', glow:'rgba(244,114,182,.85)',  icon:'👑'}
+      ];
+
+      // Floating decorative cards in background
+      const deco = ['#E8324A','#F59E0B','#16A34A','#2563EB','#9333EA','#E8324A','#F59E0B'].map((c,i)=>`
+        <div class="arena-deco-card" style="
+          --c:${c};
+          left:${[8,18,72,82,15,68,40][i]}%;
+          top:${[12,68,18,72,42,38,8][i]}%;
+          animation-delay:${i*-2.3}s;
+          animation-duration:${14+i*1.7}s;
+          transform:rotate(${[-12,18,-25,14,-8,22,-30][i]}deg);
+        "></div>
+      `).join('');
+
+      const ov = document.createElement('div');
+      ov.id = 'arena-setup';
+      ov.innerHTML = `
+        <div class="arena-bg">${deco}<div class="arena-vignette"></div></div>
+        <div class="arena-panel" role="dialog" aria-label="Create Room">
+          <button class="arena-close" aria-label="Close">×</button>
+
+          <div class="arena-header">
+            <div class="arena-eyebrow">⚔️  ROOM CREATION  ⚔️</div>
+            <div class="arena-title">FORGE YOUR ARENA</div>
+            <div class="arena-sub">Choose your battlefield. Winner takes everything.</div>
           </div>
-          <div style="display:flex;gap:10px">
-            <button onclick="document.getElementById('bet-picker').remove();window._betRes(null)" style="flex:1;padding:13px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;font-weight:700">Cancel</button>
-            <button onclick="const v=parseInt(document.getElementById('bet-picker').dataset.val||0);if(!v)return;document.getElementById('bet-picker').remove();window._betRes(v);" style="flex:1;padding:13px;background:linear-gradient(135deg,#E8324A,#C1192F);border:none;border-radius:10px;color:#fff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(232,50,74,.3)">Create Room →</button>
+
+          <div class="arena-coins">
+            <span class="arena-coin-icon">🪙</span>
+            <span class="arena-coin-val">${userCoins.toLocaleString()}</span>
+            <span class="arena-coin-lbl">in vault</span>
           </div>
-        </div>`;
-      window._betRes=resolve;document.body.appendChild(ov);
+
+          <!-- PLAYERS -->
+          <div class="arena-section">
+            <div class="arena-section-head">
+              <div class="arena-section-num">01</div>
+              <div>
+                <div class="arena-section-title">Fighters</div>
+                <div class="arena-section-sub">How many players in the arena?</div>
+              </div>
+            </div>
+            <div class="arena-players-grid">
+              ${[2,3,4].map(n=>`
+                <button class="arena-pcard ${n===4?'on':''}" data-players="${n}">
+                  <div class="arena-pcard-slots">
+                    ${Array.from({length:n}).map((_,i)=>`<div class="arena-pslot" style="--i:${i}"></div>`).join('')}
+                  </div>
+                  <div class="arena-pcard-num">${n}</div>
+                  <div class="arena-pcard-lbl">${n===2?'Duel':n===3?'Triple':'Squad'}</div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- STAKE -->
+          <div class="arena-section">
+            <div class="arena-section-head">
+              <div class="arena-section-num">02</div>
+              <div>
+                <div class="arena-section-title">The Stake</div>
+                <div class="arena-section-sub">Every player matches. Winner takes the pot.</div>
+              </div>
+            </div>
+            <div class="arena-tiers">
+              ${tiers.map((t,i)=>{
+                const tooExpensive = t.val > userCoins;
+                const selected = t.val === cfg.bet;
+                return `
+                <button class="arena-tier ${selected?'on':''} ${tooExpensive?'locked':''}"
+                  data-bet="${t.val}"
+                  style="--tier-color:${t.color};--tier-glow:${t.glow}">
+                  <div class="arena-tier-shine"></div>
+                  <div class="arena-tier-icon">${t.icon}</div>
+                  <div class="arena-tier-name">${t.name}</div>
+                  <div class="arena-tier-rarity">${t.rarity}</div>
+                  <div class="arena-tier-val">${t.val.toLocaleString()}</div>
+                  ${tooExpensive?'<div class="arena-tier-lock">🔒</div>':''}
+                </button>`;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- PRIVACY -->
+          <div class="arena-section">
+            <div class="arena-section-head">
+              <div class="arena-section-num">03</div>
+              <div>
+                <div class="arena-section-title">Access</div>
+                <div class="arena-section-sub">Anyone can join, or invite only.</div>
+              </div>
+            </div>
+            <div class="arena-privacy">
+              <button class="arena-priv on" data-priv="0">
+                <div class="arena-priv-icon">🌐</div>
+                <div>
+                  <div class="arena-priv-title">Public</div>
+                  <div class="arena-priv-sub">Show in lobby — anyone joins</div>
+                </div>
+              </button>
+              <button class="arena-priv" data-priv="1">
+                <div class="arena-priv-icon">🔐</div>
+                <div>
+                  <div class="arena-priv-title">Private</div>
+                  <div class="arena-priv-sub">Only with room code</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="arena-actions">
+            <button class="arena-cancel">Cancel</button>
+            <button class="arena-go">
+              <span class="arena-go-shine"></span>
+              <span class="arena-go-label">ENTER ARENA</span>
+              <span class="arena-go-arrow">→</span>
+            </button>
+          </div>
+          <div class="arena-go-foot" id="arenaGoFoot">
+            Stake: <b id="arenaSummary">🪙 ${cfg.bet.toLocaleString()}</b>
+            · <b id="arenaSummary2">${cfg.maxPlayers} players</b>
+            · <b id="arenaSummary3">Public</b>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(ov);
+
+      // ── Wire interactions ──────────────────────────────────────
+      const summary  = ov.querySelector('#arenaSummary');
+      const summary2 = ov.querySelector('#arenaSummary2');
+      const summary3 = ov.querySelector('#arenaSummary3');
+      const goBtn    = ov.querySelector('.arena-go');
+
+      function syncSummary(){
+        const tier = tiers.find(t=>t.val===cfg.bet);
+        summary.textContent  = `${tier?tier.icon:'🪙'} ${cfg.bet.toLocaleString()}`;
+        summary2.textContent = `${cfg.maxPlayers} player${cfg.maxPlayers>1?'s':''}`;
+        summary3.textContent = cfg.isPrivate ? 'Private' : 'Public';
+        const canAfford = cfg.bet <= userCoins;
+        goBtn.classList.toggle('disabled', !canAfford);
+        goBtn.querySelector('.arena-go-label').textContent = canAfford ? 'ENTER ARENA' : 'NOT ENOUGH COINS';
+      }
+      syncSummary();
+
+      // Player count
+      ov.querySelectorAll('.arena-pcard').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          ov.querySelectorAll('.arena-pcard').forEach(b=>b.classList.remove('on'));
+          btn.classList.add('on');
+          cfg.maxPlayers = parseInt(btn.dataset.players,10);
+          syncSummary();
+        });
+      });
+
+      // Stake tier
+      ov.querySelectorAll('.arena-tier').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          if(btn.classList.contains('locked')) {
+            btn.animate(
+              [{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
+              {duration:300}
+            );
+            return;
+          }
+          ov.querySelectorAll('.arena-tier').forEach(b=>b.classList.remove('on'));
+          btn.classList.add('on');
+          cfg.bet = parseInt(btn.dataset.bet,10);
+          syncSummary();
+        });
+      });
+
+      // Privacy
+      ov.querySelectorAll('.arena-priv').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          ov.querySelectorAll('.arena-priv').forEach(b=>b.classList.remove('on'));
+          btn.classList.add('on');
+          cfg.isPrivate = btn.dataset.priv === '1';
+          syncSummary();
+        });
+      });
+
+      // Close handlers
+      function close(result){
+        ov.classList.add('out');
+        setTimeout(()=>{ ov.remove(); resolve(result); }, 250);
+      }
+      ov.querySelector('.arena-close').addEventListener('click',()=>close(null));
+      ov.querySelector('.arena-cancel').addEventListener('click',()=>close(null));
+      goBtn.addEventListener('click',()=>{
+        if(goBtn.classList.contains('disabled')){
+          toast(`Not enough coins! You have ${userCoins.toLocaleString()} 🪙`,'e');
+          return;
+        }
+        close({ ...cfg });
+      });
+      // Escape closes
+      const onKey = (e)=>{ if(e.key==='Escape'){ close(null); document.removeEventListener('keydown',onKey); } };
+      document.addEventListener('keydown', onKey);
     });
   }
+
+  function _ensureArenaStyles(){
+    if(document.getElementById('arena-setup-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'arena-setup-styles';
+    s.textContent = `
+      @keyframes arenaIn{from{opacity:0}to{opacity:1}}
+      @keyframes arenaPanelIn{from{transform:translateY(40px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+      @keyframes arenaOut{to{opacity:0;transform:scale(.96)}}
+      @keyframes arenaFloat{
+        0%,100%{transform:translateY(0) rotate(var(--rot,0deg))}
+        50%{transform:translateY(-22px) rotate(calc(var(--rot,0deg) + 6deg))}
+      }
+      @keyframes arenaDecoDrift{
+        0%{transform:translate(0,0) rotate(var(--rot,0deg));opacity:.0}
+        15%{opacity:.18}
+        50%{transform:translate(20px,-30px) rotate(calc(var(--rot,0deg) + 10deg));opacity:.22}
+        85%{opacity:.16}
+        100%{transform:translate(0,0) rotate(var(--rot,0deg));opacity:0}
+      }
+      @keyframes arenaSlotPulse{
+        0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}
+        50%{box-shadow:0 0 0 6px rgba(245,158,11,.18)}
+      }
+      @keyframes arenaShine{
+        0%{transform:translateX(-120%) skewX(-20deg)}
+        100%{transform:translateX(250%) skewX(-20deg)}
+      }
+      @keyframes arenaTierPop{
+        0%{transform:translateY(0) scale(1)}
+        50%{transform:translateY(-8px) scale(1.05)}
+        100%{transform:translateY(-4px) scale(1.02)}
+      }
+
+      #arena-setup{
+        position:fixed;inset:0;z-index:1000;
+        background:radial-gradient(ellipse at center, rgba(40,18,8,.55) 0%, rgba(0,0,0,.92) 70%);
+        backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+        display:flex;align-items:center;justify-content:center;
+        animation:arenaIn .35s ease-out;
+        overflow:hidden;padding:20px;
+      }
+      #arena-setup.out{animation:arenaOut .25s ease-out forwards}
+
+      .arena-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+      .arena-deco-card{
+        position:absolute;width:90px;height:130px;border-radius:14px;
+        background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--c) 80%, white 0%), color-mix(in srgb, var(--c) 60%, black 40%));
+        box-shadow:0 12px 40px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.08);
+        opacity:.18;
+        animation:arenaDecoDrift 16s ease-in-out infinite;
+      }
+      .arena-deco-card::after{
+        content:'';position:absolute;inset:18%;border-radius:50%;
+        background:rgba(255,255,255,.08);
+      }
+      .arena-vignette{
+        position:absolute;inset:0;
+        background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.5) 100%);
+      }
+
+      .arena-panel{
+        position:relative;z-index:2;
+        width:min(720px, 95vw);max-height:92vh;overflow-y:auto;overflow-x:hidden;
+        background:linear-gradient(180deg, rgba(28,32,57,.85), rgba(19,23,41,.95));
+        border:1px solid rgba(255,255,255,.08);border-radius:24px;
+        padding:30px 32px 26px;
+        box-shadow:0 40px 100px rgba(0,0,0,.7), 0 0 0 1px rgba(245,158,11,.05), inset 0 1px 0 rgba(255,255,255,.06);
+        animation:arenaPanelIn .5s cubic-bezier(.2,.9,.3,1.2);
+        scrollbar-width:thin;scrollbar-color:rgba(245,158,11,.3) transparent;
+      }
+      .arena-panel::-webkit-scrollbar{width:5px}
+      .arena-panel::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:5px}
+
+      .arena-close{
+        position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+        background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+        color:rgba(255,255,255,.7);font-size:22px;line-height:1;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+        transition:all .2s;font-family:inherit;
+      }
+      .arena-close:hover{background:rgba(232,50,74,.2);border-color:rgba(232,50,74,.5);color:#fff;transform:rotate(90deg)}
+
+      .arena-header{text-align:center;margin-bottom:6px;padding-top:4px}
+      .arena-eyebrow{
+        font-size:10px;font-weight:800;letter-spacing:4px;color:#F59E0B;
+        margin-bottom:8px;opacity:.85;
+      }
+      .arena-title{
+        font-family:'Bangers', cursive;font-size:42px;letter-spacing:4px;
+        background:linear-gradient(180deg, #FEF3C7 0%, #F59E0B 60%, #C2410C 100%);
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        text-shadow:0 2px 30px rgba(245,158,11,.4);
+        line-height:1.05;margin-bottom:6px;
+      }
+      .arena-sub{font-size:12px;color:rgba(255,255,255,.55);font-weight:600;letter-spacing:.5px}
+
+      .arena-coins{
+        margin:14px auto 4px;display:inline-flex;align-items:center;gap:8px;
+        padding:8px 16px;border-radius:30px;
+        background:linear-gradient(135deg, rgba(245,158,11,.12), rgba(232,50,74,.08));
+        border:1px solid rgba(245,158,11,.25);
+        font-weight:800;font-size:13px;
+        position:relative;left:50%;transform:translateX(-50%);
+      }
+      .arena-coin-icon{font-size:16px}
+      .arena-coin-val{color:#F59E0B}
+      .arena-coin-lbl{color:rgba(255,255,255,.5);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+
+      .arena-section{margin-top:24px}
+      .arena-section-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+      .arena-section-num{
+        width:36px;height:36px;flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;
+        background:linear-gradient(135deg, #F59E0B, #C2410C);
+        border-radius:9px;font-family:'Bangers',cursive;
+        font-size:18px;color:#1A0E04;
+        box-shadow:0 4px 16px rgba(245,158,11,.35);
+      }
+      .arena-section-title{font-weight:800;font-size:16px;letter-spacing:.5px;color:#fff}
+      .arena-section-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;font-weight:600}
+
+      /* Players */
+      .arena-players-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      .arena-pcard{
+        position:relative;padding:18px 12px 14px;border-radius:14px;
+        background:rgba(255,255,255,.02);border:1.5px solid rgba(255,255,255,.06);
+        cursor:pointer;transition:all .25s ease;text-align:center;
+        font-family:inherit;color:#fff;overflow:hidden;
+      }
+      .arena-pcard:hover{border-color:rgba(245,158,11,.3);transform:translateY(-2px);background:rgba(255,255,255,.04)}
+      .arena-pcard.on{
+        border-color:#F59E0B;background:rgba(245,158,11,.08);
+        box-shadow:0 8px 24px rgba(245,158,11,.25), inset 0 1px 0 rgba(245,158,11,.2);
+        transform:translateY(-3px);
+      }
+      .arena-pcard-slots{display:flex;justify-content:center;gap:5px;margin-bottom:8px;min-height:14px}
+      .arena-pslot{
+        width:14px;height:14px;border-radius:50%;
+        background:linear-gradient(135deg, #E8324A, #F59E0B);
+        opacity:.4;transition:all .2s;
+      }
+      .arena-pcard.on .arena-pslot{opacity:1;animation:arenaSlotPulse 1.6s ease-in-out infinite;animation-delay:calc(var(--i) * .12s)}
+      .arena-pcard-num{font-family:'Bangers',cursive;font-size:36px;letter-spacing:2px;line-height:1}
+      .arena-pcard-lbl{font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,.55);margin-top:4px;text-transform:uppercase}
+      .arena-pcard.on .arena-pcard-lbl{color:#F59E0B}
+
+      /* Tiers */
+      .arena-tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      @media (min-width:560px){.arena-tiers{grid-template-columns:repeat(6,1fr)}}
+      .arena-tier{
+        position:relative;padding:14px 8px 12px;border-radius:13px;
+        background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(0,0,0,.15));
+        border:1.5px solid rgba(255,255,255,.07);
+        cursor:pointer;transition:all .25s ease;text-align:center;
+        font-family:inherit;color:#fff;overflow:hidden;
+      }
+      .arena-tier:hover:not(.locked){
+        border-color:var(--tier-color);transform:translateY(-3px);
+        box-shadow:0 10px 24px var(--tier-glow);
+      }
+      .arena-tier.on{
+        border-color:var(--tier-color);
+        background:linear-gradient(180deg, color-mix(in srgb, var(--tier-color) 12%, transparent), rgba(0,0,0,.1));
+        box-shadow:0 12px 30px var(--tier-glow), inset 0 1px 0 color-mix(in srgb, var(--tier-color) 30%, transparent);
+        animation:arenaTierPop .35s ease-out forwards;
+      }
+      .arena-tier.locked{opacity:.4;cursor:not-allowed}
+      .arena-tier-shine{
+        position:absolute;top:0;left:0;width:50%;height:100%;
+        background:linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+        opacity:0;pointer-events:none;
+      }
+      .arena-tier.on .arena-tier-shine{opacity:1;animation:arenaShine 1.8s ease-in-out infinite}
+      .arena-tier-icon{font-size:24px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 2px 6px var(--tier-glow))}
+      .arena-tier-name{font-family:'Bangers',cursive;font-size:14px;letter-spacing:1.5px;color:var(--tier-color);line-height:1}
+      .arena-tier-rarity{font-size:8px;font-weight:800;letter-spacing:1.5px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:3px}
+      .arena-tier-val{font-size:12px;font-weight:800;margin-top:5px;color:rgba(255,255,255,.85)}
+      .arena-tier-lock{position:absolute;top:6px;right:6px;font-size:11px;opacity:.7}
+
+      /* Privacy */
+      .arena-privacy{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .arena-priv{
+        display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:13px;
+        background:rgba(255,255,255,.02);border:1.5px solid rgba(255,255,255,.06);
+        cursor:pointer;transition:all .25s ease;text-align:left;
+        font-family:inherit;color:#fff;
+      }
+      .arena-priv:hover{border-color:rgba(245,158,11,.3);background:rgba(255,255,255,.04)}
+      .arena-priv.on{
+        border-color:#F59E0B;background:rgba(245,158,11,.06);
+        box-shadow:0 4px 16px rgba(245,158,11,.15);
+      }
+      .arena-priv-icon{font-size:22px;flex-shrink:0}
+      .arena-priv-title{font-weight:800;font-size:13px;line-height:1}
+      .arena-priv-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:3px;font-weight:600}
+
+      /* Actions */
+      .arena-actions{display:flex;gap:10px;margin-top:28px;align-items:stretch}
+      .arena-cancel{
+        flex:0 0 auto;padding:0 22px;
+        background:transparent;border:1.5px solid rgba(255,255,255,.1);border-radius:13px;
+        color:rgba(255,255,255,.65);font-family:inherit;font-size:13px;font-weight:700;
+        cursor:pointer;transition:all .2s;
+      }
+      .arena-cancel:hover{border-color:rgba(255,255,255,.2);color:#fff}
+      .arena-go{
+        position:relative;flex:1;padding:18px 24px;
+        background:linear-gradient(135deg, #E8324A 0%, #F59E0B 100%);
+        border:none;border-radius:13px;
+        color:#fff;font-family:'Bangers',cursive;font-size:22px;letter-spacing:3px;
+        cursor:pointer;transition:all .25s;overflow:hidden;
+        box-shadow:0 12px 30px rgba(232,50,74,.4), 0 0 0 1px rgba(255,255,255,.08) inset;
+        display:flex;align-items:center;justify-content:center;gap:12px;
+      }
+      .arena-go:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(232,50,74,.55)}
+      .arena-go:active{transform:translateY(0)}
+      .arena-go.disabled{
+        background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);
+        box-shadow:none;cursor:not-allowed;
+      }
+      .arena-go.disabled:hover{transform:none}
+      .arena-go-shine{
+        position:absolute;top:0;left:0;width:40%;height:100%;
+        background:linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+        animation:arenaShine 2.6s ease-in-out infinite;
+      }
+      .arena-go.disabled .arena-go-shine{display:none}
+      .arena-go-arrow{font-size:24px;line-height:1}
+      .arena-go-foot{
+        text-align:center;font-size:11px;color:rgba(255,255,255,.45);
+        margin-top:10px;font-weight:600;letter-spacing:.5px;
+      }
+      .arena-go-foot b{color:rgba(255,255,255,.8);font-weight:800}
+
+      @media (max-width:520px){
+        .arena-panel{padding:24px 18px 20px;border-radius:20px}
+        .arena-title{font-size:32px;letter-spacing:3px}
+        .arena-section-num{width:30px;height:30px;font-size:15px}
+        .arena-pcard-num{font-size:30px}
+        .arena-tiers{grid-template-columns:repeat(2,1fr)}
+        .arena-go{font-size:18px;letter-spacing:2px;padding:15px 18px}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   async function doCreate(){
-    const bet=await showBetPicker();if(!bet)return;
-    if((S.user?.coins||0)<bet)return toast(`Not enough coins! You have ${S.user?.coins||0} 🪙`,'e');
+    const result = await showArenaSetup();
+    if(!result) return;
+    const { bet, maxPlayers, isPrivate } = result;
+    if((S.user?.coins||0) < bet) return toast(`Not enough coins! You have ${S.user?.coins||0} 🪙`,'e');
     try{
-      const d=await api('POST','/rooms',{settings:{maxPlayers:4,bet}});
-      S.roomId=d.roomId;
+      const d = await api('POST','/rooms',{settings:{ maxPlayers, bet, isPrivate }});
+      S.roomId = d.roomId;
       S.socket.emit('room:join',{roomId:d.roomId},(res)=>{
-        if(!res.success)return toast(res.reason,'e');
-        clearInterval(S.roomsTimer);showScreen('room-screen');
-        document.getElementById('ridlbl').textContent=`Room: ${d.roomId.substr(0,8).toUpperCase()} | Bet: 🪙${bet}`;
-        if(res.state?.players)renderWaiting(res.state.players);refreshRoom();
+        if(!res.success) return toast(res.reason,'e');
+        clearInterval(S.roomsTimer); showScreen('room-screen');
+        const betLbl = bet ? ` | Bet: 🪙${bet.toLocaleString()}` : '';
+        document.getElementById('ridlbl').textContent = `Room: ${d.roomId.substr(0,8).toUpperCase()}${betLbl}`;
+        if(res.state?.players) renderWaiting(res.state.players);
+        refreshRoom();
         if(d.code) showRoomCode(d.code);
       });
-    }catch(e){toast(e.message,'e');}
+    }catch(e){ toast(e.message,'e'); }
   }
   function doJoin(roomId){
     S.roomId=roomId;
