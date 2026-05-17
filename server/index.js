@@ -1150,6 +1150,22 @@ io.on('connection', (socket) => {
   socketToUser.set(socket.id, userId);
   console.log(`[Socket] Connected: ${socket.username} (${socket.id})`);
 
+  // Wrap every socket handler so a thrown error is contained to this
+  // event instead of crashing the whole server mid-game.
+  const _rawOn = socket.on.bind(socket);
+  socket.on = (event, handler) => _rawOn(event, (...args) => {
+    try {
+      return handler(...args);
+    } catch (err) {
+      console.error(`[CRASH-GUARD] Error in socket "${event}" from ${socket.username}:`);
+      console.error(err && err.stack ? err.stack : err);
+      const ack = args[args.length - 1];
+      if (typeof ack === 'function') {
+        try { ack({ success: false, reason: 'Server error — please retry' }); } catch (_) {}
+      }
+    }
+  });
+
   // ── Room: Join ──
   socket.on('room:join', ({ roomId, password } = {}, ack) => {
     const room = roomsDB.get(roomId);
@@ -2153,6 +2169,23 @@ function sanitizeTournament(t) {
 }
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), rooms: roomsDB.size, users: usersDB.size, queue: matchmakingQueue.length });
+});
+
+// ─────────────────────────────────────────
+// CRASH GUARDS
+// Keep the server alive if a single game / socket handler throws.
+// Without these, one bad event mid-game kills Node for *everyone*
+// (the classic "server drops mid-match → ngrok ERR_NGROK_8012").
+// ─────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('\n[CRASH-GUARD] Uncaught exception — server kept alive:');
+  console.error(err && err.stack ? err.stack : err);
+  console.error('');
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('\n[CRASH-GUARD] Unhandled promise rejection — server kept alive:');
+  console.error(reason && reason.stack ? reason.stack : reason);
+  console.error('');
 });
 
 // ─────────────────────────────────────────
