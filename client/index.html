@@ -563,6 +563,85 @@
   .ec-btn:hover{transform:translateY(-3px) scale(1.04);filter:brightness(1.12) saturate(1.1);box-shadow:0 12px 26px rgba(0,0,0,.5);}
   .ec-btn:active{transform:scale(.97);}
 
+  /* ═══ LOBBY HERO BANNER ═══ */
+  .lobby-hero{
+    position:relative;display:flex;align-items:center;justify-content:space-between;
+    gap:20px;flex-wrap:wrap;
+    margin-bottom:22px;padding:20px 24px;border-radius:20px;overflow:hidden;
+    background:
+      linear-gradient(135deg,rgba(46,18,7,.94) 0%,rgba(78,32,12,.82) 48%,rgba(36,14,6,.94) 100%);
+    border:1px solid rgba(255,215,0,.22);
+    box-shadow:0 18px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(0,0,0,.3);
+    animation:lobbyEntryUp .6s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .hero-glow{
+    position:absolute;width:340px;height:340px;left:-90px;top:-160px;pointer-events:none;
+    background:radial-gradient(circle,rgba(245,158,11,.32),transparent 65%);
+    filter:blur(20px);
+  }
+  .hero-shine{
+    position:absolute;top:0;left:0;width:45%;height:100%;pointer-events:none;
+    background:linear-gradient(100deg,transparent 30%,rgba(255,235,180,.14) 50%,transparent 70%);
+    animation:shineSweepLobby 6s cubic-bezier(.4,0,.2,1) infinite;
+  }
+  .hero-left{display:flex;align-items:center;gap:16px;position:relative;z-index:1;}
+  .hero-avatar{
+    width:72px;height:72px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(145deg,#2563EB,#1E3A8A);
+    background-size:cover;background-position:center;
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px;font-weight:900;color:#fff;
+    border:3px solid rgba(255,215,0,.55);
+    box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 22px rgba(245,158,11,.35);
+    animation:idleBob 4s ease-in-out infinite;
+  }
+  .hero-greeting{
+    font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+    color:#FFB87A;margin-bottom:1px;
+  }
+  .hero-name{
+    font-family:'Bangers',cursive;font-size:32px;letter-spacing:2px;line-height:1.05;
+    background:linear-gradient(110deg,#FFD700,#FB923C,#FFE9B0);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    text-shadow:0 3px 14px rgba(0,0,0,.5);
+  }
+  .hero-league{
+    display:inline-flex;align-items:center;gap:5px;margin-top:5px;
+    font-size:11px;font-weight:800;letter-spacing:.5px;
+    padding:3px 11px;border-radius:20px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,215,0,.3);color:#FFE9B0;
+  }
+  .hero-stats{
+    display:flex;align-items:stretch;gap:4px;position:relative;z-index:1;
+    background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);
+    border-radius:14px;padding:6px;
+  }
+  .hero-stat{
+    min-width:84px;padding:8px 14px;text-align:center;border-radius:10px;
+    transition:background .2s;
+  }
+  .hero-stat:hover{background:rgba(255,255,255,.05);}
+  .hero-stat + .hero-stat{position:relative;}
+  .hero-stat + .hero-stat::before{
+    content:'';position:absolute;left:0;top:18%;height:64%;width:1px;
+    background:rgba(255,255,255,.1);
+  }
+  .hero-stat-val{
+    font-family:'Bangers',cursive;font-size:24px;letter-spacing:1px;line-height:1;
+    color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  .hero-stat-lbl{
+    font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;
+    color:rgba(255,255,255,.5);margin-top:5px;display:flex;align-items:center;gap:3px;justify-content:center;
+  }
+  @media (max-width:720px){
+    .lobby-hero{padding:16px;gap:14px;}
+    .hero-stats{width:100%;justify-content:space-between;}
+    .hero-stat{min-width:0;flex:1;padding:8px 4px;}
+    .hero-name{font-size:26px;}
+    .hero-avatar{width:58px;height:58px;font-size:26px;}
+  }
+
   /* Room cards stagger */
   .rgrid > .rcard{animation:lobbyEntryUp .5s cubic-bezier(.16,1,.3,1) backwards}
   .rgrid > .rcard:nth-child(1){animation-delay:0s}
@@ -2314,6 +2393,37 @@
         </div>
       </div>
       <div class="lmain">
+        <!-- Player hero banner -->
+        <div class="lobby-hero" id="lobbyHero">
+          <div class="hero-shine"></div>
+          <div class="hero-glow"></div>
+          <div class="hero-left">
+            <div class="hero-avatar" id="heroAvatar">🎮</div>
+            <div class="hero-id">
+              <div class="hero-greeting" id="heroGreeting" data-i18n="welcomeBack">Welcome back</div>
+              <div class="hero-name" id="heroName">Player</div>
+              <div class="hero-league" id="heroLeague">🥈 Silver</div>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="hero-stat-val" id="heroCoins">0</div>
+              <div class="hero-stat-lbl">🪙 <span data-i18n="coins">Coins</span></div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-val" id="heroElo">1000</div>
+              <div class="hero-stat-lbl">⚡ <span data-i18n="statRating">Rating</span></div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-val" id="heroWins">0</div>
+              <div class="hero-stat-lbl">🏆 <span data-i18n="statWins">Wins</span></div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-val" id="heroWinRate">0%</div>
+              <div class="hero-stat-lbl">📊 <span data-i18n="statWinRate">Win Rate</span></div>
+            </div>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
           <div>
             <div class="public-title" data-i18n="publicRooms">🃏 Public Rooms</div>
@@ -2778,6 +2888,7 @@
         resetHint:'Enter your username and the email you registered with to set a new password.',
         newPassword:'New Password', backToLogin:'← Back to login',
         fillAll:'Fill all fields', pwResetOk:'Password reset — you can now log in',
+        welcomeBack:'Welcome back', statRating:'Rating', statWins:'Wins', statWinRate:'Win Rate',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
@@ -2856,6 +2967,7 @@
         resetHint:'Saisissez votre nom d\'utilisateur et l\'e-mail utilisé à l\'inscription pour définir un nouveau mot de passe.',
         newPassword:'Nouveau mot de passe', backToLogin:'← Retour à la connexion',
         fillAll:'Remplissez tous les champs', pwResetOk:'Mot de passe réinitialisé — vous pouvez vous connecter',
+        welcomeBack:'Bon retour', statRating:'Classement', statWins:'Victoires', statWinRate:'Taux de victoire',
       },
       ar:{
         login:'تسجيل الدخول', register:'إنشاء حساب', username:'اسم المستخدم', password:'كلمة المرور',
@@ -2934,6 +3046,7 @@
         resetHint:'أدخل اسم المستخدم والبريد الإلكتروني الذي سجّلت به لتعيين كلمة مرور جديدة.',
         newPassword:'كلمة مرور جديدة', backToLogin:'← العودة لتسجيل الدخول',
         fillAll:'املأ جميع الحقول', pwResetOk:'تمت إعادة تعيين كلمة المرور — يمكنك الآن تسجيل الدخول',
+        welcomeBack:'مرحباً بعودتك', statRating:'التصنيف', statWins:'انتصارات', statWinRate:'نسبة الفوز',
       },
       de:{
         login:'Anmelden', register:'Registrieren', username:'Benutzername', password:'Passwort',
@@ -3012,6 +3125,7 @@
         resetHint:'Gib deinen Benutzernamen und die bei der Registrierung verwendete E-Mail ein, um ein neues Passwort festzulegen.',
         newPassword:'Neues Passwort', backToLogin:'← Zurück zur Anmeldung',
         fillAll:'Fülle alle Felder aus', pwResetOk:'Passwort zurückgesetzt — du kannst dich jetzt anmelden',
+        welcomeBack:'Willkommen zurück', statRating:'Wertung', statWins:'Siege', statWinRate:'Siegquote',
       },
       es:{
         login:'Iniciar sesión', register:'Registrarse', username:'Usuario', password:'Contraseña',
@@ -3090,6 +3204,7 @@
         resetHint:'Introduce tu usuario y el correo con el que te registraste para definir una nueva contraseña.',
         newPassword:'Nueva contraseña', backToLogin:'← Volver a iniciar sesión',
         fillAll:'Rellena todos los campos', pwResetOk:'Contraseña restablecida — ya puedes iniciar sesión',
+        welcomeBack:'Bienvenido de nuevo', statRating:'Puntuación', statWins:'Victorias', statWinRate:'Tasa de victorias',
       },
       it:{
         login:'Accedi', register:'Registrati', username:'Nome utente', password:'Password',
@@ -3168,6 +3283,7 @@
         resetHint:'Inserisci il tuo nome utente e l\'e-mail usata in fase di registrazione per impostare una nuova password.',
         newPassword:'Nuova password', backToLogin:'← Torna al login',
         fillAll:'Compila tutti i campi', pwResetOk:'Password reimpostata — ora puoi accedere',
+        welcomeBack:'Bentornato', statRating:'Punteggio', statWins:'Vittorie', statWinRate:'Tasso di vittorie',
       },
       sv:{
         login:'Logga in', register:'Registrera', username:'Användarnamn', password:'Lösenord',
@@ -3246,6 +3362,7 @@
         resetHint:'Ange ditt användarnamn och e-posten du registrerade dig med för att ange ett nytt lösenord.',
         newPassword:'Nytt lösenord', backToLogin:'← Tillbaka till inloggning',
         fillAll:'Fyll i alla fält', pwResetOk:'Lösenordet återställt — du kan nu logga in',
+        welcomeBack:'Välkommen tillbaka', statRating:'Rankning', statWins:'Vinster', statWinRate:'Vinstandel',
       },
     },
   };
@@ -4614,7 +4731,21 @@
     if(Chat.activeTab==='spec') switchChatTab('chat');
     showScreen('lobby-screen');
     if(S.user){document.getElementById('huser').textContent=S.user.username;document.getElementById('hcoins').textContent=S.user.coins||0;document.getElementById('scoins').textContent=S.user.coins||0;}
+    renderLobbyHero();
     loadRooms();clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
+  }
+  function renderLobbyHero(){
+    const u=S.user; if(!u) return;
+    _renderAvatarInto(document.getElementById('heroAvatar'), u);
+    const nm=document.getElementById('heroName'); if(nm) nm.textContent=u.username||'Player';
+    const lg=u.league||{};
+    const lgEl=document.getElementById('heroLeague'); if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.name||'Bronze'}`;
+    const gp=u.stats?.gamesPlayed||0, gw=u.stats?.gamesWon||0;
+    const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+    set('heroCoins',(u.coins||0).toLocaleString());
+    set('heroElo',u.elo??1000);
+    set('heroWins',gw);
+    set('heroWinRate',gp?Math.round(gw/gp*100)+'%':'0%');
   }
   async function loadRooms(){
     try{
