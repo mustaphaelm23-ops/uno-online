@@ -3069,7 +3069,11 @@
   };
 
   /* ═══ HELPERS ═══ */
-  function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id)?.classList.add('active');if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
+  function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id)?.classList.add('active');
+    // The in-game ⚙ menu must never carry over open between screens —
+    // it opens only when the player taps the gear.
+    document.getElementById('gameMenu')?.classList.remove('show');
+    if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
   function toast(msg,type='i'){const w=document.getElementById('twrap'),t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500);}
   async function api(method,path,body){
     const r=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(S.token?{Authorization:`Bearer ${S.token}`}:{})},body:body?JSON.stringify(body):undefined});
@@ -3930,7 +3934,7 @@
       const old=document.getElementById('arena-setup');if(old)old.remove();
       _ensureArenaStyles();
 
-      const cfg = { maxPlayers:4, bet:1000, isPrivate:false };
+      const cfg = { maxPlayers:4, bet:1000, isPrivate:false, invites:[] };
       const userCoins = S.user?.coins || 0;
 
       // Stake tiers — rarity tiers like a card game
@@ -4051,6 +4055,20 @@
             </div>
           </div>
 
+          <!-- SQUAD -->
+          <div class="arena-section">
+            <div class="arena-section-head">
+              <div class="arena-section-num">04</div>
+              <div>
+                <div class="arena-section-title">Your Squad</div>
+                <div class="arena-section-sub">Invite friends — or leave empty for a random match.</div>
+              </div>
+            </div>
+            <div class="arena-friends" id="arenaFriends">
+              <div class="arena-friends-msg">Loading friends…</div>
+            </div>
+          </div>
+
           <!-- ACTIONS -->
           <div class="arena-actions">
             <button class="arena-cancel">Cancel</button>
@@ -4064,6 +4082,7 @@
             Stake: <b id="arenaSummary">🪙 ${cfg.bet.toLocaleString()}</b>
             · <b id="arenaSummary2">${cfg.maxPlayers} players</b>
             · <b id="arenaSummary3">Public</b>
+            · <b id="arenaSummary4">Random</b>
           </div>
         </div>
       `;
@@ -4073,6 +4092,7 @@
       const summary  = ov.querySelector('#arenaSummary');
       const summary2 = ov.querySelector('#arenaSummary2');
       const summary3 = ov.querySelector('#arenaSummary3');
+      const summary4 = ov.querySelector('#arenaSummary4');
       const goBtn    = ov.querySelector('.arena-go');
 
       function syncSummary(){
@@ -4080,11 +4100,47 @@
         summary.textContent  = `${tier?tier.icon:'🪙'} ${cfg.bet.toLocaleString()}`;
         summary2.textContent = `${cfg.maxPlayers} player${cfg.maxPlayers>1?'s':''}`;
         summary3.textContent = cfg.isPrivate ? 'Private' : 'Public';
+        summary4.textContent = cfg.invites.length
+          ? `${cfg.invites.length} friend${cfg.invites.length>1?'s':''} invited`
+          : 'Random';
         const canAfford = cfg.bet <= userCoins;
         goBtn.classList.toggle('disabled', !canAfford);
         goBtn.querySelector('.arena-go-label').textContent = canAfford ? 'ENTER ARENA' : 'NOT ENOUGH COINS';
       }
       syncSummary();
+
+      // ── Friends to invite (loaded async) ───────────────────────
+      (async ()=>{
+        const box = ov.querySelector('#arenaFriends');
+        if(!box) return;
+        try{
+          const d = await api('GET','/friends');
+          const friends = (d.friends||[]).slice()
+            .sort((a,b)=>(b.isOnline?1:0)-(a.isOnline?1:0));
+          if(!friends.length){
+            box.innerHTML = `<div class="arena-friends-msg">No friends yet — add some from the lobby 👥, or just play a random match.</div>`;
+            return;
+          }
+          box.innerHTML = friends.map(f=>`
+            <button class="arena-friend ${f.isOnline?'':'off'}" data-fid="${f.id}" ${f.isOnline?'':'disabled'}>
+              <span class="arena-friend-dot ${f.isOnline?'on':''}"></span>
+              <span class="arena-friend-name">${esc(f.username)}</span>
+              <span class="arena-friend-state">${f.isOnline?'Online':'Offline'}</span>
+              <span class="arena-friend-check">✓</span>
+            </button>`).join('');
+          box.querySelectorAll('.arena-friend:not(.off)').forEach(btn=>{
+            btn.addEventListener('click',()=>{
+              const fid = btn.dataset.fid;
+              const i = cfg.invites.indexOf(fid);
+              if(i>=0){ cfg.invites.splice(i,1); btn.classList.remove('on'); }
+              else { cfg.invites.push(fid); btn.classList.add('on'); }
+              syncSummary();
+            });
+          });
+        }catch(e){
+          box.innerHTML = `<div class="arena-friends-msg">Couldn't load friends — you can still play a random match.</div>`;
+        }
+      })();
 
       // Player count
       ov.querySelectorAll('.arena-pcard').forEach(btn=>{
@@ -4377,6 +4433,26 @@
       }
       .arena-go-foot b{color:rgba(255,255,255,.8);font-weight:800}
 
+      .arena-friends{display:flex;flex-wrap:wrap;gap:8px}
+      .arena-friends-msg{font-size:12px;color:rgba(255,255,255,.45);font-weight:600;line-height:1.5;padding:4px 2px}
+      .arena-friend{
+        display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:11px;
+        background:rgba(255,255,255,.025);border:1.5px solid rgba(255,255,255,.07);
+        cursor:pointer;transition:all .2s ease;font-family:inherit;color:#fff;
+      }
+      .arena-friend:hover:not(.off){border-color:rgba(245,158,11,.35);background:rgba(255,255,255,.05)}
+      .arena-friend.on{border-color:#F59E0B;background:rgba(245,158,11,.1);box-shadow:0 4px 14px rgba(245,158,11,.2)}
+      .arena-friend.off{opacity:.4;cursor:not-allowed}
+      .arena-friend-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);flex-shrink:0}
+      .arena-friend-dot.on{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.6)}
+      .arena-friend-name{font-weight:800;font-size:13px}
+      .arena-friend-state{font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px}
+      .arena-friend-check{
+        font-size:11px;font-weight:900;color:#F59E0B;width:0;overflow:hidden;
+        transition:width .2s ease;
+      }
+      .arena-friend.on .arena-friend-check{width:13px}
+
       @media (max-width:520px){
         .arena-panel{padding:24px 18px 20px;border-radius:20px}
         .arena-title{font-size:32px;letter-spacing:3px}
@@ -4392,7 +4468,7 @@
   async function doCreate(){
     const result = await showArenaSetup();
     if(!result) return;
-    const { bet, maxPlayers, isPrivate } = result;
+    const { bet, maxPlayers, isPrivate, invites=[] } = result;
     if((S.user?.coins||0) < bet) return toast(`Not enough coins! You have ${S.user?.coins||0} 🪙`,'e');
     try{
       const d = await api('POST','/rooms',{settings:{ maxPlayers, bet, isPrivate }});
@@ -4405,6 +4481,15 @@
         if(res.state?.players) renderWaiting(res.state.players);
         refreshRoom();
         if(d.code) showRoomCode(d.code);
+        // Fire off invites to the friends picked in the Arena Setup
+        if(invites.length){
+          Promise.allSettled(invites.map(fid =>
+            api('POST','/friends/invite',{ friendId:fid, roomId:d.roomId })
+          )).then(rs=>{
+            const ok = rs.filter(r=>r.status==='fulfilled').length;
+            if(ok) toast(`🎮 Invite sent to ${ok} friend${ok>1?'s':''}!`,'s');
+          });
+        }
       });
     }catch(e){ toast(e.message,'e'); }
   }
