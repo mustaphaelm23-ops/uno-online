@@ -143,6 +143,64 @@
   .btnP .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);animation:ripple .6s linear;}
   .err{color:var(--red);font-size:12px;font-weight:600;margin-top:12px;text-align:center;min-height:18px;}
 
+  /* ─── Auth: password eye, guest, forgot ─── */
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:46px!important;}
+  .pw-eye{
+    position:absolute;top:50%;right:6px;transform:translateY(-50%);
+    width:34px;height:34px;border:none;border-radius:8px;
+    background:transparent;cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    opacity:.5;transition:all .2s var(--transition-smooth);
+  }
+  .pw-eye:hover{opacity:1;background:rgba(255,255,255,.06);}
+  .pw-eye.on{opacity:1;}
+  html[dir=rtl] .pw-wrap input{padding-right:16px!important;padding-left:46px!important;}
+  html[dir=rtl] .pw-eye{right:auto;left:6px;}
+  .fg-opt{
+    font-size:9px;font-weight:700;color:var(--accent);
+    background:rgba(245,158,11,.12);padding:2px 7px;border-radius:20px;
+    text-transform:uppercase;letter-spacing:.5px;margin-left:4px;
+  }
+  .fg-hint{
+    font-size:11px;color:var(--muted);line-height:1.5;
+    margin:-4px 0 14px;font-weight:600;
+  }
+  .auth-link{
+    background:none;border:none;cursor:pointer;
+    color:var(--muted);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;
+    padding:4px 2px;transition:color .2s var(--transition-smooth);
+  }
+  .auth-link:hover{color:var(--accent);}
+  .auth-link-r{display:block;margin:-4px 0 4px auto;}
+  .auth-divider{
+    display:flex;align-items:center;gap:12px;
+    margin:20px 0 16px;color:var(--muted);
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;
+  }
+  .auth-divider::before,.auth-divider::after{
+    content:'';flex:1;height:1px;background:var(--border);
+  }
+  .btnGuest{
+    width:100%;padding:13px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--border);border-radius:10px;color:var(--text);
+    font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;
+    cursor:pointer;letter-spacing:.5px;
+    transition:all .22s var(--transition-smooth);
+  }
+  .btnGuest:hover{
+    border-color:var(--accent);background:rgba(245,158,11,.08);
+    transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.25);
+  }
+  .btnGuest:active{transform:translateY(0);}
+  .forgot-title{
+    font-family:'Bangers',cursive;font-size:26px;letter-spacing:2px;
+    text-align:center;color:var(--text);margin-bottom:8px;
+  }
+  #forgotForm,#authMain{animation:fadeInScale .35s var(--transition-smooth);}
+  #forgotForm .auth-link{display:block;margin:14px auto 0;text-align:center;}
+
   /* ═══════════════════════════════════════════
     LOBBY SCREEN
     ═══════════════════════════════════════════ */
@@ -2150,20 +2208,62 @@
     <div class="auth-box">
       <div class="logo">UNO</div>
       <div class="sub" data-i18n="onlineMP">Online Multiplayer</div>
-      <div class="tabs">
-        <button class="tab on" onclick="switchTab('login')" data-i18n="login">Login</button>
-        <button class="tab" onclick="switchTab('register')" data-i18n="register">Register</button>
+
+      <!-- ─── Login / Register ─── -->
+      <div id="authMain">
+        <div class="tabs">
+          <button class="tab on" onclick="switchTab('login')" data-i18n="login">Login</button>
+          <button class="tab" onclick="switchTab('register')" data-i18n="register">Register</button>
+        </div>
+        <div id="lf">
+          <div class="fg"><label data-i18n="username">Username</label><input id="lu" type="text" placeholder="your_username" autocomplete="username"/></div>
+          <div class="fg">
+            <label data-i18n="password">Password</label>
+            <div class="pw-wrap">
+              <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/>
+              <button type="button" class="pw-eye" onclick="togglePw('lp',this)" aria-label="Show password">👁</button>
+            </div>
+          </div>
+          <button class="auth-link auth-link-r" onclick="showForgot()" data-i18n="forgotPw">Forgot password?</button>
+          <button class="btnP" onclick="doLogin()" data-i18n="loginBtn">Login →</button>
+        </div>
+        <div id="rf" style="display:none">
+          <div class="fg"><label data-i18n="username">Username</label><input id="ru" type="text" placeholder="choose_username" autocomplete="username"/></div>
+          <div class="fg">
+            <label><span data-i18n="email">Email</span> <span class="fg-opt" data-i18n="optional">optional</span></label>
+            <input id="re" type="email" placeholder="you@gmail.com" autocomplete="email"/>
+          </div>
+          <div class="fg">
+            <label data-i18n="password">Password</label>
+            <div class="pw-wrap">
+              <input id="rp" type="password" placeholder="min 6 characters" autocomplete="new-password"/>
+              <button type="button" class="pw-eye" onclick="togglePw('rp',this)" aria-label="Show password">👁</button>
+            </div>
+          </div>
+          <div class="fg-hint" data-i18n="emailHint">Add an email and you can recover your account if you forget your password.</div>
+          <button class="btnP" onclick="doRegister()" data-i18n="createAcct">Create Account →</button>
+        </div>
+        <div class="auth-divider"><span data-i18n="or">or</span></div>
+        <button class="btnGuest" onclick="doGuest()">🎭 <span data-i18n="playAsGuest">Play as Guest</span></button>
       </div>
-      <div id="lf">
-        <div class="fg"><label data-i18n="username">Username</label><input id="lu" type="text" placeholder="your_username" autocomplete="username"/></div>
-        <div class="fg"><label data-i18n="password">Password</label><input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
-        <button class="btnP" onclick="doLogin()" data-i18n="loginBtn">Login →</button>
+
+      <!-- ─── Forgot password ─── -->
+      <div id="forgotForm" style="display:none">
+        <div class="forgot-title" data-i18n="resetPw">Reset Password</div>
+        <div class="fg-hint" data-i18n="resetHint">Enter your username and the email you registered with to set a new password.</div>
+        <div class="fg"><label data-i18n="username">Username</label><input id="fu" type="text" placeholder="your_username"/></div>
+        <div class="fg"><label data-i18n="email">Email</label><input id="fe" type="email" placeholder="you@gmail.com"/></div>
+        <div class="fg">
+          <label data-i18n="newPassword">New Password</label>
+          <div class="pw-wrap">
+            <input id="fp" type="password" placeholder="min 6 characters"/>
+            <button type="button" class="pw-eye" onclick="togglePw('fp',this)" aria-label="Show password">👁</button>
+          </div>
+        </div>
+        <button class="btnP" onclick="doResetPassword()" data-i18n="resetPw">Reset Password</button>
+        <button class="auth-link" onclick="hideForgot()" data-i18n="backToLogin">← Back to login</button>
       </div>
-      <div id="rf" style="display:none">
-        <div class="fg"><label data-i18n="username">Username</label><input id="ru" type="text" placeholder="choose_username" autocomplete="username"/></div>
-        <div class="fg"><label data-i18n="password">Password</label><input id="rp" type="password" placeholder="min 6 characters" autocomplete="new-password"/></div>
-        <button class="btnP" onclick="doRegister()" data-i18n="createAcct">Create Account →</button>
-      </div>
+
       <div class="err" id="aerr"></div>
     </div>
   </div>
@@ -2672,6 +2772,12 @@
         ach_victor:'Tournament Victor', ach_victorD:'Win a tournament',
         ach_skilled:'Skilled', ach_skilledD:'Reach 1300 ELO',
         ach_elite:'Elite', ach_eliteD:'Reach 1600 ELO',
+        forgotPw:'Forgot password?', email:'Email', optional:'optional',
+        emailHint:'Add an email and you can recover your account if you forget your password.',
+        or:'or', playAsGuest:'Play as Guest', resetPw:'Reset Password',
+        resetHint:'Enter your username and the email you registered with to set a new password.',
+        newPassword:'New Password', backToLogin:'← Back to login',
+        fillAll:'Fill all fields', pwResetOk:'Password reset — you can now log in',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
@@ -2744,6 +2850,12 @@
         ach_victor:'Vainqueur de tournoi', ach_victorD:'Gagnez un tournoi',
         ach_skilled:'Talentueux', ach_skilledD:'Atteignez 1300 ELO',
         ach_elite:'Élite', ach_eliteD:'Atteignez 1600 ELO',
+        forgotPw:'Mot de passe oublié ?', email:'E-mail', optional:'facultatif',
+        emailHint:'Ajoutez un e-mail pour pouvoir récupérer votre compte si vous oubliez votre mot de passe.',
+        or:'ou', playAsGuest:'Jouer en invité', resetPw:'Réinitialiser le mot de passe',
+        resetHint:'Saisissez votre nom d\'utilisateur et l\'e-mail utilisé à l\'inscription pour définir un nouveau mot de passe.',
+        newPassword:'Nouveau mot de passe', backToLogin:'← Retour à la connexion',
+        fillAll:'Remplissez tous les champs', pwResetOk:'Mot de passe réinitialisé — vous pouvez vous connecter',
       },
       ar:{
         login:'تسجيل الدخول', register:'إنشاء حساب', username:'اسم المستخدم', password:'كلمة المرور',
@@ -2816,6 +2928,12 @@
         ach_victor:'بطل البطولة', ach_victorD:'افز ببطولة',
         ach_skilled:'ماهر', ach_skilledD:'اوصل إلى 1300 نقطة تصنيف',
         ach_elite:'النخبة', ach_eliteD:'اوصل إلى 1600 نقطة تصنيف',
+        forgotPw:'نسيت كلمة المرور؟', email:'البريد الإلكتروني', optional:'اختياري',
+        emailHint:'أضف بريداً إلكترونياً لتتمكن من استعادة حسابك إذا نسيت كلمة المرور.',
+        or:'أو', playAsGuest:'العب كضيف', resetPw:'إعادة تعيين كلمة المرور',
+        resetHint:'أدخل اسم المستخدم والبريد الإلكتروني الذي سجّلت به لتعيين كلمة مرور جديدة.',
+        newPassword:'كلمة مرور جديدة', backToLogin:'← العودة لتسجيل الدخول',
+        fillAll:'املأ جميع الحقول', pwResetOk:'تمت إعادة تعيين كلمة المرور — يمكنك الآن تسجيل الدخول',
       },
       de:{
         login:'Anmelden', register:'Registrieren', username:'Benutzername', password:'Passwort',
@@ -2888,6 +3006,12 @@
         ach_victor:'Turniersieger', ach_victorD:'Gewinne ein Turnier',
         ach_skilled:'Geschickt', ach_skilledD:'Erreiche 1300 ELO',
         ach_elite:'Elite', ach_eliteD:'Erreiche 1600 ELO',
+        forgotPw:'Passwort vergessen?', email:'E-Mail', optional:'optional',
+        emailHint:'Füge eine E-Mail hinzu, um dein Konto wiederherstellen zu können, falls du dein Passwort vergisst.',
+        or:'oder', playAsGuest:'Als Gast spielen', resetPw:'Passwort zurücksetzen',
+        resetHint:'Gib deinen Benutzernamen und die bei der Registrierung verwendete E-Mail ein, um ein neues Passwort festzulegen.',
+        newPassword:'Neues Passwort', backToLogin:'← Zurück zur Anmeldung',
+        fillAll:'Fülle alle Felder aus', pwResetOk:'Passwort zurückgesetzt — du kannst dich jetzt anmelden',
       },
       es:{
         login:'Iniciar sesión', register:'Registrarse', username:'Usuario', password:'Contraseña',
@@ -2960,6 +3084,12 @@
         ach_victor:'Vencedor de torneo', ach_victorD:'Gana un torneo',
         ach_skilled:'Hábil', ach_skilledD:'Alcanza 1300 ELO',
         ach_elite:'Élite', ach_eliteD:'Alcanza 1600 ELO',
+        forgotPw:'¿Olvidaste tu contraseña?', email:'Correo', optional:'opcional',
+        emailHint:'Añade un correo para poder recuperar tu cuenta si olvidas la contraseña.',
+        or:'o', playAsGuest:'Jugar como invitado', resetPw:'Restablecer contraseña',
+        resetHint:'Introduce tu usuario y el correo con el que te registraste para definir una nueva contraseña.',
+        newPassword:'Nueva contraseña', backToLogin:'← Volver a iniciar sesión',
+        fillAll:'Rellena todos los campos', pwResetOk:'Contraseña restablecida — ya puedes iniciar sesión',
       },
       it:{
         login:'Accedi', register:'Registrati', username:'Nome utente', password:'Password',
@@ -3032,6 +3162,12 @@
         ach_victor:'Vincitore di torneo', ach_victorD:'Vinci un torneo',
         ach_skilled:'Abile', ach_skilledD:'Raggiungi 1300 ELO',
         ach_elite:'Élite', ach_eliteD:'Raggiungi 1600 ELO',
+        forgotPw:'Password dimenticata?', email:'E-mail', optional:'facoltativo',
+        emailHint:'Aggiungi un\'e-mail per poter recuperare il tuo account se dimentichi la password.',
+        or:'oppure', playAsGuest:'Gioca come ospite', resetPw:'Reimposta password',
+        resetHint:'Inserisci il tuo nome utente e l\'e-mail usata in fase di registrazione per impostare una nuova password.',
+        newPassword:'Nuova password', backToLogin:'← Torna al login',
+        fillAll:'Compila tutti i campi', pwResetOk:'Password reimpostata — ora puoi accedere',
       },
       sv:{
         login:'Logga in', register:'Registrera', username:'Användarnamn', password:'Lösenord',
@@ -3104,6 +3240,12 @@
         ach_victor:'Turneringsvinnare', ach_victorD:'Vinn en turnering',
         ach_skilled:'Skicklig', ach_skilledD:'Nå 1300 ELO',
         ach_elite:'Elit', ach_eliteD:'Nå 1600 ELO',
+        forgotPw:'Glömt lösenordet?', email:'E-post', optional:'valfritt',
+        emailHint:'Lägg till en e-post så kan du återställa ditt konto om du glömmer lösenordet.',
+        or:'eller', playAsGuest:'Spela som gäst', resetPw:'Återställ lösenord',
+        resetHint:'Ange ditt användarnamn och e-posten du registrerade dig med för att ange ett nytt lösenord.',
+        newPassword:'Nytt lösenord', backToLogin:'← Tillbaka till inloggning',
+        fillAll:'Fyll i alla fält', pwResetOk:'Lösenordet återställt — du kan nu logga in',
       },
     },
   };
@@ -3664,21 +3806,55 @@
   }
 
   /* ═══ AUTH ═══ */
-  function switchTab(t){
-    document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',(i===0&&t==='login')||(i===1&&t==='register')));
-    document.getElementById('lf').style.display=t==='login'?'block':'none';
-    document.getElementById('rf').style.display=t==='register'?'block':'none';
+  function switchTab(tab){
+    document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',(i===0&&tab==='login')||(i===1&&tab==='register')));
+    document.getElementById('lf').style.display=tab==='login'?'block':'none';
+    document.getElementById('rf').style.display=tab==='register'?'block':'none';
+    document.getElementById('aerr').textContent='';
+  }
+  function togglePw(id,btn){
+    const inp=document.getElementById(id); if(!inp)return;
+    const reveal=inp.type==='password';
+    inp.type=reveal?'text':'password';
+    btn.textContent=reveal?'🙈':'👁';
+    btn.classList.toggle('on',reveal);
+  }
+  function showForgot(){
+    document.getElementById('authMain').style.display='none';
+    document.getElementById('forgotForm').style.display='block';
+    document.getElementById('aerr').textContent='';
+  }
+  function hideForgot(){
+    document.getElementById('forgotForm').style.display='none';
+    document.getElementById('authMain').style.display='block';
     document.getElementById('aerr').textContent='';
   }
   async function doLogin(){
     const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
-    if(!u||!p)return setErr('Fill all fields');
+    if(!u||!p)return setErr(t('fillAll'));
     try{const d=await api('POST','/auth/login',{username:u,password:p});onAuth(d.token,d.user);}catch(e){setErr(e.message);SFX.play('error');}
   }
   async function doRegister(){
     const u=document.getElementById('ru').value.trim(),p=document.getElementById('rp').value;
-    if(!u||!p)return setErr('Fill all fields');
-    try{const d=await api('POST','/auth/register',{username:u,password:p});onAuth(d.token,d.user);}catch(e){setErr(e.message);SFX.play('error');}
+    const e=document.getElementById('re').value.trim();
+    if(!u||!p)return setErr(t('fillAll'));
+    try{const d=await api('POST','/auth/register',{username:u,password:p,email:e||undefined});onAuth(d.token,d.user);}catch(err){setErr(err.message);SFX.play('error');}
+  }
+  async function doGuest(){
+    try{const d=await api('POST','/auth/guest',{});onAuth(d.token,d.user);}catch(e){setErr(e.message);SFX.play('error');}
+  }
+  async function doResetPassword(){
+    const u=document.getElementById('fu').value.trim();
+    const e=document.getElementById('fe').value.trim();
+    const p=document.getElementById('fp').value;
+    if(!u||!e||!p)return setErr(t('fillAll'));
+    try{
+      await api('POST','/auth/reset',{username:u,email:e,newPassword:p});
+      hideForgot(); switchTab('login');
+      document.getElementById('lu').value=u;
+      document.getElementById('fp').value='';
+      toast('✅ '+t('pwResetOk'),'s');
+    }catch(err){setErr(err.message);SFX.play('error');}
   }
   function onAuth(token,user){
     S.token=token;S.user=user;
@@ -6578,10 +6754,10 @@
   }
 
   function handleAuthEnter(e){
-    if(e.key==='Enter'){
-      if(document.getElementById('lf').style.display!=='none')doLogin();
-      else doRegister();
-    }
+    if(e.key!=='Enter')return;
+    if(document.getElementById('forgotForm').style.display!=='none')return doResetPassword();
+    if(document.getElementById('lf').style.display!=='none')doLogin();
+    else doRegister();
   }
 
   /* ═══ INIT ═══ */
@@ -6591,7 +6767,7 @@
     if(S.token&&S.user){initSock();goLobby();}
     else showScreen('auth-screen');
     // Auth enter key
-    ['lu','lp','ru','rp'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',handleAuthEnter));
+    ['lu','lp','ru','rp','re','fu','fe','fp'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',handleAuthEnter));
   });
 
   document.addEventListener('keydown',e=>{

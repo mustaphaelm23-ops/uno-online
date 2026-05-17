@@ -150,11 +150,13 @@ function calcELO(winnerElo, loserElo) {
   return { gain: Math.max(8, change), loss: Math.max(8, change) };
 }
 
-function createUserRecord({ username, passwordHash }) {
+function createUserRecord({ username, passwordHash, email = null, isGuest = false }) {
   return {
     id:           uuidv4(),
     username,
     passwordHash,
+    email:        email ? String(email).trim().toLowerCase() : null,
+    isGuest:      !!isGuest,
     coins:        CONFIG.DEFAULT_COINS,
     avatar:       null,
     stats: { gamesPlayed: 0, gamesWon: 0, totalPoints: 0 },
@@ -163,6 +165,8 @@ function createUserRecord({ username, passwordHash }) {
     lastLoginAt:  Date.now(),
   };
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ─────────────────────────────────────────
 // ROOM RECORD
@@ -290,7 +294,7 @@ function verifySocketToken(token) {
 // ─────────────────────────────────────────
 
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   if (username.length < 3 || username.length > 20) return res.status(400).json({ error: 'Username must be 3-20 characters' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -298,13 +302,41 @@ app.post('/api/auth/register', async (req, res) => {
   const exists = [...usersDB.values()].find(u => u.username.toLowerCase() === username.toLowerCase());
   if (exists) return res.status(409).json({ error: 'Username already taken' });
 
+  // Email is optional, but if given it must be valid and unused — it's the
+  // recovery key for "forgot password".
+  let cleanEmail = null;
+  if (email && String(email).trim()) {
+    cleanEmail = String(email).trim().toLowerCase();
+    if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: 'Invalid email address' });
+    const emailTaken = [...usersDB.values()].find(u => u.email && u.email === cleanEmail);
+    if (emailTaken) return res.status(409).json({ error: 'Email already registered' });
+  }
+
   const passwordHash = await bcrypt.hash(password, CONFIG.SALT_ROUNDS);
-  const user = createUserRecord({ username, passwordHash });
+  const user = createUserRecord({ username, passwordHash, email: cleanEmail });
   usersDB.set(user.id, user);
   saveUsers(); // ← FIX: save after registration
 
   const token = jwt.sign({ userId: user.id, username: user.username }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES_IN });
-  console.log(`[Auth] Registered: ${username}`);
+  console.log(`[Auth] Registered: ${username}${cleanEmail ? ' (' + cleanEmail + ')' : ''}`);
+  res.status(201).json({ token, user: sanitizeUser(user) });
+});
+
+// Guest login — instant throwaway account, no credentials needed.
+app.post('/api/auth/guest', async (req, res) => {
+  let username, tries = 0;
+  do {
+    username = 'Guest' + Math.floor(1000 + Math.random() * 9000);
+    tries++;
+  } while ([...usersDB.values()].some(u => u.username.toLowerCase() === username.toLowerCase()) && tries < 60);
+
+  const passwordHash = await bcrypt.hash(uuidv4(), CONFIG.SALT_ROUNDS);
+  const user = createUserRecord({ username, passwordHash, isGuest: true });
+  usersDB.set(user.id, user);
+  saveUsers();
+
+  const token = jwt.sign({ userId: user.id, username: user.username }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES_IN });
+  console.log(`[Auth] Guest created: ${username}`);
   res.status(201).json({ token, user: sanitizeUser(user) });
 });
 
@@ -1005,14 +1037,20 @@ app.get('/api/rewards', authMiddleware, (req, res) => {
 });
 
 // Admin: reset password
+// Forgot password — verified by the recovery email set at registration.
 app.post('/api/auth/reset', async (req, res) => {
-  const { username, newPassword } = req.body;
-  if (!username || !newPassword) return res.status(400).json({ error: 'Fill all fields' });
+  const { username, email, newPassword } = req.body;
+  if (!username || !email || !newPassword) return res.status(400).json({ error: 'Fill all fields' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
   const user = [...usersDB.values()].find(u => u.username.toLowerCase() === username.toLowerCase());
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user) return res.status(404).json({ error: 'No account with that username' });
+  if (!user.email) return res.status(400).json({ error: 'This account has no recovery email on file' });
+  if (user.email !== String(email).trim().toLowerCase())
+    return res.status(401).json({ error: 'Email does not match this account' });
   user.passwordHash = await bcrypt.hash(newPassword, CONFIG.SALT_ROUNDS);
   saveUsers();
-  res.json({ success: true, message: 'Password reset' });
+  console.log(`[Auth] Password reset: ${user.username}`);
+  res.json({ success: true, message: 'Password reset — you can now log in' });
 });
 app.post('/api/admin/add-coins', async (req, res) => {
   const { username, amount, secret } = req.body;
