@@ -1111,7 +1111,7 @@
   .mmspin{width:56px;height:56px;border:4px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
 
   /* ═══ TOASTS ═══ */
-  .twrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:200;pointer-events:none;}
+  .twrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:2000;pointer-events:none;}
   .toast{
     background:linear-gradient(135deg,var(--bg2),var(--bg3));
     border:1px solid var(--border);border-radius:10px;
@@ -5999,39 +5999,136 @@
       el.textContent = (user.username||'?').charAt(0).toUpperCase();
     }
   }
+  // Apply an avatar instantly (optimistic) and persist in the background.
+  async function _applyAvatar(av){
+    const prev = S.user?.avatar;
+    if(S.user){ S.user.avatar = av; localStorage.setItem('uno_user', JSON.stringify(S.user)); }
+    _renderAvatarInto(document.getElementById('profileAvatar'), S.user);
+    _renderAvatarInto(document.getElementById('heroAvatar'), S.user);
+    try{
+      await api('POST','/profile/avatar',{ avatar: av });
+      toast('✅ '+t('avatarUpdated'),'s');
+    }catch(e){
+      // Roll back if the server rejected it
+      if(S.user){ S.user.avatar = prev; localStorage.setItem('uno_user', JSON.stringify(S.user)); }
+      _renderAvatarInto(document.getElementById('profileAvatar'), S.user);
+      _renderAvatarInto(document.getElementById('heroAvatar'), S.user);
+      toast(e.message||'Could not save avatar','e');
+    }
+  }
   function showAvatarPicker(){
     const old=document.getElementById('avatarPicker'); if(old) old.remove();
+    _ensureAvatarStyles();
     const cur=S.user?.avatar;
     const ov=document.createElement('div');
     ov.id='avatarPicker';
-    ov.style.cssText='position:fixed;inset:0;z-index:1300;background:rgba(4,6,14,.85);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:20px;animation:gcIn .25s ease';
     ov.innerHTML=`
-      <div style="width:min(440px,95vw);max-height:88vh;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(28,32,57,.97),rgba(17,21,38,.99));border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7)">
-        <div style="font-family:'Bangers',cursive;font-size:25px;letter-spacing:2px;color:#fff;text-align:center">${esc(t('chooseAvatar'))}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin:4px 0 16px;font-weight:600">${esc(t('chooseAvatarSub'))}</div>
-        <div style="overflow-y:auto;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:2px">
-          ${AVATARS.map(a=>`
-            <button class="av-pick ${a===cur?'on':''}" data-av="${a}" style="aspect-ratio:1;border-radius:13px;cursor:pointer;font-size:26px;
-              display:flex;align-items:center;justify-content:center;font-family:inherit;
-              background:${a===cur?'rgba(245,158,11,.16)':'rgba(255,255,255,.04)'};
-              border:2px solid ${a===cur?'#F59E0B':'rgba(255,255,255,.07)'};transition:all .15s">${a}</button>`).join('')}
+      <div class="av-panel">
+        <div class="av-title">${esc(t('chooseAvatar'))}</div>
+        <div class="av-sub">${esc(t('chooseAvatarSub'))}</div>
+        <div class="av-stage"><div class="av-stage-ring"></div><div class="av-stage-face" id="avStageFace">${cur&&!_isImgAvatar(cur)?cur:'🎮'}</div></div>
+        <div class="av-grid">
+          ${AVATARS.map((a,i)=>`
+            <button class="av-tile ${a===cur?'on':''}" data-av="${a}" style="animation-delay:${i*22}ms">
+              <span class="av-face">${a}</span>
+            </button>`).join('')}
         </div>
-        <button id="avPickClose" style="margin-top:14px;padding:12px;background:transparent;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.65);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">${esc(t('close'))}</button>
+        <button class="av-done" id="avPickClose">${esc(t('close'))}</button>
       </div>`;
     document.body.appendChild(ov);
-    ov.querySelectorAll('.av-pick').forEach(b=>b.addEventListener('click',async()=>{
-      const av=b.dataset.av;
-      try{
-        const res=await api('POST','/profile/avatar',{ avatar:av });
-        if(S.user){ S.user.avatar=res.avatar; localStorage.setItem('uno_user',JSON.stringify(S.user)); }
-        _renderAvatarInto(document.getElementById('profileAvatar'), S.user);
-        _renderAvatarInto(document.getElementById('heroAvatar'), S.user);
-        ov.remove();
-        toast('✅ '+t('avatarUpdated'),'s');
-      }catch(e){ toast(e.message||'Error','e'); }
-    }));
+    const stage=ov.querySelector('#avStageFace');
+    ov.querySelectorAll('.av-tile').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const av=b.dataset.av;
+        ov.querySelectorAll('.av-tile').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        // confirm pop + preview on the stage
+        b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:320,easing:'cubic-bezier(.34,1.56,.64,1)'});
+        if(stage){ stage.textContent=av; stage.animate([{transform:'rotateY(90deg) scale(.6)'},{transform:'rotateY(0) scale(1)'}],{duration:380,easing:'cubic-bezier(.2,.9,.3,1.2)'}); }
+        _applyAvatar(av);
+      });
+      // pointer-tracking 3D tilt
+      b.addEventListener('pointermove',e=>{
+        const r=b.getBoundingClientRect();
+        const px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+        b.style.transform=`translateY(-6px) rotateX(${-py*22}deg) rotateY(${px*22}deg) scale(1.08)`;
+      });
+      b.addEventListener('pointerleave',()=>{ b.style.transform=''; });
+    });
     ov.querySelector('#avPickClose').addEventListener('click',()=>ov.remove());
     ov.addEventListener('mousedown',e=>{ if(e.target===ov) ov.remove(); });
+  }
+  function _ensureAvatarStyles(){
+    if(document.getElementById('av-styles')) return;
+    const s=document.createElement('style'); s.id='av-styles';
+    s.textContent=`
+      @keyframes avTileIn{from{opacity:0;transform:translateY(16px) rotateX(40deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
+      @keyframes avFloat{0%,100%{transform:translateZ(26px) translateY(0)}50%{transform:translateZ(26px) translateY(-5px)}}
+      @keyframes avRingSpin{to{transform:rotate(360deg)}}
+      @keyframes avFadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes avPanelIn{from{transform:translateY(40px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+      #avatarPicker{
+        position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;padding:20px;
+        background:radial-gradient(ellipse at 50% 40%,rgba(40,20,8,.5),rgba(4,6,14,.92));
+        backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);animation:avFadeIn .25s ease;
+      }
+      .av-panel{
+        width:min(460px,95vw);max-height:90vh;display:flex;flex-direction:column;align-items:center;
+        background:linear-gradient(180deg,rgba(30,34,60,.97),rgba(16,20,36,.99));
+        border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:24px;
+        box-shadow:0 40px 100px rgba(0,0,0,.75);animation:avPanelIn .45s cubic-bezier(.2,.9,.3,1.2);
+      }
+      .av-title{font-family:'Bangers',cursive;font-size:27px;letter-spacing:2px;color:#fff;text-align:center}
+      .av-sub{font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-top:3px;font-weight:600}
+      .av-stage{position:relative;width:108px;height:108px;margin:14px 0 18px;display:flex;align-items:center;justify-content:center}
+      .av-stage-ring{
+        position:absolute;inset:-6px;border-radius:50%;
+        background:conic-gradient(from 0deg,#F59E0B,#E8324A,#7C3AED,#06B6D4,#F59E0B);
+        animation:avRingSpin 4s linear infinite;filter:blur(3px);opacity:.85;
+      }
+      .av-stage-face{
+        position:relative;width:100px;height:100px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;font-size:52px;
+        background:radial-gradient(circle at 38% 32%,#3a4170,#141826);
+        box-shadow:inset 0 4px 14px rgba(0,0,0,.55),0 8px 20px rgba(0,0,0,.5);
+        filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));
+      }
+      .av-grid{
+        display:grid;grid-template-columns:repeat(6,1fr);gap:9px;
+        width:100%;overflow-y:auto;padding:6px;perspective:850px;
+      }
+      .av-grid::-webkit-scrollbar{width:5px}
+      .av-grid::-webkit-scrollbar-thumb{background:rgba(245,158,11,.35);border-radius:5px}
+      .av-tile{
+        aspect-ratio:1;border:none;border-radius:15px;cursor:pointer;padding:0;
+        background:linear-gradient(160deg,#2c3258,#171b2d);
+        display:flex;align-items:center;justify-content:center;
+        transform-style:preserve-3d;
+        transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+        box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
+        animation:avTileIn .4s cubic-bezier(.16,1,.3,1) backwards;
+      }
+      .av-tile .av-face{
+        font-size:30px;display:block;transform:translateZ(14px);
+        filter:drop-shadow(0 5px 5px rgba(0,0,0,.55));transition:transform .2s;
+      }
+      .av-tile:hover{box-shadow:0 16px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12)}
+      .av-tile:hover .av-face{transform:translateZ(26px) scale(1.12)}
+      .av-tile:active{transform:scale(.94)!important}
+      .av-tile.on{
+        background:linear-gradient(160deg,#6a4715,#2a1c08);
+        box-shadow:0 0 0 2px #F59E0B,0 12px 28px rgba(245,158,11,.45),inset 0 1px 0 rgba(255,255,255,.15);
+      }
+      .av-tile.on .av-face{animation:avFloat 2.2s ease-in-out infinite}
+      .av-done{
+        margin-top:16px;width:100%;padding:13px;border-radius:13px;cursor:pointer;
+        background:transparent;border:1.5px solid rgba(255,255,255,.12);
+        color:rgba(255,255,255,.7);font-family:inherit;font-weight:800;font-size:13px;
+        transition:all .2s;
+      }
+      .av-done:hover{border-color:var(--accent);color:#fff;background:rgba(245,158,11,.08)}
+    `;
+    document.head.appendChild(s);
   }
   function copyProfileId(){
     const id = S.user?.id || '';
