@@ -188,6 +188,7 @@ function createRoomRecord(hostId, settings = {}) {
       password:     settings.password      || null,
       drawStacking: settings.drawStacking  || 'none',
       bet:          settings.bet           || 0,
+      botDifficulty: settings.botDifficulty || 'medium',
     },
     game:       null,
     playerIds:  [],
@@ -199,6 +200,14 @@ function createRoomRecord(hostId, settings = {}) {
     createdAt:  Date.now(),
     startedAt:  null,
   };
+}
+
+// Records a prize/reward in the user's trophy log (latest 40 kept).
+function logReward(user, icon, label, amount) {
+  if (!user) return;
+  if (!Array.isArray(user.rewards)) user.rewards = [];
+  user.rewards.unshift({ icon, label, amount, at: Date.now() });
+  if (user.rewards.length > 40) user.rewards.length = 40;
 }
 
 // ─────────────────────────────────────────
@@ -357,6 +366,7 @@ app.post('/api/coins/claim-daily', authMiddleware, (req, res) => {
   const reward = 100;
   user.coins += reward;
   user.lastDailyClaimAt = now;
+  logReward(user, '🎁', 'Daily Reward', reward);
   saveUsers(); // ← FIX: save after claiming
   res.json({ coins: user.coins, earned: reward });
 });
@@ -625,6 +635,8 @@ function maybeFinishSeasonGlobal() {
         const u = usersDB.get(slot.userId);
         if (u) {
           u.coins = (u.coins || 0) + prize;
+          const medal = finish === 1 ? '🏆' : finish === 2 ? '🥈' : finish === 3 ? '🥉' : '🎖️';
+          logReward(u, medal, `La Liga S${lg.seasonNumber || 1} — finished #${finish}`, prize);
           console.log(`[League] ${u.username} finished #${finish} → +${prize} coins`);
         }
       }
@@ -978,10 +990,20 @@ app.post('/api/coins/insta-reward', authMiddleware, (req, res) => {
   user.instaFollowed = true;
   user.coins += CONFIG.INSTA_REWARD;
   user.brokeCount2 = 0;
+  logReward(user, '📸', 'Instagram Follow Bonus', CONFIG.INSTA_REWARD);
   saveUsers();
   console.log(`[Coins] Instagram reward: +${CONFIG.INSTA_REWARD} for ${user.username}`);
   res.json({ coins: user.coins, earned: CONFIG.INSTA_REWARD });
 });
+// Trophy Cabinet — every prize the user has won, newest first
+app.get('/api/rewards', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const rewards = Array.isArray(user.rewards) ? user.rewards : [];
+  const totalWon = rewards.reduce((s, r) => s + (r.amount || 0), 0);
+  res.json({ rewards, totalWon, count: rewards.length });
+});
+
 // Admin: reset password
 app.post('/api/auth/reset', async (req, res) => {
   const { username, newPassword } = req.body;
@@ -1489,6 +1511,51 @@ io.on('connection', (socket) => {
     ack?.({ success: true });
   });
 
+  // ── Training Ground — instant solo match vs a difficulty-scaled bot ──
+  socket.on('practice:start', ({ difficulty = 'medium' } = {}, ack) => {
+    const user = usersDB.get(userId);
+    if (!user) return ack?.({ success: false, reason: 'User not found' });
+    if (!['easy', 'medium', 'hard'].includes(difficulty)) difficulty = 'medium';
+
+    const room = createRoomRecord(user.id, { maxPlayers: 2, bet: 0, botDifficulty: difficulty });
+    room.game = new GameManager(room.id, room.settings);
+    room.isPractice = true;
+    attachGameListeners(room);
+
+    const player = new Player(user.id, user.username, user.coins);
+    player.avatar = user.avatar;
+    room.game.addPlayer(player);
+    room.playerIds.push(user.id);
+
+    const botName = { easy: 'Rookie Bot', medium: 'Veteran Bot', hard: 'Master Bot' }[difficulty];
+    const bot = new Player('bot_' + Date.now(), botName, 0);
+    bot.isBot = true;
+    bot.isConnected = true;
+    bot.status = 'active';
+    room.game.addPlayer(bot);
+    room.playerIds.push(bot.id);
+
+    roomsDB.set(room.id, room);
+    socket.join(room.id);
+    socket.currentRoomId = room.id;
+    console.log(`[Practice] ${user.username} vs ${difficulty} bot in ${room.id}`);
+
+    ack?.({ success: true, roomId: room.id });
+
+    // Auto-start after a short beat so the transition feels smooth
+    setTimeout(() => {
+      const r = roomsDB.get(room.id);
+      if (!r || r.status !== 'lobby') return;
+      const result = r.game.startGame(user.id);
+      if (!result.success) return;
+      r.status = 'playing';
+      r.startedAt = Date.now();
+      const p = r.game.players.find(pp => pp.id === user.id);
+      const ps = findSocketByUserId(user.id);
+      if (ps && p) ps.emit('game:state', r.game._playerState(p));
+    }, 1500);
+  });
+
   // ── Disconnect ──
   socket.on('disconnect', (reason) => {
     socketToUser.delete(socket.id);
@@ -1633,6 +1700,9 @@ function attachGameListeners(room) {
         const totalWin = bet * (data.players.length - 1);
         user.coins += totalWin;
         user.stats.gamesWon++;
+        if (totalWin > 0) {
+          logReward(user, '🪙', `Match win vs ${opponents.join(', ') || 'opponent'}`, totalWin);
+        }
       } else {
         // Loser pays the bet
         user.coins = Math.max(0, user.coins - bet);
@@ -2044,6 +2114,7 @@ function reportTournamentResult(tournamentId, winnerId, loserId) {
     if(winnerUser) {
       winnerUser.coins += t.prizeCoins;
       winnerUser.tournamentWins = (winnerUser.tournamentWins||0) + 1;
+      logReward(winnerUser, '⚔️', `Tournament champion — ${t.name}`, t.prizeCoins);
       saveUsers();
     }
     const winnerSock = findSocketByUserId(winners[0].id);

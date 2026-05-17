@@ -337,11 +337,15 @@ class GameManager extends EventEmitter {
     if (phase === TURN_PHASE.MUST_PLAY && this.current?.isBot) {
       if (this._botTimer) clearTimeout(this._botTimer);
       const me = this.current;
+      // Harder bots react faster, easier bots feel more relaxed.
+      const diff = this.settings.botDifficulty || 'medium';
+      const base  = diff === 'hard' ? 900  : diff === 'easy' ? 1800 : 1500;
+      const jitter = diff === 'hard' ? 700  : diff === 'easy' ? 1500 : 1200;
       this._botTimer = setTimeout(() => {
         if (this._phase === PHASE.PLAYING && this.current?.id === me.id && this.current?.isBot) {
           this._playBotTurn();
         }
-      }, 1500 + Math.random() * 1200);
+      }, base + Math.random() * jitter);
     }
   }
 
@@ -371,7 +375,9 @@ class GameManager extends EventEmitter {
           ? [VALUES.DRAW_TWO, VALUES.WILD_DRAW_FOUR]
           : [];
       const counter = player.handRaw.find(c => need.includes(c.value));
-      if (counter && Math.random() < 0.5) {
+      const diff = this.settings.botDifficulty || 'medium';
+      const counterChance = diff === 'hard' ? 1 : diff === 'easy' ? 0.25 : 0.5;
+      if (counter && Math.random() < counterChance) {
         return this._botPlay(player, counter);
       }
       const cards = this._deck.drawMany(this._stackDraw);
@@ -388,8 +394,7 @@ class GameManager extends EventEmitter {
 
     const playable = player.getPlayable(top);
     if (playable.length > 0) {
-      const card = playable[Math.floor(Math.random() * playable.length)];
-      return this._botPlay(player, card);
+      return this._botPlay(player, this._pickBotCard(player, playable));
     }
 
     const drawn = this._deck.draw();
@@ -446,6 +451,48 @@ class GameManager extends EventEmitter {
     this._setTurnPhase(TURN_PHASE.MUST_PLAY);
     this._startTurnTimer();
     this._broadcastState();
+  }
+
+  // Choose which playable card a bot plays, scaled by difficulty.
+  //  easy   → fully random
+  //  medium → sheds number cards, saves actions to punish a close opponent
+  //  hard   → punishes a near-winning opponent hard, otherwise dumps the
+  //           heaviest point load and hoards wilds for later
+  _pickBotCard(player, playable) {
+    const diff = this.settings.botDifficulty || 'medium';
+    const rand = () => playable[Math.floor(Math.random() * playable.length)];
+    if (diff === 'easy' || playable.length === 1) return rand();
+
+    // Biggest threat = fewest cards among the other active players.
+    const minOpp = this._players
+      .filter(p => p.id !== player.id && p.status === 'active')
+      .reduce((m, p) => Math.min(m, p.handRaw.length), 99);
+    const threat = minOpp <= 2;
+
+    const wildD4 = playable.filter(c => c.value === VALUES.WILD_DRAW_FOUR);
+    const draw2  = playable.filter(c => c.value === VALUES.DRAW_TWO);
+    const skips  = playable.filter(c => c.value === VALUES.SKIP || c.value === VALUES.REVERSE);
+    const wilds  = playable.filter(c => c.value === VALUES.WILD);
+    const nums   = playable.filter(c => !c.isWild && !c.isAction)
+                           .sort((a, b) => b.points - a.points);
+
+    if (diff === 'hard') {
+      if (threat) {
+        if (wildD4.length) return wildD4[0];
+        if (draw2.length)  return draw2[0];
+        if (skips.length)  return skips[0];
+      }
+      if (nums.length)   return nums[0];
+      if (skips.length)  return skips[0];
+      if (draw2.length)  return draw2[0];
+      if (wilds.length)  return wilds[0];
+      return wildD4[0] || rand();
+    }
+
+    // medium
+    if (threat && (draw2.length || skips.length)) return draw2[0] || skips[0];
+    if (nums.length) return nums[0];
+    return rand();
   }
 
   _pickBotColor(player) {
