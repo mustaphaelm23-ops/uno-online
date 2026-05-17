@@ -3896,7 +3896,7 @@
 
   const S={
     token:localStorage.getItem('uno_token'),
-    user:JSON.parse(localStorage.getItem('uno_user')||'null'),
+    user:(()=>{try{return JSON.parse(localStorage.getItem('uno_user')||'null');}catch(e){localStorage.removeItem('uno_user');return null;}})(),
     socket:null,roomId:null,
     roomsTimer:null,unoTimer:null,
     pendingWild:null,calledUNO:false,
@@ -3992,12 +3992,18 @@
   }
   function onAuth(token,user){
     S.token=token;S.user=user;
-    localStorage.setItem('uno_token',token);localStorage.setItem('uno_user',JSON.stringify(user));
+    try{
+      localStorage.setItem('uno_token',token);
+      localStorage.setItem('uno_user',JSON.stringify(user));
+    }catch(e){}
     // Reveal admin-only menu items for the admin user
     if(user?.username && user.username.toLowerCase().includes('mustapha')){
       const m=document.getElementById('adminPanelMenuItem');if(m)m.style.display='';
     }
-    initSock();goLobby();
+    // A render error must never block login — show the lobby no matter what.
+    try{ initSock(); }catch(e){ console.error('[Auth] initSock failed:',e); }
+    try{ goLobby(); }
+    catch(e){ console.error('[Auth] goLobby failed:',e); showScreen('lobby-screen'); }
   }
   function doLogout(){localStorage.removeItem('uno_token');localStorage.removeItem('uno_user');S.token=null;S.user=null;S.socket?.disconnect();clearInterval(S.roomsTimer);showScreen('auth-screen');}
   function setErr(m){document.getElementById('aerr').textContent=m;}
@@ -5982,8 +5988,20 @@
       }
     }catch(e){}
   }
-  // Preset avatars — players pick one of these; custom image uploads are off.
-  const AVATARS=['🦁','🐯','🐶','🐱','🦊','🐺','🐼','🐨','🐵','🐸','🐙','🦈','🐬','🦋','🐝','🐢','🦅','🦉','🦄','🐲','🦖','🐉','🦝','🐰','🐹','🐻','🦔','🐧','🦜','🦚','😎','🤠','🥷','🧙','🦸','🦹','👽','🤖','👾','🎃','💀','👻','🤡','🐔'];
+  // Preset character avatars — players pick one; custom image uploads are off.
+  const AVATARS=[
+    {e:'🥷',n:'Ninja'},{e:'🕵️',n:'Spy'},{e:'🦸',n:'Superhero'},{e:'🦹',n:'Villain'},
+    {e:'🧙',n:'Wizard'},{e:'🧛',n:'Vampire'},{e:'🧟',n:'Zombie'},{e:'🧞',n:'Genie'},
+    {e:'🧜',n:'Merman'},{e:'🧚',n:'Fairy'},{e:'🧝',n:'Elf'},{e:'🦾',n:'Iron Man'},
+    {e:'🤖',n:'Robot'},{e:'👽',n:'Alien'},{e:'👾',n:'Invader'},{e:'👻',n:'Ghost'},
+    {e:'🤡',n:'Joker'},{e:'👹',n:'Ogre'},{e:'👺',n:'Goblin'},{e:'☠️',n:'Pirate'},
+    {e:'🤠',n:'Cowboy'},{e:'🤴',n:'King'},{e:'👸',n:'Queen'},{e:'👮',n:'Officer'},
+    {e:'💂',n:'Guard'},{e:'🧑‍🚀',n:'Astronaut'},{e:'🧑‍🚒',n:'Firefighter'},{e:'🎅',n:'Santa'},
+    {e:'⛄',n:'Iceman'},{e:'🔥',n:'Blaze'},{e:'⚡',n:'Bolt'},{e:'🐲',n:'Dragon'},
+    {e:'🦁',n:'Lion'},{e:'🐺',n:'Wolf'},{e:'🦅',n:'Eagle'},{e:'🦈',n:'Shark'},
+    {e:'🦄',n:'Unicorn'},{e:'🐯',n:'Tiger'},{e:'🦊',n:'Fox'},{e:'🐉',n:'Serpent'},
+  ];
+  function _avatarName(e){ const a=AVATARS.find(x=>x.e===e); return a?a.n:''; }
   function _isImgAvatar(a){ return typeof a==='string' && /^(data:|https?:|\/)/i.test(a); }
   function _renderAvatarInto(el, user){
     if(!el || !user) return;
@@ -6026,17 +6044,23 @@
       <div class="av-panel">
         <div class="av-title">${esc(t('chooseAvatar'))}</div>
         <div class="av-sub">${esc(t('chooseAvatarSub'))}</div>
-        <div class="av-stage"><div class="av-stage-ring"></div><div class="av-stage-face" id="avStageFace">${cur&&!_isImgAvatar(cur)?cur:'🎮'}</div></div>
+        <div class="av-stage">
+          <div class="av-stage-ring"></div>
+          <div class="av-stage-face" id="avStageFace">${cur&&!_isImgAvatar(cur)?cur:'🎮'}</div>
+        </div>
+        <div class="av-stage-name" id="avStageName">${esc(_avatarName(cur)||'')}</div>
         <div class="av-grid">
           ${AVATARS.map((a,i)=>`
-            <button class="av-tile ${a===cur?'on':''}" data-av="${a}" style="animation-delay:${i*22}ms">
-              <span class="av-face">${a}</span>
+            <button class="av-tile ${a.e===cur?'on':''}" data-av="${a.e}" data-name="${esc(a.n)}" style="animation-delay:${i*20}ms">
+              <span class="av-face">${a.e}</span>
+              <span class="av-name">${esc(a.n)}</span>
             </button>`).join('')}
         </div>
         <button class="av-done" id="avPickClose">${esc(t('close'))}</button>
       </div>`;
     document.body.appendChild(ov);
     const stage=ov.querySelector('#avStageFace');
+    const stageName=ov.querySelector('#avStageName');
     ov.querySelectorAll('.av-tile').forEach(b=>{
       b.addEventListener('click',()=>{
         const av=b.dataset.av;
@@ -6045,6 +6069,7 @@
         // confirm pop + preview on the stage
         b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:320,easing:'cubic-bezier(.34,1.56,.64,1)'});
         if(stage){ stage.textContent=av; stage.animate([{transform:'rotateY(90deg) scale(.6)'},{transform:'rotateY(0) scale(1)'}],{duration:380,easing:'cubic-bezier(.2,.9,.3,1.2)'}); }
+        if(stageName) stageName.textContent=b.dataset.name||'';
         _applyAvatar(av);
       });
       // pointer-tracking 3D tilt
@@ -6080,7 +6105,8 @@
       }
       .av-title{font-family:'Bangers',cursive;font-size:27px;letter-spacing:2px;color:#fff;text-align:center}
       .av-sub{font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-top:3px;font-weight:600}
-      .av-stage{position:relative;width:108px;height:108px;margin:14px 0 18px;display:flex;align-items:center;justify-content:center}
+      .av-stage{position:relative;width:108px;height:108px;margin:14px 0 4px;display:flex;align-items:center;justify-content:center}
+      .av-stage-name{font-family:'Bangers',cursive;font-size:21px;letter-spacing:1.5px;color:#F59E0B;min-height:24px;margin-bottom:12px;text-shadow:0 2px 10px rgba(245,158,11,.4)}
       .av-stage-ring{
         position:absolute;inset:-6px;border-radius:50%;
         background:conic-gradient(from 0deg,#F59E0B,#E8324A,#7C3AED,#06B6D4,#F59E0B);
@@ -6094,32 +6120,37 @@
         filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));
       }
       .av-grid{
-        display:grid;grid-template-columns:repeat(6,1fr);gap:9px;
-        width:100%;overflow-y:auto;padding:6px;perspective:850px;
+        display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+        width:100%;overflow-y:auto;padding:6px;perspective:900px;
       }
       .av-grid::-webkit-scrollbar{width:5px}
       .av-grid::-webkit-scrollbar-thumb{background:rgba(245,158,11,.35);border-radius:5px}
       .av-tile{
-        aspect-ratio:1;border:none;border-radius:15px;cursor:pointer;padding:0;
+        border:none;border-radius:15px;cursor:pointer;padding:11px 4px 8px;
         background:linear-gradient(160deg,#2c3258,#171b2d);
-        display:flex;align-items:center;justify-content:center;
+        display:flex;flex-direction:column;align-items:center;gap:5px;
         transform-style:preserve-3d;
         transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
         box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
         animation:avTileIn .4s cubic-bezier(.16,1,.3,1) backwards;
       }
       .av-tile .av-face{
-        font-size:30px;display:block;transform:translateZ(14px);
+        font-size:32px;display:block;transform:translateZ(16px);line-height:1;
         filter:drop-shadow(0 5px 5px rgba(0,0,0,.55));transition:transform .2s;
       }
+      .av-tile .av-name{
+        font-size:8.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+        color:rgba(255,255,255,.55);transition:color .2s;
+      }
       .av-tile:hover{box-shadow:0 16px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12)}
-      .av-tile:hover .av-face{transform:translateZ(26px) scale(1.12)}
+      .av-tile:hover .av-face{transform:translateZ(30px) scale(1.14)}
       .av-tile:active{transform:scale(.94)!important}
       .av-tile.on{
         background:linear-gradient(160deg,#6a4715,#2a1c08);
         box-shadow:0 0 0 2px #F59E0B,0 12px 28px rgba(245,158,11,.45),inset 0 1px 0 rgba(255,255,255,.15);
       }
       .av-tile.on .av-face{animation:avFloat 2.2s ease-in-out infinite}
+      .av-tile.on .av-name{color:#F59E0B}
       .av-done{
         margin-top:16px;width:100%;padding:13px;border-radius:13px;cursor:pointer;
         background:transparent;border:1.5px solid rgba(255,255,255,.12);
