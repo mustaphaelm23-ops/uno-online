@@ -2554,10 +2554,9 @@
   <div class="profile-ov" id="profileOv">
     <div class="profile-box">
       <div class="profile-avatar-wrap">
-        <div class="profile-avatar" id="profileAvatar" onclick="document.getElementById('avatarFileInput').click()" title="Click to change avatar">🎮</div>
-        <button class="profile-avatar-edit" onclick="document.getElementById('avatarFileInput').click()" title="Change avatar">📷</button>
+        <div class="profile-avatar" id="profileAvatar" onclick="showAvatarPicker()" title="Choose your avatar">🎮</div>
+        <button class="profile-avatar-edit" onclick="showAvatarPicker()" title="Choose avatar">✏️</button>
       </div>
-      <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)"/>
       <div class="profile-name" id="profileName">Player</div>
       <div class="profile-id" id="profileId" title="Click to copy ID" onclick="copyProfileId()">ID: ----</div>
       <div class="profile-joined" id="profileJoined">Joined: ---</div>
@@ -2889,6 +2888,7 @@
         newPassword:'New Password', backToLogin:'← Back to login',
         fillAll:'Fill all fields', pwResetOk:'Password reset — you can now log in',
         welcomeBack:'Welcome back', statRating:'Rating', statWins:'Wins', statWinRate:'Win Rate',
+        chooseAvatar:'Choose Your Avatar', chooseAvatarSub:'Pick a character — tap to apply it instantly', avatarUpdated:'Avatar updated!',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
@@ -2968,6 +2968,7 @@
         newPassword:'Nouveau mot de passe', backToLogin:'← Retour à la connexion',
         fillAll:'Remplissez tous les champs', pwResetOk:'Mot de passe réinitialisé — vous pouvez vous connecter',
         welcomeBack:'Bon retour', statRating:'Classement', statWins:'Victoires', statWinRate:'Taux de victoire',
+        chooseAvatar:'Choisissez votre avatar', chooseAvatarSub:'Choisissez un personnage — touchez pour l\'appliquer', avatarUpdated:'Avatar mis à jour !',
       },
       ar:{
         login:'تسجيل الدخول', register:'إنشاء حساب', username:'اسم المستخدم', password:'كلمة المرور',
@@ -3047,6 +3048,7 @@
         newPassword:'كلمة مرور جديدة', backToLogin:'← العودة لتسجيل الدخول',
         fillAll:'املأ جميع الحقول', pwResetOk:'تمت إعادة تعيين كلمة المرور — يمكنك الآن تسجيل الدخول',
         welcomeBack:'مرحباً بعودتك', statRating:'التصنيف', statWins:'انتصارات', statWinRate:'نسبة الفوز',
+        chooseAvatar:'اختر صورتك الرمزية', chooseAvatarSub:'اختر شخصية — اضغط لتطبيقها فوراً', avatarUpdated:'تم تحديث الصورة الرمزية!',
       },
       de:{
         login:'Anmelden', register:'Registrieren', username:'Benutzername', password:'Passwort',
@@ -3126,6 +3128,7 @@
         newPassword:'Neues Passwort', backToLogin:'← Zurück zur Anmeldung',
         fillAll:'Fülle alle Felder aus', pwResetOk:'Passwort zurückgesetzt — du kannst dich jetzt anmelden',
         welcomeBack:'Willkommen zurück', statRating:'Wertung', statWins:'Siege', statWinRate:'Siegquote',
+        chooseAvatar:'Wähle deinen Avatar', chooseAvatarSub:'Wähle einen Charakter — zum Anwenden tippen', avatarUpdated:'Avatar aktualisiert!',
       },
       es:{
         login:'Iniciar sesión', register:'Registrarse', username:'Usuario', password:'Contraseña',
@@ -3205,6 +3208,7 @@
         newPassword:'Nueva contraseña', backToLogin:'← Volver a iniciar sesión',
         fillAll:'Rellena todos los campos', pwResetOk:'Contraseña restablecida — ya puedes iniciar sesión',
         welcomeBack:'Bienvenido de nuevo', statRating:'Puntuación', statWins:'Victorias', statWinRate:'Tasa de victorias',
+        chooseAvatar:'Elige tu avatar', chooseAvatarSub:'Elige un personaje — toca para aplicarlo', avatarUpdated:'¡Avatar actualizado!',
       },
       it:{
         login:'Accedi', register:'Registrati', username:'Nome utente', password:'Password',
@@ -3284,6 +3288,7 @@
         newPassword:'Nuova password', backToLogin:'← Torna al login',
         fillAll:'Compila tutti i campi', pwResetOk:'Password reimpostata — ora puoi accedere',
         welcomeBack:'Bentornato', statRating:'Punteggio', statWins:'Vittorie', statWinRate:'Tasso di vittorie',
+        chooseAvatar:'Scegli il tuo avatar', chooseAvatarSub:'Scegli un personaggio — tocca per applicarlo', avatarUpdated:'Avatar aggiornato!',
       },
       sv:{
         login:'Logga in', register:'Registrera', username:'Användarnamn', password:'Lösenord',
@@ -3363,6 +3368,7 @@
         newPassword:'Nytt lösenord', backToLogin:'← Tillbaka till inloggning',
         fillAll:'Fyll i alla fält', pwResetOk:'Lösenordet återställt — du kan nu logga in',
         welcomeBack:'Välkommen tillbaka', statRating:'Rankning', statWins:'Vinster', statWinRate:'Vinstandel',
+        chooseAvatar:'Välj din avatar', chooseAvatarSub:'Välj en karaktär — tryck för att använda', avatarUpdated:'Avatar uppdaterad!',
       },
     },
   };
@@ -4106,6 +4112,12 @@
       }, 200);
     });
     sk.on('game:state_update',(state)=>{if(!S.roomId)return;applyFullState(state);});
+    sk.on('practice:error',({reason}={})=>{
+      S.roomId=null;
+      if(!document.getElementById('game-screen').classList.contains('active')){
+        toast('⚠️ '+(reason||'Training could not start — try again'),'e');
+      }
+    });
 
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game
@@ -4308,9 +4320,9 @@
         </div>`;
       }).join('');
       const more = (hands[p.id]?.length || 0) > 12 ? `<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:6px;font-weight:700">+${hands[p.id].length - 12}</div>` : '';
-      const avatar = p.avatar
+      const avatar = _isImgAvatar(p.avatar)
         ? `<div class="opp-avatar" style="background-image:url('${p.avatar}')"></div>`
-        : `<div class="opp-avatar opp-avatar-letter">${(p.username||'?').charAt(0).toUpperCase()}</div>`;
+        : `<div class="opp-avatar opp-avatar-letter">${esc(p.avatar||(p.username||'?').charAt(0).toUpperCase())}</div>`;
       const votes = tally[p.id] || 0;
       const isMyVote = myVote === p.id;
       const voteBtn = `<button class="vote-btn ${isMyVote?'active':''}" onclick="voteFor('${p.id}')" title="${isMyVote?'Your pick':'Cheer for this player'}">${isMyVote?'⭐':'🗳️'} ${isMyVote?'Voted':'Vote'}</button>`;
@@ -4405,9 +4417,9 @@
       list.innerHTML = rows.map(u => {
         const isMe = u.id === S.user?.id;
         const posClass = u.rank === 1 ? 'gold' : u.rank === 2 ? 'silver' : u.rank === 3 ? 'bronze' : '';
-        const av = u.avatar
+        const av = _isImgAvatar(u.avatar)
           ? `<div class="league-mini-avatar" style="background-image:url('${u.avatar}')"></div>`
-          : `<div class="league-mini-avatar">${(u.username||'?').charAt(0).toUpperCase()}</div>`;
+          : `<div class="league-mini-avatar">${esc(u.avatar||(u.username||'?').charAt(0).toUpperCase())}</div>`;
         const winRate = u.gamesPlayed > 0 ? Math.round((u.gamesWon / u.gamesPlayed) * 100) : 0;
         return `<div class="league-row ${isMe?'me':''}">
           <div class="league-pos ${posClass}">#${u.rank}</div>
@@ -4678,9 +4690,9 @@
           transition:transform .3s ease;">
           <div style="font-family:'Bangers',cursive;font-size:9px;color:rgba(255,255,255,.35);transform:rotate(-15deg);text-shadow:0 1px 2px rgba(0,0,0,.5)">UNO</div>
         </div>`).join('');
-      const avatar = p.avatar
+      const avatar = _isImgAvatar(p.avatar)
         ? `<div class="opp-avatar" style="background-image:url('${p.avatar}')"></div>`
-        : `<div class="opp-avatar opp-avatar-letter">${(p.username||'?').charAt(0).toUpperCase()}</div>`;
+        : `<div class="opp-avatar opp-avatar-letter">${esc(p.avatar||(p.username||'?').charAt(0).toUpperCase())}</div>`;
       const isMuted = VoiceChat.mutedPeers?.has(p.id);
       const muteBtn = showMute
         ? `<button class="mute-toggle ${isMuted?'muted':''}" onclick="VoiceChat.toggleMutePeer('${p.id}')" title="${isMuted?'Unmute':'Mute'} ${esc(p.username)}'s mic">${isMuted?'🔇':'🔊'}</button>`
@@ -5970,17 +5982,56 @@
       }
     }catch(e){}
   }
+  // Preset avatars — players pick one of these; custom image uploads are off.
+  const AVATARS=['🦁','🐯','🐶','🐱','🦊','🐺','🐼','🐨','🐵','🐸','🐙','🦈','🐬','🦋','🐝','🐢','🦅','🦉','🦄','🐲','🦖','🐉','🦝','🐰','🐹','🐻','🦔','🐧','🦜','🦚','😎','🤠','🥷','🧙','🦸','🦹','👽','🤖','👾','🎃','💀','👻','🤡','🐔'];
+  function _isImgAvatar(a){ return typeof a==='string' && /^(data:|https?:|\/)/i.test(a); }
   function _renderAvatarInto(el, user){
     if(!el || !user) return;
-    if(user.avatar){
+    el.classList.remove('has-img');
+    el.style.backgroundImage = '';
+    if(_isImgAvatar(user.avatar)){
       el.classList.add('has-img');
       el.style.backgroundImage = `url('${user.avatar}')`;
       el.textContent = '';
+    } else if(user.avatar){
+      el.textContent = user.avatar; // preset emoji avatar
     } else {
-      el.classList.remove('has-img');
-      el.style.backgroundImage = '';
       el.textContent = (user.username||'?').charAt(0).toUpperCase();
     }
+  }
+  function showAvatarPicker(){
+    const old=document.getElementById('avatarPicker'); if(old) old.remove();
+    const cur=S.user?.avatar;
+    const ov=document.createElement('div');
+    ov.id='avatarPicker';
+    ov.style.cssText='position:fixed;inset:0;z-index:1300;background:rgba(4,6,14,.85);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:20px;animation:gcIn .25s ease';
+    ov.innerHTML=`
+      <div style="width:min(440px,95vw);max-height:88vh;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(28,32,57,.97),rgba(17,21,38,.99));border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7)">
+        <div style="font-family:'Bangers',cursive;font-size:25px;letter-spacing:2px;color:#fff;text-align:center">${esc(t('chooseAvatar'))}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin:4px 0 16px;font-weight:600">${esc(t('chooseAvatarSub'))}</div>
+        <div style="overflow-y:auto;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:2px">
+          ${AVATARS.map(a=>`
+            <button class="av-pick ${a===cur?'on':''}" data-av="${a}" style="aspect-ratio:1;border-radius:13px;cursor:pointer;font-size:26px;
+              display:flex;align-items:center;justify-content:center;font-family:inherit;
+              background:${a===cur?'rgba(245,158,11,.16)':'rgba(255,255,255,.04)'};
+              border:2px solid ${a===cur?'#F59E0B':'rgba(255,255,255,.07)'};transition:all .15s">${a}</button>`).join('')}
+        </div>
+        <button id="avPickClose" style="margin-top:14px;padding:12px;background:transparent;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.65);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">${esc(t('close'))}</button>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelectorAll('.av-pick').forEach(b=>b.addEventListener('click',async()=>{
+      const av=b.dataset.av;
+      try{
+        const res=await api('POST','/profile/avatar',{ avatar:av });
+        if(S.user){ S.user.avatar=res.avatar; localStorage.setItem('uno_user',JSON.stringify(S.user)); }
+        _renderAvatarInto(document.getElementById('profileAvatar'), S.user);
+        _renderAvatarInto(document.getElementById('heroAvatar'), S.user);
+        ov.remove();
+        toast('✅ '+t('avatarUpdated'),'s');
+      }catch(e){ toast(e.message||'Error','e'); }
+    }));
+    ov.querySelector('#avPickClose').addEventListener('click',()=>ov.remove());
+    ov.addEventListener('mousedown',e=>{ if(e.target===ov) ov.remove(); });
   }
   function copyProfileId(){
     const id = S.user?.id || '';

@@ -989,22 +989,17 @@ app.post('/api/profile/avatar', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
   const { avatar } = req.body;
-  if (typeof avatar !== 'string' || !avatar.startsWith('data:image/')) {
-    return res.status(400).json({ error: 'Invalid avatar payload' });
+  if (typeof avatar !== 'string' || !avatar.trim()) {
+    return res.status(400).json({ error: 'Invalid avatar' });
   }
-  if (avatar.length > 4 * 1024 * 1024) {
-    return res.status(413).json({ error: 'Avatar too large (max ~3MB)' });
+  const a = avatar.trim();
+  // Custom image uploads are NOT allowed — only short preset avatars.
+  if (/^(data:|https?:|\/)/i.test(a) || a.length > 16) {
+    return res.status(400).json({ error: 'Only preset avatars are allowed' });
   }
-  const now = Date.now();
-  if (user.lastAvatarAt && now - user.lastAvatarAt < AVATAR_COOLDOWN_MS) {
-    const left = AVATAR_COOLDOWN_MS - (now - user.lastAvatarAt);
-    const days = Math.ceil(left / (24*60*60*1000));
-    return res.status(429).json({ error: `You can change your avatar again in ${days} day${days===1?'':'s'}`, retryInDays: days });
-  }
-  user.avatar = avatar;
-  user.lastAvatarAt = now;
+  user.avatar = a;
   saveUsers();
-  res.json({ avatar: user.avatar, lastAvatarAt: user.lastAvatarAt, cooldownDays: 10 });
+  res.json({ avatar: user.avatar });
 });
 
 app.delete('/api/profile/avatar', authMiddleware, (req, res) => {
@@ -1599,15 +1594,29 @@ io.on('connection', (socket) => {
     // Auto-start after a short beat so the transition feels smooth
     setTimeout(() => {
       const r = roomsDB.get(room.id);
-      if (!r || r.status !== 'lobby') return;
-      const result = r.game.startGame(user.id);
-      if (!result.success) return;
-      r.status = 'playing';
-      r.startedAt = Date.now();
+      if (!r) {
+        io.to(room.id).emit('practice:error', { reason: 'Match room expired' });
+        return;
+      }
+      if (r.status === 'lobby') {
+        const result = r.game.startGame(user.id);
+        if (!result.success) {
+          console.error(`[Practice] startGame failed for ${user.username}: ${result.reason}`);
+          io.to(room.id).emit('practice:error', { reason: result.reason || 'Could not start match' });
+          return;
+        }
+        r.status = 'playing';
+        r.startedAt = Date.now();
+      }
       const p = r.game.players.find(pp => pp.id === user.id);
+      if (!p) return;
+      const state = r.game._playerState(p);
+      // Emit to the room (the player's socket joined it) — reliable even if
+      // the socket id changed. Also hit the live socket directly as a backup.
+      io.to(room.id).emit('game:state', state);
       const ps = findSocketByUserId(user.id);
-      if (ps && p) ps.emit('game:state', r.game._playerState(p));
-    }, 1500);
+      if (ps && !ps.rooms?.has(room.id)) ps.emit('game:state', state);
+    }, 1200);
   });
 
   // ── Disconnect ──
@@ -2247,7 +2256,19 @@ process.on('unhandledRejection', (reason) => {
 // START SERVER
 // ─────────────────────────────────────────
 
+// Custom image uploads are forbidden — strip any that exist from old data.
+function purgeImageAvatars() {
+  let purged = 0;
+  for (const u of usersDB.values()) {
+    if (typeof u.avatar === 'string' && /^(data:|https?:|\/)/i.test(u.avatar)) {
+      u.avatar = null; purged++;
+    }
+  }
+  if (purged) { saveUsers(); console.log(`[Avatar] Cleared ${purged} custom image avatar(s)`); }
+}
+
 loadUsers().then(() => {
+  purgeImageAvatars();
   server.listen(CONFIG.PORT, '0.0.0.0', () => {
   console.log(`
 ╔══════════════════════════════════╗
@@ -2259,6 +2280,7 @@ loadUsers().then(() => {
 });
 }).catch(err => {
   console.log('[DB] Starting without MongoDB:', err.message);
+  purgeImageAvatars();
   server.listen(CONFIG.PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${CONFIG.PORT} (no DB)`);
   });
