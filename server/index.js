@@ -2090,8 +2090,25 @@ app.post('/api/tournament/create', (req, res) => {
   res.json({ tournament: sanitizeTournament(t) });
 });
 
+// Always keep one open tournament available to join.
+function ensureOpenTournament() {
+  const open = [...tournamentsDB.values()].find(t => t.status === 'open');
+  if (open) return open;
+  const id = uuidv4();
+  const t = {
+    id, name: 'UNO Open Cup',
+    maxPlayers: 8, prizeCoins: 5000,
+    players: [], bracket: [], round: 0,
+    status: 'open', createdAt: Date.now(), winner: null,
+  };
+  tournamentsDB.set(id, t);
+  console.log(`[Tournament] Auto-seeded: ${t.name}`);
+  return t;
+}
+
 // Get all open tournaments
 app.get('/api/tournaments', authMiddleware, (req, res) => {
+  ensureOpenTournament();
   const list = [...tournamentsDB.values()]
     .filter(t => t.status !== 'finished')
     .map(sanitizeTournament);
