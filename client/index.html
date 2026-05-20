@@ -2331,15 +2331,10 @@
               <button type="button" class="pw-eye" onclick="togglePw('lp',this)" aria-label="Show password">👁</button>
             </div>
           </div>
-          <button class="auth-link auth-link-r" onclick="showForgot()" data-i18n="forgotPw">Forgot password?</button>
           <button class="btnP" onclick="doLogin()" data-i18n="loginBtn">Login →</button>
         </div>
         <div id="rf" style="display:none">
           <div class="fg"><label data-i18n="username">Username</label><input id="ru" type="text" placeholder="choose_username" autocomplete="username"/></div>
-          <div class="fg">
-            <label><span data-i18n="email">Email</span> <span class="fg-opt" data-i18n="optional">optional</span></label>
-            <input id="re" type="email" placeholder="you@gmail.com" autocomplete="email"/>
-          </div>
           <div class="fg">
             <label data-i18n="password">Password</label>
             <div class="pw-wrap">
@@ -2347,28 +2342,10 @@
               <button type="button" class="pw-eye" onclick="togglePw('rp',this)" aria-label="Show password">👁</button>
             </div>
           </div>
-          <div class="fg-hint" data-i18n="emailHint">Add an email and you can recover your account if you forget your password.</div>
           <button class="btnP" onclick="doRegister()" data-i18n="createAcct">Create Account →</button>
         </div>
         <div class="auth-divider"><span data-i18n="or">or</span></div>
         <button class="btnGuest" onclick="doGuest()">🎭 <span data-i18n="playAsGuest">Play as Guest</span></button>
-      </div>
-
-      <!-- ─── Forgot password ─── -->
-      <div id="forgotForm" style="display:none">
-        <div class="forgot-title" data-i18n="resetPw">Reset Password</div>
-        <div class="fg-hint" data-i18n="resetHint">Enter your username and the email you registered with to set a new password.</div>
-        <div class="fg"><label data-i18n="username">Username</label><input id="fu" type="text" placeholder="your_username"/></div>
-        <div class="fg"><label data-i18n="email">Email</label><input id="fe" type="email" placeholder="you@gmail.com"/></div>
-        <div class="fg">
-          <label data-i18n="newPassword">New Password</label>
-          <div class="pw-wrap">
-            <input id="fp" type="password" placeholder="min 6 characters"/>
-            <button type="button" class="pw-eye" onclick="togglePw('fp',this)" aria-label="Show password">👁</button>
-          </div>
-        </div>
-        <button class="btnP" onclick="doResetPassword()" data-i18n="resetPw">Reset Password</button>
-        <button class="auth-link" onclick="hideForgot()" data-i18n="backToLogin">← Back to login</button>
       </div>
 
       <div class="err" id="aerr"></div>
@@ -4001,9 +3978,8 @@
   }
   async function doRegister(){
     const u=document.getElementById('ru').value.trim(),p=document.getElementById('rp').value;
-    const e=document.getElementById('re').value.trim();
     if(!u||!p)return setErr(t('fillAll'));
-    try{const d=await api('POST','/auth/register',{username:u,password:p,email:e||undefined});onAuth(d.token,d.user);}catch(err){setErr(err.message);SFX.play('error');}
+    try{const d=await api('POST','/auth/register',{username:u,password:p});onAuth(d.token,d.user);}catch(err){setErr(err.message);SFX.play('error');}
   }
   async function doGuest(){
     try{const d=await api('POST','/auth/guest',{});onAuth(d.token,d.user);}catch(e){setErr(e.message);SFX.play('error');}
@@ -7127,8 +7103,7 @@
 
   function handleAuthEnter(e){
     if(e.key!=='Enter')return;
-    if(document.getElementById('forgotForm').style.display!=='none')return doResetPassword();
-    if(document.getElementById('lf').style.display!=='none')doLogin();
+    if(document.getElementById('lf')?.style.display!=='none')doLogin();
     else doRegister();
   }
 
@@ -7139,7 +7114,7 @@
     if(S.token&&S.user){initSock();goLobby();}
     else showScreen('auth-screen');
     // Auth enter key
-    ['lu','lp','ru','rp','re','fu','fe','fp'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',handleAuthEnter));
+    ['lu','lp','ru','rp'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',handleAuthEnter));
   });
 
   document.addEventListener('keydown',e=>{
