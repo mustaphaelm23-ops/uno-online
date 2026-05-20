@@ -2099,29 +2099,41 @@ app.post('/api/tournament/create', (req, res) => {
   res.json({ tournament: sanitizeTournament(t) });
 });
 
-// Always keep one open tournament available to join.
-function ensureOpenTournament() {
-  const open = [...tournamentsDB.values()].find(t => t.status === 'open');
-  if (open) return open;
-  const id = uuidv4();
-  const t = {
-    id, name: 'UNO Open Cup',
-    maxPlayers: 8, prizeCoins: 5000,
-    players: [], bracket: [], round: 0,
-    status: 'open', createdAt: Date.now(), winner: null,
-  };
-  tournamentsDB.set(id, t);
-  console.log(`[Tournament] Auto-seeded: ${t.name}`);
-  return t;
-}
-
-// Get all open tournaments
+// Get all open/playing tournaments
 app.get('/api/tournaments', authMiddleware, (req, res) => {
-  ensureOpenTournament();
   const list = [...tournamentsDB.values()]
     .filter(t => t.status !== 'finished')
+    .sort((a, b) => b.createdAt - a.createdAt)
     .map(sanitizeTournament);
   res.json({ tournaments: list });
+});
+
+// Player-created tournament — the creator stakes the prize from their own coins.
+app.post('/api/tournaments/create', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { name, maxPlayers, prizeCoins } = req.body;
+  const n = String(name || '').trim();
+  if (n.length < 3 || n.length > 30) return res.status(400).json({ error: 'Name must be 3-30 characters' });
+  const max = Math.min(16, Math.max(2, parseInt(maxPlayers, 10) || 4));
+  const prize = Math.max(0, parseInt(prizeCoins, 10) || 0);
+  if (prize > 0) {
+    if ((user.coins || 0) < prize) return res.status(400).json({ error: 'Not enough coins to stake this prize' });
+    user.coins -= prize;
+  }
+  const id = uuidv4();
+  const t = {
+    id, name: n, maxPlayers: max, prizeCoins: prize,
+    players: [{ id: user.id, username: user.username, elo: user.elo || 1000 }],
+    bracket: [], round: 0,
+    status: 'open', createdAt: Date.now(), winner: null,
+    creatorId: user.id,
+  };
+  tournamentsDB.set(id, t);
+  saveUsers();
+  console.log(`[Tournament] ${user.username} created: ${n} (prize: ${prize}, max: ${max})`);
+  io.emit('tournament:update', sanitizeTournament(t));
+  res.json({ tournament: sanitizeTournament(t), coins: user.coins });
 });
 
 // Get single tournament
@@ -2146,12 +2158,15 @@ app.post('/api/tournaments/:id/join', authMiddleware, (req, res) => {
   res.json({ success: true, tournament: sanitizeTournament(t) });
 });
 
-// Admin: start tournament
-app.post('/api/tournaments/:id/start', (req, res) => {
-  const { secret } = req.body;
-  if(secret !== 'uno_admin_2024') return res.status(403).json({ error: 'Forbidden' });
+// Start tournament — admin (secret) OR the creator can start once ≥2 joined.
+app.post('/api/tournaments/:id/start', authMiddleware, (req, res) => {
+  const { secret } = req.body || {};
   const t = tournamentsDB.get(req.params.id);
   if(!t) return res.status(404).json({ error: 'Not found' });
+  const isAdmin = secret === 'uno_admin_2024';
+  const isCreator = t.creatorId && t.creatorId === req.user?.userId;
+  if(!isAdmin && !isCreator) return res.status(403).json({ error: 'Only the creator can start this tournament' });
+  if(t.status !== 'open') return res.status(400).json({ error: 'Tournament already started' });
   if(t.players.length < 2) return res.status(400).json({ error: 'Need at least 2 players' });
   t.status = 'playing';
   t.round = 1;
