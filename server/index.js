@@ -2108,15 +2108,97 @@ app.get('/api/tournaments', authMiddleware, (req, res) => {
   res.json({ tournaments: list });
 });
 
-// Player-created tournament — the creator stakes the prize from their own coins.
+const TOURNAMENT_BOT_NAMES = [
+  'Rookie Bot','Veteran Bot','Master Bot','Cyber Bot','Nova Bot','Zeta Bot',
+  'Pixel Bot','Ace Bot','Echo Bot','Apex Bot','Titan Bot','Phantom Bot',
+  'Vortex Bot','Blaze Bot','Frost Bot','Spectre Bot'
+];
+
+function _makeTournamentBots(n) {
+  const pool = [...TOURNAMENT_BOT_NAMES].sort(() => Math.random() - 0.5);
+  const bots = [];
+  for (let i = 0; i < n; i++) {
+    bots.push({
+      id: 'tbot_' + uuidv4().slice(0, 8),
+      username: pool[i % pool.length],
+      elo: 850 + Math.floor(Math.random() * 550),
+      isBot: true,
+    });
+  }
+  return bots;
+}
+
+function _eloPick(p1, p2) {
+  const e1 = p1.elo || 1000, e2 = p2.elo || 1000;
+  const prob = 1 / (1 + Math.pow(10, (e2 - e1) / 400));
+  return Math.random() < prob ? p1 : p2;
+}
+
+// Set up one bracket match: bot-vs-bot auto-resolves after a short beat;
+// any match involving a human gets a live room with a bot opponent ready.
+function setupTournamentMatch(t, match) {
+  const { p1, p2 } = match;
+  const b1 = !!p1.isBot, b2 = !!p2.isBot;
+  if (b1 && b2) {
+    setTimeout(() => {
+      const w = _eloPick(p1, p2);
+      const l = w === p1 ? p2 : p1;
+      reportTournamentResult(t.id, w.id, l.id);
+    }, 2500 + Math.random() * 1500);
+    return;
+  }
+  const hostP = b1 ? p2 : p1;
+  const room = createRoomRecord(hostP.id, { maxPlayers: 2, tournamentId: t.id });
+  room.game = new GameManager(room.id, room.settings);
+  attachGameListeners(room);
+  room.tournamentMatchId = `${t.id}:${p1.id}:${p2.id}`;
+  [p1, p2].forEach(p => {
+    const u = p.isBot ? null : usersDB.get(p.id);
+    const player = new Player(p.id, p.username, u?.coins || 0);
+    if (p.isBot) { player.isBot = true; player.isConnected = true; player.status = 'active'; }
+    else if (u) player.avatar = u.avatar;
+    room.game.addPlayer(player);
+    room.playerIds.push(p.id);
+  });
+  roomsDB.set(room.id, room);
+  match.roomId = room.id;
+  // Tell each human to enter
+  [p1, p2].forEach(p => {
+    if (p.isBot) return;
+    const opp = p === p1 ? p2 : p1;
+    const sock = findSocketByUserId(p.id);
+    if (sock) {
+      sock.join(room.id);
+      sock.currentRoomId = room.id;
+      sock.emit('tournament:match_ready', { roomId: room.id, opponent: opp, tournamentName: t.name });
+    }
+  });
+  // Kick off the game so the human only has to play
+  setTimeout(() => {
+    const r = roomsDB.get(room.id);
+    if (!r || r.status !== 'lobby') return;
+    const result = r.game.startGame(hostP.id);
+    if (!result.success) return;
+    r.status = 'playing'; r.startedAt = Date.now();
+    r.playerIds.forEach(pid => {
+      if (pid.startsWith('tbot_') || pid.startsWith('bot_')) return;
+      const ps = findSocketByUserId(pid);
+      const player = r.game.players.find(pp => pp.id === pid);
+      if (ps && player) ps.emit('game:state', r.game._playerState(player));
+    });
+  }, 1800);
+}
+
+// Player-created tournament — creator stakes the prize, players pay the entry fee.
 app.post('/api/tournaments/create', authMiddleware, (req, res) => {
   const user = usersDB.get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const { name, maxPlayers, prizeCoins } = req.body;
+  const { name, maxPlayers, prizeCoins, entryFee } = req.body;
   const n = String(name || '').trim();
   if (n.length < 3 || n.length > 30) return res.status(400).json({ error: 'Name must be 3-30 characters' });
-  const max = Math.min(16, Math.max(2, parseInt(maxPlayers, 10) || 4));
+  const max = [2, 4, 8, 16].includes(parseInt(maxPlayers, 10)) ? parseInt(maxPlayers, 10) : 4;
   const prize = Math.max(0, parseInt(prizeCoins, 10) || 0);
+  const fee = Math.max(0, parseInt(entryFee, 10) || 0);
   if (prize > 0) {
     if ((user.coins || 0) < prize) return res.status(400).json({ error: 'Not enough coins to stake this prize' });
     user.coins -= prize;
@@ -2124,6 +2206,7 @@ app.post('/api/tournaments/create', authMiddleware, (req, res) => {
   const id = uuidv4();
   const t = {
     id, name: n, maxPlayers: max, prizeCoins: prize,
+    entryFee: fee, pot: prize,
     players: [{ id: user.id, username: user.username, elo: user.elo || 1000 }],
     bracket: [], round: 0,
     status: 'open', createdAt: Date.now(), winner: null,
@@ -2131,7 +2214,7 @@ app.post('/api/tournaments/create', authMiddleware, (req, res) => {
   };
   tournamentsDB.set(id, t);
   saveUsers();
-  console.log(`[Tournament] ${user.username} created: ${n} (prize: ${prize}, max: ${max})`);
+  console.log(`[Tournament] ${user.username} created: ${n} (prize: ${prize}, fee: ${fee}, max: ${max})`);
   io.emit('tournament:update', sanitizeTournament(t));
   res.json({ tournament: sanitizeTournament(t), coins: user.coins });
 });
@@ -2143,7 +2226,7 @@ app.get('/api/tournaments/:id', authMiddleware, (req, res) => {
   res.json({ tournament: sanitizeTournament(t) });
 });
 
-// Join tournament
+// Join tournament — entry fee (if any) is charged and added to the pot.
 app.post('/api/tournaments/:id/join', authMiddleware, (req, res) => {
   const t = tournamentsDB.get(req.params.id);
   const user = usersDB.get(req.user.userId);
@@ -2152,13 +2235,21 @@ app.post('/api/tournaments/:id/join', authMiddleware, (req, res) => {
   if(t.status !== 'open') return res.status(400).json({ error: 'Tournament already started' });
   if(t.players.find(p => p.id === user.id)) return res.status(400).json({ error: 'Already registered' });
   if(t.players.length >= t.maxPlayers) return res.status(400).json({ error: 'Tournament full' });
+  const fee = t.entryFee || 0;
+  if (fee > 0) {
+    if ((user.coins || 0) < fee) return res.status(400).json({ error: `Entry fee is ${fee}🪙 — not enough coins` });
+    user.coins -= fee;
+    t.pot = (t.pot || 0) + fee;
+  }
   t.players.push({ id: user.id, username: user.username, elo: user.elo||1000 });
-  console.log(`[Tournament] ${user.username} joined ${t.name}`);
+  saveUsers();
+  console.log(`[Tournament] ${user.username} joined ${t.name} (fee: ${fee})`);
   io.emit('tournament:update', sanitizeTournament(t));
-  res.json({ success: true, tournament: sanitizeTournament(t) });
+  res.json({ success: true, tournament: sanitizeTournament(t), coins: user.coins });
 });
 
 // Start tournament — admin (secret) OR the creator can start once ≥2 joined.
+// Empty slots get filled with AI bots so the bracket always runs to completion.
 app.post('/api/tournaments/:id/start', authMiddleware, (req, res) => {
   const { secret } = req.body || {};
   const t = tournamentsDB.get(req.params.id);
@@ -2168,23 +2259,16 @@ app.post('/api/tournaments/:id/start', authMiddleware, (req, res) => {
   if(!isAdmin && !isCreator) return res.status(403).json({ error: 'Only the creator can start this tournament' });
   if(t.status !== 'open') return res.status(400).json({ error: 'Tournament already started' });
   if(t.players.length < 2) return res.status(400).json({ error: 'Need at least 2 players' });
+  // Top up empty slots with bots
+  const missing = t.maxPlayers - t.players.length;
+  if (missing > 0) {
+    t.players.push(..._makeTournamentBots(missing));
+    console.log(`[Tournament] ${t.name}: filled ${missing} bot slots`);
+  }
   t.status = 'playing';
   t.round = 1;
   t.bracket = buildBracket(t.players);
-  // Create rooms for each match
-  t.bracket.forEach(match => {
-    const room = createRoomRecord(match.p1.id, { maxPlayers: 2, tournamentId: t.id });
-    room.game = new GameManager(room.id, room.settings);
-    attachGameListeners(room);
-    room.tournamentMatchId = `${t.id}:${match.p1.id}:${match.p2.id}`;
-    roomsDB.set(room.id, room);
-    match.roomId = room.id;
-    // Notify players
-    const s1 = findSocketByUserId(match.p1.id);
-    const s2 = findSocketByUserId(match.p2.id);
-    if(s1) { s1.emit('tournament:match_ready', { roomId: room.id, opponent: match.p2, tournamentName: t.name }); }
-    if(s2) { s2.emit('tournament:match_ready', { roomId: room.id, opponent: match.p1, tournamentName: t.name }); }
-  });
+  t.bracket.forEach(match => setupTournamentMatch(t, match));
   console.log(`[Tournament] Started: ${t.name} — Round ${t.round}`);
   io.emit('tournament:update', sanitizeTournament(t));
   res.json({ success: true, tournament: sanitizeTournament(t) });
@@ -2202,35 +2286,26 @@ function reportTournamentResult(tournamentId, winnerId, loserId) {
   // All matches done — check if final
   const winners = t.bracket.map(m => t.players.find(p => p.id === m.winner)).filter(Boolean);
   if(winners.length === 1) {
-    // Tournament finished!
+    // Tournament finished — pay the full pot (prize + entry fees) to a real winner.
     t.status = 'finished';
     t.winner = winners[0];
+    const payout = t.pot || t.prizeCoins || 0;
     const winnerUser = usersDB.get(winners[0].id);
     if(winnerUser) {
-      winnerUser.coins += t.prizeCoins;
+      winnerUser.coins += payout;
       winnerUser.tournamentWins = (winnerUser.tournamentWins||0) + 1;
-      logReward(winnerUser, '⚔️', `Tournament champion — ${t.name}`, t.prizeCoins);
+      logReward(winnerUser, '⚔️', `Tournament champion — ${t.name}`, payout);
       saveUsers();
+      const winnerSock = findSocketByUserId(winners[0].id);
+      if(winnerSock) winnerSock.emit('tournament:won', { name: t.name, prize: payout });
     }
-    const winnerSock = findSocketByUserId(winners[0].id);
-    if(winnerSock) winnerSock.emit('tournament:won', { name: t.name, prize: t.prizeCoins });
-    io.emit('tournament:finished', { tournamentId: t.id, winner: winners[0], prize: t.prizeCoins });
-    console.log(`[Tournament] ${t.name} finished! Winner: ${winners[0].username} +${t.prizeCoins} coins`);
+    io.emit('tournament:finished', { tournamentId: t.id, winner: winners[0], prize: payout });
+    console.log(`[Tournament] ${t.name} finished! Winner: ${winners[0].username} +${payout} coins`);
   } else {
     // Next round
     t.round++;
     t.bracket = buildBracket(winners);
-    t.bracket.forEach(match => {
-      const room = createRoomRecord(match.p1.id, { maxPlayers: 2, tournamentId: t.id });
-      room.game = new GameManager(room.id, room.settings);
-      attachGameListeners(room);
-      roomsDB.set(room.id, room);
-      match.roomId = room.id;
-      const s1 = findSocketByUserId(match.p1.id);
-      const s2 = findSocketByUserId(match.p2.id);
-      if(s1) s1.emit('tournament:match_ready', { roomId: room.id, opponent: match.p2, tournamentName: t.name, round: t.round });
-      if(s2) s2.emit('tournament:match_ready', { roomId: room.id, opponent: match.p1, tournamentName: t.name, round: t.round });
-    });
+    t.bracket.forEach(match => setupTournamentMatch(t, match));
     console.log(`[Tournament] ${t.name} — Round ${t.round}`);
   }
   io.emit('tournament:update', sanitizeTournament(t));
@@ -2239,11 +2314,15 @@ function reportTournamentResult(tournamentId, winnerId, loserId) {
 function sanitizeTournament(t) {
   return {
     id: t.id, name: t.name, maxPlayers: t.maxPlayers,
-    prizeCoins: t.prizeCoins, players: t.players,
+    prizeCoins: t.prizeCoins,
+    entryFee: t.entryFee || 0,
+    pot: t.pot || t.prizeCoins || 0,
+    players: t.players,
     bracket: t.bracket.map(m => ({
       p1: m.p1, p2: m.p2, winner: m.winner, roomId: m.roomId
     })),
     round: t.round, status: t.status, winner: t.winner,
+    creatorId: t.creatorId || null,
   };
 }
 app.get('/health', (req, res) => {
