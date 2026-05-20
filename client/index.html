@@ -432,6 +432,131 @@
   }
   .lside .btnA:active{transform:translateY(0) scale(.98);}
 
+  /* ─── NEW: clean uniform sidebar ─── */
+  .lside-section{margin-bottom:18px;}
+  .lside-title{
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2.5px;
+    color:rgba(255,184,122,.65);margin-bottom:10px;padding:0 4px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .lside-title::before{
+    content:'';width:3px;height:12px;border-radius:2px;
+    background:linear-gradient(180deg,#FFD700,#E8324A);
+    box-shadow:0 0 10px rgba(245,158,11,.55);
+  }
+  .lside-title::after{
+    content:'';flex:1;height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,.12),transparent);
+  }
+
+  .lbtn{
+    display:flex;align-items:center;gap:11px;width:100%;
+    padding:7px 10px 7px 7px;border-radius:11px;margin-bottom:5px;
+    background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);
+    font-family:'Outfit',sans-serif;color:#fff;cursor:pointer;text-align:left;
+    transition:all .22s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden;
+    animation:lobbyEntry .5s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .lbtn::before{
+    content:'';position:absolute;top:0;left:0;width:50%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+    transform:translateX(-200%) skewX(-22deg);pointer-events:none;
+  }
+  .lbtn:hover{
+    background:rgba(255,255,255,.06);
+    border-color:color-mix(in srgb,var(--c,#fff) 45%,transparent);
+    transform:translateX(3px);
+    box-shadow:0 6px 18px rgba(0,0,0,.35),0 0 22px color-mix(in srgb,var(--c,#fff) 12%,transparent);
+  }
+  .lbtn:hover::before{animation:shineSweepLobby .8s cubic-bezier(.4,0,.2,1) forwards;}
+  .lbtn:active{transform:translateX(1px) scale(.98);}
+
+  .lbtn-icon{
+    width:36px;height:36px;flex-shrink:0;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+    background:linear-gradient(135deg,var(--c,#374151),var(--c2,#1F2937));
+    box-shadow:0 4px 12px color-mix(in srgb,var(--c,#000) 40%,transparent),
+               inset 0 1px 0 rgba(255,255,255,.2),
+               inset 0 -2px 6px rgba(0,0,0,.18);
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lbtn:hover .lbtn-icon{transform:scale(1.1) rotate(-4deg);}
+  .lbtn-label{
+    flex:1;font-size:13px;font-weight:700;letter-spacing:.2px;line-height:1.2;
+    color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);
+    display:flex;align-items:center;gap:6px;
+  }
+  .lbtn-chev{
+    font-size:20px;color:rgba(255,255,255,.28);font-weight:700;line-height:1;
+    transition:transform .22s,color .22s;
+  }
+  .lbtn:hover .lbtn-chev{transform:translateX(4px);color:#FFD700;}
+
+  /* Featured CTA — Create Room */
+  .lbtn-cta{
+    background:linear-gradient(135deg,rgba(232,50,74,.22),rgba(232,50,74,.06));
+    border-color:rgba(232,50,74,.45);
+    box-shadow:0 8px 22px rgba(232,50,74,.22);
+  }
+  .lbtn-cta .lbtn-label{font-weight:800;letter-spacing:.4px;}
+  .lbtn-cta:hover{
+    background:linear-gradient(135deg,rgba(232,50,74,.32),rgba(232,50,74,.12));
+    border-color:rgba(232,50,74,.7);
+    box-shadow:0 12px 28px rgba(232,50,74,.4);
+  }
+
+  /* SOON state */
+  .lbtn-soon{opacity:.7;}
+  .lbtn-soon .lbtn-label{color:rgba(255,255,255,.7);}
+  .lbtn-badge{
+    font-size:9px;font-weight:800;letter-spacing:1.2px;
+    padding:3px 7px;border-radius:20px;
+    background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);
+    border:1px solid rgba(255,255,255,.1);
+  }
+
+  /* Coin card at the bottom of the sidebar */
+  .lside-coins{
+    margin-top:8px;padding:14px 16px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(135deg,rgba(255,215,0,.14),rgba(245,158,11,.04));
+    border:1px solid rgba(255,215,0,.3);position:relative;overflow:hidden;
+    transition:all .25s;
+  }
+  .lside-coins:hover{
+    border-color:rgba(255,215,0,.6);transform:translateY(-2px);
+    box-shadow:0 10px 26px rgba(245,158,11,.25);
+  }
+  .lside-coins-shimmer{
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,215,0,.16) 50%,transparent 70%);
+    background-size:220% 100%;animation:goldShimmer 4s linear infinite;
+  }
+  .lside-coins-lbl{
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;
+    color:#FFB87A;margin-bottom:4px;position:relative;
+  }
+  .lside-coins-val{
+    font-family:'Bangers',cursive;font-size:30px;letter-spacing:1px;line-height:1.05;
+    background:linear-gradient(135deg,#FFD700,#F59E0B);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    position:relative;
+  }
+
+  /* Staggered entrance */
+  .lside .lbtn{animation-delay:calc(var(--i,0) * 30ms);}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(2){--i:1}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(3){--i:2}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(4){--i:3}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(5){--i:4}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(6){--i:5}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(7){--i:6}
+  .lside .lside-section:nth-child(1) .lbtn:nth-child(8){--i:7}
+  .lside .lside-section:nth-child(2) .lbtn{--i:8}
+  .lside .lside-section:nth-child(2) .lbtn:nth-child(3){--i:9}
+  .lside .lside-section:nth-child(2) .lbtn:nth-child(4){--i:10}
+  .lside .lside-section:nth-child(3) .lbtn:nth-child(2){--i:11}
+  .lside .lside-section:nth-child(3) .lbtn:nth-child(3){--i:12}
+
   /* Sidebar coins display — gold */
   .coins-display-side{
     background:linear-gradient(135deg,rgba(255,215,0,.14),rgba(245,158,11,.05))!important;
@@ -2376,25 +2501,84 @@
     </div>
     <div class="lbody">
       <div class="lside">
-        <div class="stitle" data-i18n="play">Play</div>
-        <button class="btnA btnC" onclick="doCreate()">➕ <span data-i18n="createRoom">Create Room</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25);" onclick="showJoinByCode()">🔑 <span data-i18n="joinCode">Join by Code</span></button>
-        <button class="btnA btnM" onclick="doMM()">🎯 <span data-i18n="quickMatch">Quick Match</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#06B6D4,#0E7490);color:#fff;box-shadow:0 4px 12px rgba(6,182,212,.3)" onclick="showGameCenter()">🎮 <span data-i18n="gameCenter">Game Center</span></button>
-        <button class="btnA btnD" onclick="doDaily()">🎁 <span data-i18n="dailyReward">Daily Reward</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#FFD700,#D97706);color:#1a1a1a;box-shadow:0 4px 12px rgba(255,215,0,.25);" onclick="showRankedLb()">🏆 <span data-i18n="ranked">Ranked</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#4C1D95);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.3);" onclick="showTournaments()">⚔️ <span data-i18n="tournament">Tournament</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#E1306C,#C13584);color:#fff;box-shadow:0 4px 12px rgba(225,48,108,.25)" onclick="doInsta()">📸 <span data-i18n="followInsta">Follow + 1000🪙</span></button>
-        <div class="stitle" style="margin-top:14px" data-i18n="competitions">Competitions</div>
-        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#16A34A,#14532D);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)" onclick="showLeague()">🏆 <span data-i18n="league">League</span></button>
-        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#1E3A8A,#0F1F4A);color:#fff;box-shadow:0 4px 12px rgba(30,58,138,.4)" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">⚽ <span data-i18n="championsLeague">Champions League</span> <span class="soon" data-i18n="soon">SOON</span></button>
-        <button class="btnA mode-btn" style="background:linear-gradient(135deg,#DC2626,#7F1D1D);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.35)" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">🌍 <span data-i18n="continentalCups">Continental Cups</span> <span class="soon" data-i18n="soon">SOON</span></button>
-        <div class="stitle" style="margin-top:14px" data-i18n="account">Account</div>
-        <button class="btnA" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.25)" onclick="showProfile()">👤 <span data-i18n="myProfile">My Profile</span></button>
-        <button class="btnA" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;box-shadow:0 4px 12px rgba(245,158,11,.25)" onclick="showLeaderboard()">🏆 <span data-i18n="leaderboard">Leaderboard</span></button>
-        <div class="coins-display-side" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:6px" onclick="showCoinsModal()" title="Click for budget details">
-          <div style="font-size:10px;color:#FFB87A;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px">💰 <span data-i18n="coins">Coins</span></div>
-          <div style="font-size:28px;font-weight:900" id="scoins">0</div>
+        <div class="lside-section">
+          <div class="lside-title" data-i18n="play">Play</div>
+          <button class="lbtn lbtn-cta" onclick="doCreate()">
+            <span class="lbtn-icon" style="--c:#E8324A;--c2:#C1192F">➕</span>
+            <span class="lbtn-label" data-i18n="createRoom">Create Room</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="showJoinByCode()">
+            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#7C3AED">🔑</span>
+            <span class="lbtn-label" data-i18n="joinCode">Join by Code</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="doMM()">
+            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#1D4ED8">🎯</span>
+            <span class="lbtn-label" data-i18n="quickMatch">Quick Match</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="showGameCenter()">
+            <span class="lbtn-icon" style="--c:#22D3EE;--c2:#0E7490">🎮</span>
+            <span class="lbtn-label" data-i18n="gameCenter">Game Center</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="doDaily()">
+            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🎁</span>
+            <span class="lbtn-label" data-i18n="dailyReward">Daily Reward</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="showRankedLb()">
+            <span class="lbtn-icon" style="--c:#FFD700;--c2:#D97706">🏆</span>
+            <span class="lbtn-label" data-i18n="ranked">Ranked</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="showTournaments()">
+            <span class="lbtn-icon" style="--c:#A855F7;--c2:#4C1D95">⚔️</span>
+            <span class="lbtn-label" data-i18n="tournament">Tournament</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="doInsta()">
+            <span class="lbtn-icon" style="--c:#F472B6;--c2:#C13584">📸</span>
+            <span class="lbtn-label" data-i18n="followInsta">Follow + 1000🪙</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+        </div>
+        <div class="lside-section">
+          <div class="lside-title" data-i18n="competitions">Competitions</div>
+          <button class="lbtn" onclick="showLeague()">
+            <span class="lbtn-icon" style="--c:#22C55E;--c2:#14532D">🏆</span>
+            <span class="lbtn-label" data-i18n="league">League</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
+            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#0F1F4A">⚽</span>
+            <span class="lbtn-label" data-i18n="championsLeague">Champions League</span>
+            <span class="lbtn-badge" data-i18n="soon">SOON</span>
+          </button>
+          <button class="lbtn lbtn-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
+            <span class="lbtn-icon" style="--c:#EF4444;--c2:#7F1D1D">🌍</span>
+            <span class="lbtn-label" data-i18n="continentalCups">Continental Cups</span>
+            <span class="lbtn-badge" data-i18n="soon">SOON</span>
+          </button>
+        </div>
+        <div class="lside-section">
+          <div class="lside-title" data-i18n="account">Account</div>
+          <button class="lbtn" onclick="showProfile()">
+            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#5B21B6">👤</span>
+            <span class="lbtn-label" data-i18n="myProfile">My Profile</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn" onclick="showLeaderboard()">
+            <span class="lbtn-icon" style="--c:#F59E0B;--c2:#92400E">🏆</span>
+            <span class="lbtn-label" data-i18n="leaderboard">Leaderboard</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+        </div>
+        <div class="lside-coins" onclick="showCoinsModal()" title="Click for budget details">
+          <div class="lside-coins-shimmer"></div>
+          <div class="lside-coins-lbl">💰 <span data-i18n="coins">Coins</span></div>
+          <div class="lside-coins-val" id="scoins">0</div>
         </div>
       </div>
       <div class="lmain">
