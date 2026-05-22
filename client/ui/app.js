@@ -2461,6 +2461,7 @@
     }
     renderLobbyHero();
     playLobbyIntro();
+    requestAnimationFrame(_initLnav);   // align the floating-dock pill with the active tab
     loadRooms();loadRailFriends();
     EVENT.load();   // refresh the seasonal event overlay (banner, props, intro)
     clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
@@ -2519,11 +2520,29 @@
       EVENT.decorateRooms();
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
   }
-  // ── Bottom navigation ──
+  // ── Bottom navigation — premium floating dock ──
+  // Slide the glowing pill behind the active tab (measured, so it works
+  // with both content-width desktop tabs and equal-flex mobile tabs).
+  function _moveLnavPill(el){
+    const pill=document.getElementById('lnavPill');
+    if(!pill||!el||!el.offsetWidth) return;
+    pill.style.width=el.offsetWidth+'px';
+    pill.style.transform='translateX('+el.offsetLeft+'px)';
+  }
+  function _initLnav(){
+    const pill=document.getElementById('lnavPill');
+    const on=document.querySelector('.lnav-tab.on')||document.querySelector('.lnav-tab');
+    if(!pill||!on) return;
+    pill.style.transition='none';          // no slide on first paint / resize
+    _moveLnavPill(on);
+    void pill.offsetWidth;
+    pill.style.transition='';
+  }
   function navTab(tab, el){
     document.querySelectorAll('.lnav-tab').forEach(t=>t.classList.remove('on'));
     if(el){
       el.classList.add('on');
+      _moveLnavPill(el);
       const ic=el.querySelector('.lnav-ic');
       if(ic){ ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); }
     }
@@ -4941,6 +4960,8 @@
     if(_lobbyFxInit) return; _lobbyFxInit=true;
     const layer=document.getElementById('lobby3d');
     const scr=document.getElementById('lobby-screen');
+    // keep the floating-dock pill aligned when the viewport resizes
+    let _lnavRz; window.addEventListener('resize',()=>{ clearTimeout(_lnavRz); _lnavRz=setTimeout(_initLnav,120); },{passive:true});
     // Mouse parallax — soft camera drift on the floating cards
     if(layer&&scr&&!matchMedia('(prefers-reduced-motion:reduce)').matches){
       let tx=0,ty=0,cx=0,cy=0,raf=null;

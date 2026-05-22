@@ -48,7 +48,8 @@
 @keyframes rtSeatIn{from{transform:translate(-50%,-50%) scale(0)}to{transform:translate(-50%,-50%) scale(1)}}
 @keyframes rtFeltPulse{0%,100%{box-shadow:0 0 0 9px var(--rim),0 0 0 12px rgba(0,0,0,.5),inset 0 14px 28px rgba(0,0,0,.5),inset 0 -6px 14px rgba(255,255,255,.07),0 24px 38px rgba(0,0,0,.55),0 0 24px transparent}50%{box-shadow:0 0 0 9px var(--rim),0 0 0 12px rgba(0,0,0,.5),inset 0 14px 28px rgba(0,0,0,.5),inset 0 -6px 14px rgba(255,255,255,.07),0 24px 38px rgba(0,0,0,.55),0 0 34px color-mix(in srgb,var(--felt,#16A34A) 45%,transparent)}}
 @keyframes lnavIn{from{opacity:0;transform:translateX(-50%) translateY(34px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-@keyframes lnavPop{0%{transform:scale(1)}38%{transform:scale(1.45) rotate(-9deg)}68%{transform:scale(.88)}100%{transform:scale(1)}}
+@keyframes lnavPop{0%{transform:translateY(0) scale(1)}38%{transform:translateY(-8px) scale(1.46) rotate(-9deg)}68%{transform:translateY(0) scale(1.04)}100%{transform:translateY(-3px) scale(1.2)}}
+@keyframes lnavGlowPulse{0%,100%{opacity:.62;transform:translateX(-50%) scale(.86)}50%{opacity:1;transform:translateX(-50%) scale(1.14)}}
 @keyframes lobbyEntry{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:translateX(0)}}
 @keyframes lobbyEntryUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 10px rgba(245,158,11,.4)) drop-shadow(0 0 22px rgba(232,50,74,.25));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(245,158,11,.7)) drop-shadow(0 0 38px rgba(232,50,74,.4));transform:scale(1.05)}}
