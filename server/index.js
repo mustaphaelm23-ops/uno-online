@@ -126,6 +126,7 @@ const roomsDB = new Map();
 const matchmakingQueue = [];
 const socketToUser = new Map();
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
+const worldChat = [];          // last ~60 global lobby messages
 
 // ─────────────────────────────────────────
 // USER RECORD
@@ -1067,7 +1068,7 @@ app.get('/api/friends', authMiddleware, (req, res) => {
     const f = usersDB.get(fid);
     if(!f) return null;
     const isOnline = [...socketToUser.values()].includes(fid);
-    return { id: f.id, username: f.username, coins: f.coins, isOnline };
+    return { id: f.id, username: f.username, coins: f.coins, avatar: f.avatar || null, isOnline };
   }).filter(Boolean);
   res.json({ friends });
 });
@@ -1620,6 +1621,27 @@ io.on('connection', (socket) => {
       const ps = findSocketByUserId(user.id);
       if (ps && !ps.rooms?.has(room.id)) ps.emit('game:state', state);
     }, 1200);
+  });
+
+  // ── World Chat — global lobby chat ──
+  socket.emit('world:history', worldChat.slice(-40));
+  socket.on('world:send', ({ text } = {}) => {
+    const user = usersDB.get(userId);
+    if (!user) return;
+    let msg = String(text || '').trim().slice(0, 200);
+    if (!msg) return;
+    // Simple anti-spam: 1.2s between messages per user
+    const now = Date.now();
+    if (socket._lastWorldMsg && now - socket._lastWorldMsg < 1200) return;
+    socket._lastWorldMsg = now;
+    const entry = {
+      id: 'w' + now + Math.random().toString(36).slice(2, 6),
+      userId: user.id, name: user.username, avatar: user.avatar || null,
+      text: msg, at: now,
+    };
+    worldChat.push(entry);
+    if (worldChat.length > 60) worldChat.shift();
+    io.emit('world:msg', entry);
   });
 
   // ── Disconnect ──

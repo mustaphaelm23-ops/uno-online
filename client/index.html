@@ -525,6 +525,80 @@
     .rtable-felt,.rtable-unocard,.rt-av{animation:none!important}
   }
 
+  /* ═══ RIGHT RAIL — Friends + World Chat ═══ */
+  .lrail{
+    width:300px;flex-shrink:0;z-index:5;
+    display:flex;flex-direction:column;gap:14px;padding:18px 15px;
+    background:rgba(13,16,30,.55);
+    backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
+    border-left:1px solid rgba(255,255,255,.08);
+  }
+  .rail-panel{
+    background:linear-gradient(170deg,rgba(32,36,62,.72),rgba(16,19,34,.8));
+    border:1px solid rgba(255,255,255,.08);border-radius:16px;
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 14px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
+    animation:lobbyEntry .5s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .rail-panel:nth-child(2){animation-delay:.08s}
+  .rail-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:13px 15px;font-size:11.5px;font-weight:800;letter-spacing:.7px;
+    color:#fff;text-transform:uppercase;flex-shrink:0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);
+  }
+  .rail-count{
+    font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:20px;
+    background:rgba(34,197,94,.16);color:#4ade80;border:1px solid rgba(34,197,94,.3);
+  }
+  .rail-friends{display:flex;flex-direction:column;gap:6px;padding:10px;max-height:260px;overflow-y:auto;}
+  .rail-friends::-webkit-scrollbar,.rail-chat-msgs::-webkit-scrollbar{width:5px}
+  .rail-friends::-webkit-scrollbar-thumb,.rail-chat-msgs::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:5px}
+  .rail-friend{
+    display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:11px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);
+    transition:all .2s;
+  }
+  .rail-friend:hover{background:rgba(255,255,255,.06);transform:translateX(2px);}
+  .rail-friend-av{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background-size:cover;background-position:center;background-color:#2b3155;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:800;color:#fff;
+    border:2px solid rgba(34,197,94,.55);box-shadow:0 0 10px rgba(34,197,94,.3);
+  }
+  .rail-friend-av.off{border-color:rgba(255,255,255,.12);box-shadow:none;filter:grayscale(.6);opacity:.55;}
+  .rail-friend-info{flex:1;min-width:0;}
+  .rail-friend-name{font-size:12.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rail-friend-status{font-size:10px;font-weight:700;color:#4ade80;margin-top:1px;}
+  .rail-friend-status.off{color:rgba(255,255,255,.32);}
+  .rail-empty{text-align:center;color:rgba(255,255,255,.4);font-size:11px;font-weight:600;padding:26px 12px;line-height:1.5;}
+
+  .rail-chat-panel{flex:1;min-height:160px;}
+  .rail-chat-msgs{
+    flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:7px;min-height:0;
+  }
+  .rail-msg{font-size:12px;line-height:1.45;animation:fadeIn .3s ease;}
+  .rail-msg-name{font-weight:800;color:#FFB87A;}
+  .rail-msg.me .rail-msg-name{color:#4ade80;}
+  .rail-msg-text{color:rgba(255,255,255,.85);word-break:break-word;}
+  .rail-chat-bar{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+  .rail-chat-bar input{
+    flex:1;min-width:0;padding:9px 12px;border-radius:10px;
+    background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.08);
+    color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;outline:none;
+    transition:border-color .2s;
+  }
+  .rail-chat-bar input:focus{border-color:var(--accent);}
+  .rail-chat-send{
+    width:40px;flex-shrink:0;border:none;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#06B6D4,#0E7490);color:#fff;font-size:14px;
+    transition:all .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .rail-chat-send:hover{filter:brightness(1.15);transform:scale(1.06);}
+  @media (max-width:1080px){ .lrail{display:none;} }
+
   /* ═══════════════════════════════════════════
     LOBBY POLISH — animations & premium feel
     ═══════════════════════════════════════════ */
@@ -3046,6 +3120,25 @@
           <div class="rgrid" id="livegrid"></div>
         </div>
       </div>
+      <div class="lrail">
+        <div class="rail-panel">
+          <div class="rail-head">
+            <span>👥 Friends Online</span>
+            <span class="rail-count" id="railFriendsN">0</span>
+          </div>
+          <div class="rail-friends" id="railFriends">
+            <div class="rail-empty">Loading…</div>
+          </div>
+        </div>
+        <div class="rail-panel rail-chat-panel">
+          <div class="rail-head"><span>🌐 World Chat</span></div>
+          <div class="rail-chat-msgs" id="worldMsgs"></div>
+          <div class="rail-chat-bar">
+            <input id="worldInput" type="text" maxlength="200" placeholder="Type a message…" autocomplete="off"/>
+            <button class="rail-chat-send" onclick="sendWorld()" aria-label="Send">➤</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4650,6 +4743,7 @@
     try{ S.socket?.disconnect(); }catch(e){}
     S.socket=null;
     clearInterval(S.roomsTimer); S.roomsTimer=null;
+    clearInterval(S.railTimer); S.railTimer=null;
     // Tear down any modals / overlays still hanging around.
     ['profileOv','lbOv','rankedLbOv','tournOv','adminOv','coinsModal','mmov','winov','matchInvite','inviteToast','jbcOv','leagueOv','jBC']
       .forEach(id=>document.getElementById(id)?.classList.remove('show'));
@@ -4781,6 +4875,11 @@
         toast('⚠️ '+(reason||'Training could not start — try again'),'e');
       }
     });
+    sk.on('world:history',(msgs)=>{
+      const box=document.getElementById('worldMsgs');
+      if(box){ box.innerHTML=(msgs||[]).map(_worldMsgHTML).join(''); box.scrollTop=box.scrollHeight; }
+    });
+    sk.on('world:msg',(m)=>_appendWorldMsg(m));
 
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game
@@ -5423,7 +5522,9 @@
       _animateCount('scoins',S.user.coins||0);
     }
     renderLobbyHero();
-    loadRooms();clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
+    loadRooms();loadRailFriends();
+    clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
+    clearInterval(S.railTimer);S.railTimer=setInterval(loadRailFriends,20000);
   }
   function renderLobbyHero(){
     const u=S.user; if(!u) return;
@@ -5476,6 +5577,56 @@
       g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false)).join('');
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
   }
+  // ── Right rail: Friends Online + World Chat ──
+  async function loadRailFriends(){
+    const box=document.getElementById('railFriends');
+    if(!box) return;
+    try{
+      const d=await apiFetch('/api/friends');
+      const friends=(d.friends||[]).slice().sort((a,b)=>(b.isOnline?1:0)-(a.isOnline?1:0));
+      const online=friends.filter(f=>f.isOnline).length;
+      const nEl=document.getElementById('railFriendsN'); if(nEl) nEl.textContent=online;
+      if(!friends.length){
+        box.innerHTML=`<div class="rail-empty">No friends yet.<br>Add some with the 👥 button.</div>`;
+        return;
+      }
+      box.innerHTML=friends.map(f=>{
+        const img=_isImgAvatar(f.avatar);
+        const face=img?'':esc(f.avatar||(f.username||'?').charAt(0).toUpperCase());
+        return `<div class="rail-friend">
+          <div class="rail-friend-av ${f.isOnline?'':'off'}" style="${img?`background-image:url('${f.avatar}')`:''}">${face}</div>
+          <div class="rail-friend-info">
+            <div class="rail-friend-name">${esc(f.username)}</div>
+            <div class="rail-friend-status ${f.isOnline?'':'off'}">${f.isOnline?'● Online':'Offline'}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }catch(e){
+      box.innerHTML=`<div class="rail-empty">Couldn't load friends</div>`;
+    }
+  }
+  function _worldMsgHTML(m){
+    const me=m.userId===S.user?.id;
+    return `<div class="rail-msg ${me?'me':''}"><span class="rail-msg-name">${esc(m.name||'?')}:</span> <span class="rail-msg-text">${esc(m.text||'')}</span></div>`;
+  }
+  function _appendWorldMsg(m){
+    const box=document.getElementById('worldMsgs');
+    if(!box) return;
+    const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<48;
+    box.insertAdjacentHTML('beforeend',_worldMsgHTML(m));
+    while(box.children.length>60) box.removeChild(box.firstChild);
+    if(atBottom) box.scrollTop=box.scrollHeight;
+  }
+  function sendWorld(){
+    const inp=document.getElementById('worldInput');
+    if(!inp) return;
+    const txt=(inp.value||'').trim();
+    if(!txt) return;
+    if(!S.socket?.connected) return toast('Not connected','e');
+    S.socket.emit('world:send',{text:txt});
+    inp.value='';
+  }
+
   // Render one room as a premium 3D table with seated players.
   const _FELTS=[['#15803D','#08351b'],['#B91C1C','#4a0a0a'],['#1D4ED8','#0a1f52'],['#9333EA','#3b0f63']];
   function _roomTableHTML(r, live){
@@ -7309,6 +7460,9 @@
         if(!raf) raf=requestAnimationFrame(loop);
       },{passive:true});
     }
+    // World chat — send on Enter
+    const wi=document.getElementById('worldInput');
+    if(wi) wi.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendWorld(); } });
     // UI hover / click sounds — soft and debounced
     const SEL='.lbtn,.btnA,.btnP,.btnS,.btnI,.rcard,.rtable,.cat-opt,.coin-pill-hdr,#huser,.game-menu-item';
     document.addEventListener('pointerover',e=>{
