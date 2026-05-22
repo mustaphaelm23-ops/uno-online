@@ -2142,6 +2142,250 @@
     _navModal('Collection','🃏',body,foot);
   }
 
+  /* ═══════════════ BATTLE PASS ═══════════════ */
+  const BP={ data:null };
+  async function showBattlePass(){
+    const old=document.getElementById('bpModal'); if(old) old.remove();
+    _ensureBPStyles();
+    const ov=document.createElement('div');
+    ov.id='bpModal';
+    ov.innerHTML=`<div class="bp-panel"><div class="bp-loading"><div class="bp-spin"></div>Loading Battle Pass…</div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown',e=>{ if(e.target===ov) _bpClose(); });
+    try{
+      BP.data=await apiFetch('/api/battlepass');
+      _renderBattlePass();
+    }catch(e){
+      const p=ov.querySelector('.bp-panel');
+      if(p) p.innerHTML=`<div class="bp-loading" style="color:#f87171">Could not load Battle Pass</div>`;
+    }
+  }
+  function _bpClose(){
+    const ov=document.getElementById('bpModal'); if(!ov) return;
+    ov.classList.add('out'); setTimeout(()=>ov.remove(),220);
+  }
+  function _bpCountdown(endsAt){
+    const ms=endsAt-Date.now();
+    if(ms<=0) return 'Season ended';
+    const d=Math.floor(ms/86400000), h=Math.floor((ms%86400000)/3600000), m=Math.floor((ms%3600000)/60000);
+    return d>0?`${d}d ${h}h left`:h>0?`${h}h ${m}m left`:`${m}m left`;
+  }
+  function _renderBattlePass(){
+    const d=BP.data; if(!d) return;
+    const ov=document.getElementById('bpModal'); if(!ov) return;
+    const maxT=d.tiers.length;
+    const lvl=d.level;
+    const inLvl=lvl>=maxT?d.xpPerTier:(d.xp%d.xpPerTier);
+    const pct=lvl>=maxT?100:Math.round(inLvl/d.xpPerTier*100);
+    const claimed=new Set(d.claimed);
+    const card=(tr,track,tier)=>{
+      const rw=tr[track], key=`${tier}:${track}`, isClaimed=claimed.has(key);
+      const unlocked=lvl>=tier;
+      const canClaim=unlocked && !isClaimed && (track==='free'||d.premium);
+      const state=isClaimed?'claimed':canClaim?'claimable':'locked';
+      const badge=isClaimed?'✓':canClaim?'CLAIM':(track==='prem'&&!d.premium?'👑':'🔒');
+      return `<div class="bp-rw ${track} r-${rw.rarity} ${state}" data-key="${key}" `+
+        `${canClaim?`onclick="claimBP(${tier},'${track}')"`:''}>
+        <div class="bp-rw-shine"></div>
+        <div class="bp-rw-icon">${rw.icon}</div>
+        <div class="bp-rw-amt">🪙 ${esc(rw.label)}</div>
+        <div class="bp-rw-badge">${badge}</div>
+      </div>`;
+    };
+    const cols=d.tiers.map((tr,i)=>{
+      const tier=i+1, unlocked=lvl>=tier, current=tier===lvl+1;
+      return `<div class="bp-col ${unlocked?'on':''} ${current?'current':''}">
+        ${card(tr,'prem',tier)}
+        <div class="bp-tier ${unlocked?'on':''}">${tier}</div>
+        ${card(tr,'free',tier)}
+      </div>`;
+    }).join('');
+    ov.querySelector('.bp-panel').innerHTML=`
+      <div class="bp-aura"></div>
+      <div class="bp-head">
+        <div class="bp-season">
+          <div class="bp-season-name">${esc(d.name)}</div>
+          <div class="bp-season-timer">⏳ ${_bpCountdown(d.endsAt)}</div>
+        </div>
+        <div class="bp-lvlwrap">
+          <div class="bp-lvl">${lvl}</div>
+          <div class="bp-xp">
+            <div class="bp-xp-top"><span>LEVEL ${lvl}</span><span>${lvl>=maxT?'MAX':inLvl+' / '+d.xpPerTier+' XP'}</span></div>
+            <div class="bp-xp-bar"><div class="bp-xp-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+        <button class="bp-close" onclick="_bpClose()" aria-label="Close">×</button>
+      </div>
+      ${d.premium
+        ? `<div class="bp-prem-on">👑 PREMIUM PASS ACTIVE — every tier unlocked</div>`
+        : `<div class="bp-prem-cta">
+             <div class="bp-prem-cta-txt"><b>👑 Unlock Premium Pass</b><span>Unlock the gold track — exclusive rewards every tier</span></div>
+             <button class="bp-prem-btn" onclick="unlockBPPremium()">${d.premiumPrice.toLocaleString()} 🪙</button>
+           </div>`}
+      <div class="bp-tracklabels">
+        <div class="bp-tl prem">👑 PREMIUM</div>
+        <div class="bp-tl free">FREE</div>
+      </div>
+      <div class="bp-track" id="bpTrack">${cols}</div>`;
+    // animate XP bar + cinematic intro
+    const g=window.gsap, fill=ov.querySelector('.bp-xp-fill');
+    if(g && !matchMedia('(prefers-reduced-motion:reduce)').matches){
+      g.fromTo('.bp-panel',{y:40,opacity:0,scale:.96},{y:0,opacity:1,scale:1,duration:.5,ease:'back.out(1.4)'});
+      g.to(fill,{width:pct+'%',duration:1.1,ease:'power2.out',delay:.25});
+      g.fromTo('.bp-col',{y:30,opacity:0},{y:0,opacity:1,duration:.45,stagger:.04,ease:'power3.out',delay:.15});
+      // scroll the track to the current tier
+      setTimeout(()=>{
+        const cur=ov.querySelector('.bp-col.current');
+        if(cur) cur.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+      },500);
+    } else {
+      if(fill) fill.style.width=pct+'%';
+      const cur=ov.querySelector('.bp-col.current');
+      if(cur) cur.scrollIntoView({inline:'center',block:'nearest'});
+    }
+  }
+  async function claimBP(tier,track){
+    try{
+      const d=await apiFetch('/api/battlepass/claim',{method:'POST',body:JSON.stringify({tier,track})});
+      BP.data.claimed=d.claimed;
+      if(typeof d.coins==='number'){
+        S.user.coins=d.coins; localStorage.setItem('uno_user',JSON.stringify(S.user));
+        const hc=document.getElementById('hcoins'); if(hc) _animateCount('hcoins',d.coins);
+      }
+      // claim burst from the card
+      const cardEl=document.querySelector(`.bp-rw[data-key="${tier}:${track}"]`);
+      if(cardEl && typeof _coinBurst==='function') _coinBurst(cardEl);
+      try{ SFX.play('uno'); }catch(e){}
+      _renderBattlePass();
+      toast(`🎟️ Claimed +${(d.reward&&d.reward.amount||0).toLocaleString()} 🪙`,'s');
+    }catch(e){ toast(e.message||'Could not claim','e'); }
+  }
+  async function unlockBPPremium(){
+    if(!confirm(`Unlock the Premium Battle Pass for ${BP.data.premiumPrice.toLocaleString()} coins?`)) return;
+    try{
+      const d=await apiFetch('/api/battlepass/unlock',{method:'POST',body:JSON.stringify({})});
+      BP.data.premium=true;
+      if(typeof d.coins==='number'){
+        S.user.coins=d.coins; localStorage.setItem('uno_user',JSON.stringify(S.user));
+        _animateCount('hcoins',d.coins);
+      }
+      try{ SFX.play('win'); }catch(e){}
+      _renderBattlePass();
+      const ov=document.getElementById('bpModal');
+      if(window.gsap&&ov) window.gsap.fromTo(ov.querySelectorAll('.bp-rw.prem'),
+        {scale:.7,opacity:.3},{scale:1,opacity:1,duration:.5,stagger:.03,ease:'back.out(1.7)'});
+      toast('👑 Premium Pass unlocked!','s');
+    }catch(e){ toast(e.message||'Could not unlock','e'); }
+  }
+  function _ensureBPStyles(){
+    if(document.getElementById('bp-styles')) return;
+    const s=document.createElement('style'); s.id='bp-styles';
+    s.textContent=`
+      @keyframes bpIn{from{opacity:0}to{opacity:1}}
+      @keyframes bpOut{to{opacity:0}}
+      @keyframes bpSpin{to{transform:rotate(360deg)}}
+      @keyframes bpClaimPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.55),0 8px 22px rgba(0,0,0,.5)}50%{box-shadow:0 0 0 7px rgba(245,158,11,0),0 8px 22px rgba(0,0,0,.5)}}
+      @keyframes bpShine{0%,55%{transform:translateX(-160%) skewX(-20deg)}100%{transform:translateX(360%) skewX(-20deg)}}
+      @keyframes bpAura{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1)}50%{opacity:.8;transform:translate(-50%,-50%) scale(1.12)}}
+      #bpModal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px;
+        background:radial-gradient(ellipse at 50% 35%,rgba(40,22,8,.7),rgba(3,4,12,.97));
+        backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:bpIn .3s ease;}
+      #bpModal.out{animation:bpOut .22s ease forwards;}
+      .bp-panel{position:relative;width:min(940px,97vw);max-height:92vh;overflow:hidden;
+        display:flex;flex-direction:column;
+        background:linear-gradient(180deg,rgba(30,26,48,.98),rgba(14,12,26,.99));
+        border:1px solid rgba(255,215,0,.18);border-radius:24px;
+        box-shadow:0 50px 120px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);}
+      .bp-aura{position:absolute;left:50%;top:0;width:80%;height:300px;transform:translate(-50%,-50%);
+        background:radial-gradient(ellipse,rgba(245,158,11,.3),transparent 70%);filter:blur(40px);
+        pointer-events:none;animation:bpAura 6s ease-in-out infinite;}
+      .bp-loading{padding:70px;text-align:center;color:rgba(255,255,255,.6);font-weight:700;
+        display:flex;flex-direction:column;align-items:center;gap:14px;}
+      .bp-spin{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:#F59E0B;animation:bpSpin .8s linear infinite;}
+      .bp-head{position:relative;z-index:1;display:flex;align-items:center;gap:18px;padding:20px 24px 14px;flex-wrap:wrap;}
+      .bp-season-name{font-family:'Bangers',cursive;font-size:26px;letter-spacing:1.5px;
+        background:linear-gradient(180deg,#FFF7E0,#F59E0B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+      .bp-season-timer{font-size:11px;font-weight:800;color:#FFB87A;letter-spacing:.5px;margin-top:2px;}
+      .bp-lvlwrap{display:flex;align-items:center;gap:12px;margin-left:auto;}
+      .bp-lvl{width:54px;height:54px;flex-shrink:0;border-radius:14px;display:flex;align-items:center;justify-content:center;
+        font-family:'Bangers',cursive;font-size:26px;color:#1a0e04;
+        background:linear-gradient(135deg,#FFD700,#F59E0B);box-shadow:0 6px 18px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.5);}
+      .bp-xp{width:210px;max-width:42vw;}
+      .bp-xp-top{display:flex;justify-content:space-between;font-size:9.5px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.6);margin-bottom:5px;}
+      .bp-xp-bar{height:10px;border-radius:8px;background:rgba(0,0,0,.4);overflow:hidden;border:1px solid rgba(255,255,255,.07);}
+      .bp-xp-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#F59E0B,#FFD700);box-shadow:0 0 12px rgba(245,158,11,.6);}
+      .bp-close{width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:22px;line-height:1;
+        background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.75);
+        font-family:inherit;transition:all .2s;}
+      .bp-close:hover{background:rgba(232,50,74,.22);border-color:rgba(232,50,74,.5);color:#fff;transform:rotate(90deg);}
+      .bp-prem-cta{position:relative;z-index:1;display:flex;align-items:center;gap:14px;margin:4px 24px 6px;
+        padding:12px 16px;border-radius:14px;
+        background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(124,58,237,.12));
+        border:1px solid rgba(245,158,11,.4);}
+      .bp-prem-cta-txt{flex:1;display:flex;flex-direction:column;gap:2px;}
+      .bp-prem-cta-txt b{font-size:14px;color:#fff;}
+      .bp-prem-cta-txt span{font-size:11px;color:rgba(255,255,255,.6);font-weight:600;}
+      .bp-prem-btn{padding:11px 20px;border:none;border-radius:11px;cursor:pointer;
+        background:linear-gradient(135deg,#FFD700,#F59E0B);color:#1a0e04;
+        font-family:'Outfit',sans-serif;font-size:13px;font-weight:900;letter-spacing:.5px;
+        box-shadow:0 6px 18px rgba(245,158,11,.45);transition:all .2s cubic-bezier(.34,1.56,.64,1);}
+      .bp-prem-btn:hover{transform:translateY(-2px) scale(1.04);filter:brightness(1.08);}
+      .bp-prem-on{margin:4px 24px 6px;padding:10px;border-radius:12px;text-align:center;
+        font-size:12px;font-weight:800;letter-spacing:.5px;color:#FFD700;
+        background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);}
+      .bp-tracklabels{display:flex;flex-direction:column;gap:74px;position:absolute;left:8px;top:128px;z-index:2;pointer-events:none;}
+      .bp-tl{font-size:8px;font-weight:900;letter-spacing:1px;writing-mode:vertical-rl;transform:rotate(180deg);
+        color:rgba(255,255,255,.3);}
+      .bp-tl.prem{color:rgba(245,158,11,.6);}
+      .bp-track{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:14px 24px 22px;
+        scrollbar-width:thin;scrollbar-color:rgba(245,158,11,.4) transparent;}
+      .bp-track::-webkit-scrollbar{height:7px;}
+      .bp-track::-webkit-scrollbar-thumb{background:rgba(245,158,11,.4);border-radius:7px;}
+      .bp-col{flex-shrink:0;width:94px;display:flex;flex-direction:column;align-items:center;gap:9px;}
+      .bp-col.current .bp-tier{box-shadow:0 0 0 3px #FFD700,0 0 22px rgba(245,158,11,.7);transform:scale(1.12);}
+      .bp-tier{position:relative;width:36px;height:36px;border-radius:50%;flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;
+        font-family:'Bangers',cursive;font-size:18px;color:rgba(255,255,255,.5);
+        background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);transition:all .3s;}
+      .bp-tier.on{color:#1a0e04;background:linear-gradient(135deg,#FFD700,#F59E0B);border-color:transparent;}
+      .bp-tier::before{content:'';position:absolute;right:100%;width:14px;height:4px;background:rgba(255,255,255,.08);}
+      .bp-tier.on::before{background:linear-gradient(90deg,#F59E0B,#FFD700);}
+      .bp-col:first-child .bp-tier::before{display:none;}
+      .bp-rw{position:relative;width:88px;height:90px;border-radius:13px;cursor:default;overflow:hidden;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+        background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(0,0,0,.25));
+        border:1.5px solid var(--rc,rgba(255,255,255,.12));
+        transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;}
+      .bp-rw.r-common{--rc:#9CA3AF;}
+      .bp-rw.r-rare{--rc:#3B82F6;}
+      .bp-rw.r-epic{--rc:#A855F7;}
+      .bp-rw.r-legendary{--rc:#F59E0B;}
+      .bp-rw.prem{background:linear-gradient(165deg,color-mix(in srgb,var(--rc) 24%,rgba(40,28,6,.6)),rgba(20,12,4,.7));}
+      .bp-rw-shine{position:absolute;top:0;left:0;width:42%;height:100%;pointer-events:none;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:translateX(-160%);}
+      .bp-rw-icon{font-size:26px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));}
+      .bp-rw-amt{font-size:11px;font-weight:800;color:#fff;}
+      .bp-rw-badge{font-size:9px;font-weight:900;letter-spacing:.6px;padding:2px 7px;border-radius:10px;
+        background:rgba(0,0,0,.4);color:rgba(255,255,255,.55);}
+      .bp-rw.locked{opacity:.5;}
+      .bp-rw.claimed{opacity:.7;}
+      .bp-rw.claimed{border-color:rgba(74,222,128,.5);}
+      .bp-rw.claimed .bp-rw-badge{background:rgba(74,222,128,.2);color:#4ade80;}
+      .bp-rw.claimable{cursor:pointer;border-color:var(--rc);
+        box-shadow:0 0 18px color-mix(in srgb,var(--rc) 45%,transparent),0 8px 22px rgba(0,0,0,.5);
+        animation:bpClaimPulse 1.8s ease-in-out infinite;}
+      .bp-rw.claimable .bp-rw-badge{background:linear-gradient(135deg,#FFD700,#F59E0B);color:#1a0e04;}
+      .bp-rw.claimable .bp-rw-shine{animation:bpShine 2.4s ease-in-out infinite;}
+      .bp-rw.claimable:hover{transform:translateY(-5px) scale(1.06);}
+      @media (max-width:560px){
+        .bp-head{padding:16px 16px 10px;}.bp-xp{width:140px;}
+        .bp-prem-cta,.bp-prem-on{margin-left:14px;margin-right:14px;}
+        .bp-track{padding:14px 14px 20px;}.bp-tracklabels{display:none;}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   // ── Right rail: Friends Online + World Chat ──
   async function loadRailFriends(){
     const box=document.getElementById('railFriends');

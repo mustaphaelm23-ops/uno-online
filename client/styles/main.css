@@ -3050,3 +3050,30 @@
   .intro-gsap .lside-section,
   .intro-gsap .lnav,
   .intro-gsap .rail-panel{ animation:none!important; }
+
+  /* ═══ Battle Pass sidebar banner ═══ */
+  .bp-banner{
+    position:relative;overflow:hidden;width:100%;
+    display:flex;align-items:center;gap:11px;
+    padding:12px 13px;margin-bottom:14px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(135deg,#3a2a08,#5a3f0c 50%,#3a2a08);
+    border:1px solid rgba(255,215,0,.4);
+    box-shadow:0 8px 22px rgba(245,158,11,.22),inset 0 1px 0 rgba(255,255,255,.12);
+    font-family:'Outfit',sans-serif;
+    transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .bp-banner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(245,158,11,.4);border-color:rgba(255,215,0,.7);}
+  .bp-banner-glow{
+    position:absolute;left:-40%;top:0;width:50%;height:100%;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,235,150,.32),transparent);
+    animation:bpBannerSweep 4.5s ease-in-out infinite;
+  }
+  .bp-banner-crown{font-size:24px;position:relative;filter:drop-shadow(0 2px 6px rgba(245,158,11,.6));}
+  .bp-banner-txt{flex:1;position:relative;min-width:0;}
+  .bp-banner-title{
+    font-family:'Bangers',cursive;font-size:16px;letter-spacing:1.5px;
+    background:linear-gradient(180deg,#FFF7E0,#FFD700);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .bp-banner-sub{font-size:9.5px;font-weight:700;color:rgba(255,215,150,.7);letter-spacing:.3px;}
+  .bp-banner-chev{font-size:20px;color:#FFD700;font-weight:700;position:relative;}

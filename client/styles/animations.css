@@ -142,3 +142,4 @@
 @keyframes rtSweep{to{transform:translateX(130%)}}
 @keyframes rtSpark{0%,100%{opacity:0;transform:translateY(0) scale(.6)}25%{opacity:.9;transform:translateY(-7px) scale(1)}55%{opacity:.5;transform:translateY(-13px) scale(.85)}}
 @keyframes rtOnlinePulse{0%,100%{box-shadow:0 0 6px #22C55E}50%{box-shadow:0 0 11px #22C55E,0 0 3px #fff}}
+@keyframes bpBannerSweep{0%,100%{transform:translateX(-40%)}50%{transform:translateX(360%)}}

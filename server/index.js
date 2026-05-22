@@ -1035,6 +1035,95 @@ app.get('/api/rewards', authMiddleware, (req, res) => {
   res.json({ rewards, totalWon, count: rewards.length });
 });
 
+// ─────────────────────────────────────────
+// BATTLE PASS
+// ─────────────────────────────────────────
+function buildBPTiers() {
+  const rar = ['common','common','rare','common','rare','epic','common','rare','common','epic',
+               'rare','common','epic','rare','common','epic','rare','legendary','rare','legendary'];
+  const tiers = [];
+  for (let i = 0; i < 20; i++) {
+    const lvl = i + 1;
+    const freeAmt = 150 + i * 50;
+    const premAmt = 500 + i * 220;
+    tiers.push({
+      free: { type:'coins', amount:freeAmt, rarity:'common', icon:'🪙', label:`${freeAmt}` },
+      prem: {
+        type:'coins', amount:premAmt, rarity:rar[i]||'rare',
+        icon: lvl%5===0 ? '👑' : (rar[i]==='legendary'?'💎':rar[i]==='epic'?'🔥':'🪙'),
+        label: `${premAmt}`,
+      },
+    });
+  }
+  return tiers;
+}
+const BP_SEASON = {
+  number: 1,
+  name: 'Season 1 · Neon Rush',
+  endsAt: new Date('2026-06-17T20:00:00Z').getTime(),
+  xpPerTier: 1000,
+  premiumPrice: 20000,
+  tiers: buildBPTiers(),
+};
+function ensureBP(user) {
+  if (!user.bp || user.bp.season !== BP_SEASON.number) {
+    user.bp = { season: BP_SEASON.number, xp: 0, claimed: [], premium: false };
+  }
+  if (!Array.isArray(user.bp.claimed)) user.bp.claimed = [];
+  return user.bp;
+}
+function bpLevel(bp) {
+  return Math.min(BP_SEASON.tiers.length, Math.floor(bp.xp / BP_SEASON.xpPerTier));
+}
+
+app.get('/api/battlepass', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const bp = ensureBP(user);
+  saveUsers();
+  res.json({
+    season: BP_SEASON.number, name: BP_SEASON.name, endsAt: BP_SEASON.endsAt,
+    xpPerTier: BP_SEASON.xpPerTier, premiumPrice: BP_SEASON.premiumPrice,
+    tiers: BP_SEASON.tiers,
+    xp: bp.xp, level: bpLevel(bp), claimed: bp.claimed, premium: !!bp.premium,
+    coins: user.coins,
+  });
+});
+
+app.post('/api/battlepass/claim', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const bp = ensureBP(user);
+  const tier = parseInt(req.body?.tier, 10);          // 1-based tier number
+  const track = req.body?.track === 'prem' ? 'prem' : 'free';
+  if (!(tier >= 1 && tier <= BP_SEASON.tiers.length)) return res.status(400).json({ error: 'Bad tier' });
+  if (bpLevel(bp) < tier) return res.status(400).json({ error: 'Tier not reached yet' });
+  if (track === 'prem' && !bp.premium) return res.status(403).json({ error: 'Premium pass required' });
+  const key = `${tier}:${track}`;
+  if (bp.claimed.includes(key)) return res.status(400).json({ error: 'Already claimed' });
+  const reward = BP_SEASON.tiers[tier - 1][track];
+  bp.claimed.push(key);
+  if (reward.type === 'coins') {
+    user.coins += reward.amount;
+    logReward(user, track==='prem'?'👑':'🎟️', `Battle Pass T${tier} — ${BP_SEASON.name}`, reward.amount);
+  }
+  saveUsers();
+  res.json({ success:true, coins:user.coins, claimed:bp.claimed, reward });
+});
+
+app.post('/api/battlepass/unlock', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const bp = ensureBP(user);
+  if (bp.premium) return res.status(400).json({ error: 'Already unlocked' });
+  if ((user.coins || 0) < BP_SEASON.premiumPrice)
+    return res.status(400).json({ error: `Need ${BP_SEASON.premiumPrice.toLocaleString()} coins` });
+  user.coins -= BP_SEASON.premiumPrice;
+  bp.premium = true;
+  saveUsers();
+  res.json({ success:true, coins:user.coins, premium:true });
+});
+
 // Admin: reset password
 // Forgot password — verified by the recovery email set at registration.
 app.post('/api/auth/reset', async (req, res) => {
@@ -1774,6 +1863,9 @@ function attachGameListeners(room) {
       // Match history (latest 20 per user) — feeds the League Hub
       if (!Array.isArray(user.matchHistory)) user.matchHistory = [];
       const won = winnerData && winnerData.id === playerData.id;
+      // Battle Pass XP — every match feeds progression
+      ensureBP(user);
+      user.bp.xp += won ? 220 : 90;
       const opponents = data.players.filter(p => p.id !== playerData.id).map(p => p.username);
       user.matchHistory.unshift({
         at: Date.now(),
