@@ -82,8 +82,10 @@
   <!-- ═══ LOBBY ═══ -->
   <div id="lobby-screen" class="screen">
     <div class="lobby-bg-img" aria-hidden="true"></div>
+    <div class="lobby-tint" aria-hidden="true"></div>
     <div class="lobby-3d" id="lobby3d" aria-hidden="true"></div>
     <div class="lobby-fx" aria-hidden="true"></div>
+    <div class="lobby-weather" id="lobbyWeather" aria-hidden="true"></div>
     <div class="lhdr">
       <div class="llogo">UNO</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -96,6 +98,7 @@
             <div class="game-menu-title" data-i18n="settings">Settings</div>
             <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 <span data-i18n="profile">Profile</span></button>
             <button class="game-menu-item" onclick="showLangPicker();document.getElementById('lobbyMenu').classList.remove('show')">🌐 <span data-i18n="language">Language</span></button>
+            <button class="game-menu-item" onclick="showThemePicker();document.getElementById('lobbyMenu').classList.remove('show')">🎨 Season Theme</button>
             <button class="game-menu-item" onclick="pwaInstall();document.getElementById('lobbyMenu').classList.remove('show')">📲 <span data-i18n="installApp">Install App</span></button>
             <button class="game-menu-item" id="adminPanelMenuItem" style="display:none" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ <span data-i18n="adminPanel">Admin Panel</span></button>
             <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 <span data-i18n="logout">Logout</span></button>
