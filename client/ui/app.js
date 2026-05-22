@@ -2250,15 +2250,81 @@
       BP.data.claimed=d.claimed;
       if(typeof d.coins==='number'){
         S.user.coins=d.coins; localStorage.setItem('uno_user',JSON.stringify(S.user));
-        const hc=document.getElementById('hcoins'); if(hc) _animateCount('hcoins',d.coins);
+        _animateCount('hcoins',d.coins);
       }
-      // claim burst from the card
-      const cardEl=document.querySelector(`.bp-rw[data-key="${tier}:${track}"]`);
-      if(cardEl && typeof _coinBurst==='function') _coinBurst(cardEl);
-      try{ SFX.play('uno'); }catch(e){}
       _renderBattlePass();
-      toast(`🎟️ Claimed +${(d.reward&&d.reward.amount||0).toLocaleString()} 🪙`,'s');
+      _claimCinematic(d.reward||{}, track);
     }catch(e){ toast(e.message||'Could not claim','e'); }
+  }
+  // Rarity-scaled claim reveal — common = clean pop, legendary = big cinematic.
+  function _claimCinematic(reward, track){
+    const g=window.gsap;
+    const rar=reward.rarity||'common';
+    const R=({
+      common:   {c:'#B6BDCC',name:'COMMON',   parts:9,  rays:0,flash:0,shake:0,  build:.05},
+      rare:     {c:'#3B82F6',name:'RARE',     parts:18, rays:1,flash:0,shake:0,  build:.22},
+      epic:     {c:'#A855F7',name:'EPIC',     parts:30, rays:1,flash:1,shake:5,  build:.4},
+      legendary:{c:'#F59E0B',name:'LEGENDARY',parts:50, rays:1,flash:1,shake:11, build:.65},
+    })[rar]||{c:'#B6BDCC',name:'COMMON',parts:9,rays:0,flash:0,shake:0,build:.05};
+    _ensureBPStyles();
+    const ov=document.createElement('div');
+    ov.id='claimCine';
+    ov.style.setProperty('--cc',R.c);
+    ov.innerHTML=`
+      ${R.rays?'<div class="cc-rays"></div>':''}
+      ${R.flash?'<div class="cc-flash"></div>':''}
+      <div class="cc-card r-${rar}">
+        <div class="cc-card-shine"></div>
+        <div class="cc-rarity">${R.name}</div>
+        <div class="cc-icon">${reward.icon||'🪙'}</div>
+        <div class="cc-amount">+${(reward.amount||0).toLocaleString()} 🪙</div>
+        <div class="cc-trk">${track==='prem'?'👑 PREMIUM REWARD':'FREE REWARD'}</div>
+      </div>
+      <div class="cc-tap">Tap to continue</div>`;
+    document.body.appendChild(ov);
+    const card=ov.querySelector('.cc-card');
+    const done=()=>{ if(ov._x)return; ov._x=1;
+      if(g) g.to(ov,{opacity:0,duration:.25,onComplete:()=>ov.remove()}); else ov.remove(); };
+    ov.addEventListener('click',done);
+    const bigSound=rar==='legendary'||rar==='epic';
+    if(!g || matchMedia('(prefers-reduced-motion:reduce)').matches){
+      try{SFX.play(bigSound?'win':'uno');}catch(e){}
+      setTimeout(done,1700); return;
+    }
+    const tl=g.timeline();
+    tl.fromTo(ov,{opacity:0},{opacity:1,duration:.22});
+    if(ov.querySelector('.cc-rays'))
+      tl.fromTo('.cc-rays',{scale:.25,opacity:0,rotation:-70},{scale:1,opacity:1,rotation:0,duration:.55+R.build,ease:'power2.out'},0);
+    if(R.build) tl.to({},{duration:R.build});                       // anticipation
+    if(ov.querySelector('.cc-flash'))
+      tl.fromTo('.cc-flash',{opacity:0},{opacity:.85,duration:.1,yoyo:true,repeat:1},'>-.04');
+    tl.fromTo(card,{scale:.2,rotationY:-180,opacity:0},
+      {scale:1,rotationY:0,opacity:1,duration:.62,ease:'back.out(1.8)'},'>-.06')
+      .call(()=>{ try{SFX.play(bigSound?'win':'uno');}catch(e){} _ccParticles(card,R); });
+    if(R.shake)
+      tl.fromTo(ov,{x:-R.shake},{x:R.shake,duration:.05,repeat:5,yoyo:true,ease:'none',clearProps:'x'},'<');
+    tl.fromTo('.cc-card-shine',{x:'-170%'},{x:'280%',duration:.75,ease:'power1.inOut'},'>-.15')
+      .fromTo('.cc-tap',{opacity:0},{opacity:1,duration:.4},'>-.1')
+      .to(card,{y:-9,duration:1.7,ease:'sine.inOut',yoyo:true,repeat:-1},'>');
+    setTimeout(done, bigSound?(rar==='legendary'?5400:4400):3400);
+  }
+  function _ccParticles(originEl,R){
+    const g=window.gsap; if(!g) return;
+    const r=originEl.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    for(let i=0;i<R.parts;i++){
+      const p=document.createElement('div');
+      p.className='cc-particle';
+      if(Math.random()<.5){ p.textContent='🪙'; }
+      else { p.classList.add('dot'); p.style.background=R.c; p.style.boxShadow=`0 0 10px ${R.c}`; }
+      p.style.left=cx+'px'; p.style.top=cy+'px';
+      document.body.appendChild(p);
+      const ang=Math.random()*Math.PI*2, dist=110+Math.random()*300;
+      g.to(p,{x:Math.cos(ang)*dist,y:Math.sin(ang)*dist-Math.random()*110,
+        rotation:(Math.random()-.5)*660,scale:.4+Math.random()*1.25,
+        duration:.95+Math.random()*.6,ease:'power3.out'});
+      g.to(p,{opacity:0,duration:.5,delay:.6+Math.random()*.4,onComplete:()=>p.remove()});
+    }
   }
   async function unlockBPPremium(){
     if(!confirm(`Unlock the Premium Battle Pass for ${BP.data.premiumPrice.toLocaleString()} coins?`)) return;
@@ -2382,6 +2448,34 @@
         .bp-prem-cta,.bp-prem-on{margin-left:14px;margin-right:14px;}
         .bp-track{padding:14px 14px 20px;}.bp-tracklabels{display:none;}
       }
+      /* ── Claim reward cinematic ── */
+      @keyframes ccRaySpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+      #claimCine{position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:18px;cursor:pointer;perspective:1100px;
+        background:radial-gradient(ellipse at 50% 45%,rgba(20,14,4,.72),rgba(2,3,8,.93));
+        backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+      .cc-rays{position:absolute;left:50%;top:48%;width:150vmax;height:150vmax;
+        transform:translate(-50%,-50%);pointer-events:none;
+        background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--cc) 38%,transparent) 0deg 9deg,transparent 9deg 22deg);
+        -webkit-mask:radial-gradient(circle,#000 4%,transparent 52%);mask:radial-gradient(circle,#000 4%,transparent 52%);
+        animation:ccRaySpin 14s linear infinite;}
+      .cc-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#fff,transparent 55%);pointer-events:none;}
+      .cc-card{position:relative;width:230px;padding:26px 20px 20px;border-radius:22px;
+        transform-style:preserve-3d;text-align:center;overflow:hidden;
+        background:linear-gradient(170deg,color-mix(in srgb,var(--cc) 30%,rgba(22,18,30,.96)),rgba(12,10,20,.98));
+        border:2px solid var(--cc);
+        box-shadow:0 0 60px color-mix(in srgb,var(--cc) 55%,transparent),0 30px 70px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.14);}
+      .cc-card-shine{position:absolute;top:0;left:0;width:46%;height:100%;pointer-events:none;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-170%) skewX(-18deg);}
+      .cc-rarity{font-family:'Bangers',cursive;font-size:15px;letter-spacing:3px;color:var(--cc);
+        text-shadow:0 0 16px color-mix(in srgb,var(--cc) 70%,transparent);margin-bottom:8px;}
+      .cc-icon{font-size:74px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6));}
+      .cc-amount{font-family:'Bangers',cursive;font-size:34px;letter-spacing:1px;margin-top:8px;
+        background:linear-gradient(180deg,#FFF7E0,#F59E0B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+      .cc-trk{font-size:9.5px;font-weight:900;letter-spacing:1.4px;color:rgba(255,255,255,.6);margin-top:8px;}
+      .cc-tap{font-size:11px;font-weight:800;letter-spacing:1.5px;color:rgba(255,255,255,.5);text-transform:uppercase;}
+      .cc-particle{position:fixed;font-size:24px;pointer-events:none;z-index:1101;will-change:transform;}
+      .cc-particle.dot{width:9px;height:9px;border-radius:50%;font-size:0;}
     `;
     document.head.appendChild(s);
   }
