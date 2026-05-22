@@ -746,12 +746,19 @@
       if(layer) layer.innerHTML='';
       if(slot) slot.innerHTML='';
       const d=this.data;
-      if(!d) return;                                     // no active event → plain lobby
+      if(!d){                                            // no active event → plain lobby
+        document.body.style.removeProperty('--ev');
+        document.body.style.removeProperty('--ev2');
+        return;
+      }
       if(scr){
         scr.classList.add('event-active','event-'+d.id);
         scr.style.setProperty('--ev',d.color||'#FFD23F');
         scr.style.setProperty('--ev2',d.color2||'#FF8A00');
       }
+      // also expose event colours globally so in-room ambiance can use them
+      document.body.style.setProperty('--ev',d.color||'#FFD23F');
+      document.body.style.setProperty('--ev2',d.color2||'#FF8A00');
       this._buildProps(d.prop);
       this._buildBanner(d);
       this._startCountdown(d);
@@ -988,6 +995,76 @@
         host.appendChild(p);
         setTimeout(()=>p.remove(),dur*1000+250);
       }
+    },
+
+    /* ── event rooms ── */
+    // The featured (spotlit) room rotates every 15s; loadRooms re-renders every 5s.
+    pickFeatured(rooms){
+      if(!this.data||!rooms||!rooms.length) return null;
+      return rooms[Math.floor(Date.now()/15000)%rooms.length].id;
+    },
+    // Fill the featured room's particle host (one room only → cheap).
+    decorateRooms(){
+      if(!this.data||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+      document.querySelectorAll('.rt-ev-fx[data-evfx]').forEach(host=>{
+        host.removeAttribute('data-evfx');
+        for(let i=0;i<7;i++){
+          const s=document.createElement('div');
+          s.className='rt-ev-spark';
+          const dur=2.4+Math.random()*2;
+          s.style.cssText=`left:${(8+Math.random()*84).toFixed(0)}%;`+
+            `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`+
+            `--sd:${((Math.random()*2-1)*22).toFixed(0)}px;`;
+          host.appendChild(s);
+        }
+      });
+    },
+
+    /* ── cinematic event-room entry ── */
+    roomEnter(joinFn){
+      const d=this.data;
+      if(!d||matchMedia('(prefers-reduced-motion:reduce)').matches){ joinFn(); return; }
+      const ov=document.createElement('div');
+      ov.className='ev-room-wipe';
+      ov.style.setProperty('--ev',d.color||'#FFD23F');
+      ov.style.setProperty('--ev2',d.color2||'#FF8A00');
+      ov.innerHTML=`<div class="ev-room-wipe-logo">${d.logo||d.icon||'🎉'}</div>`;
+      document.body.appendChild(ov);
+      try{ SFX&&SFX.play&&SFX.play('turn'); }catch(e){}
+      setTimeout(joinFn,300);                                    // swap screens behind the wipe
+      setTimeout(()=>{ ov.classList.add('out'); setTimeout(()=>ov.remove(),380); },780);
+    },
+
+    /* ── in-room event ambiance (event-tinted vignette + soft particles) ── */
+    enterRoomAmbiance(){
+      if(!this.data) return;
+      document.body.classList.add('in-event-room');
+      let amb=document.getElementById('eventRoomAmb');
+      if(!amb){
+        amb=document.createElement('div');
+        amb.id='eventRoomAmb';
+        amb.innerHTML='<div class="era-vignette"></div><div class="era-fx"></div>';
+        document.body.appendChild(amb);
+      }
+      const fx=amb.querySelector('.era-fx');
+      fx.innerHTML='';
+      if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+      const n=matchMedia('(pointer:coarse)').matches?6:11;
+      for(let i=0;i<n;i++){
+        const p=document.createElement('div');
+        p.className='era-p';
+        const dur=9+Math.random()*9;
+        p.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;`+
+          `width:${(3+Math.random()*4).toFixed(0)}px;height:${(3+Math.random()*4).toFixed(0)}px;`+
+          `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`+
+          `--sd:${((Math.random()*2-1)*55).toFixed(0)}px;opacity:${(.25+Math.random()*.4).toFixed(2)};`;
+        fx.appendChild(p);
+      }
+    },
+    exitRoomAmbiance(){
+      document.body.classList.remove('in-event-room');
+      const amb=document.getElementById('eventRoomAmb');
+      if(amb){ const fx=amb.querySelector('.era-fx'); if(fx) fx.innerHTML=''; }
     },
   };
   window.EVENT=EVENT;   // referenced from inline onclick handlers
@@ -1485,6 +1562,8 @@
     // they open only when the player taps the gear.
     document.getElementById('gameMenu')?.classList.remove('show');
     document.getElementById('lobbyMenu')?.classList.remove('show');
+    // event-room ambiance only belongs on the room/game screens
+    if(id!=='game-screen'&&id!=='room-screen') document.body.classList.remove('in-event-room');
     if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
   function toast(msg,type='i'){const w=document.getElementById('twrap'),t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500);}
   async function api(method,path,body){
@@ -2363,6 +2442,7 @@
   function goLobby(){
     // Reset spectator + clutch + league-game state when returning to lobby
     document.body.classList.remove('spectating','clutch','in-league-game');
+    EVENT.exitRoomAmbiance();   // drop event-room vignette/particles
     document.getElementById('roundIntermission')?.classList.remove('show');
     S.isSpectator = false;
     S.g.spectatorHands = {};
@@ -2416,7 +2496,7 @@
         if(live.length){
           liveSec.style.display='';
           liveInfo.textContent = `${live.length} live game${live.length===1?'':'s'} — watch in progress`;
-          liveGrid.innerHTML = live.map(r => _roomTableHTML(r, true)).join('');
+          liveGrid.innerHTML = live.map(r => _roomTableHTML(r, true, null)).join('');
         } else {
           liveSec.style.display='none';
         }
@@ -2434,7 +2514,9 @@
           <button class="ec-btn match" onclick="doMM()">🎯 Quick Match</button>
         </div>
       </div>`;return;}
-      g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false)).join('');
+      const featId=EVENT.pickFeatured(d.rooms);
+      g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false,featId)).join('');
+      EVENT.decorateRooms();
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
   }
   // ── Bottom navigation ──
@@ -2900,7 +2982,7 @@
 
   // Render one room as a premium 3D table with seated players.
   const _FELTS=[['#15803D','#08351b'],['#B91C1C','#4a0a0a'],['#1D4ED8','#0a1f52'],['#9333EA','#3b0f63']];
-  function _roomTableHTML(r, live){
+  function _roomTableHTML(r, live, featId){
     const max=r.maxPlayers||4;
     const seats=r.seats||[];
     const f=live?['#B91C1C','#4a0a0a']:_FELTS[((r.id.charCodeAt(0)||0)+(r.id.charCodeAt(2)||0))%_FELTS.length];
@@ -2925,8 +3007,16 @@
       }
     }
     const code=r.id.substr(0,6).toUpperCase();
-    // Seasonal event decoration — a small corner sticker while an event is live
-    const evTag=(EVENT.data)?`<div class="rt-evtag" title="${esc(EVENT.data.name)}">${EVENT.data.icon||'🎉'}</div>`:'';
+    // Seasonal event rooms — every room transforms while an event is live;
+    // one rotating room is the spotlit "featured" room.
+    const ev=EVENT.data;
+    const isFeat=!!(ev&&featId&&r.id===featId&&!live);
+    const evDeco=ev?(
+      `<div class="rt-frame${isFeat?' feat':''}" aria-hidden="true"></div>`+
+      `<div class="rt-ribbon">${ev.icon||'🎉'} LIMITED</div>`+
+      (isFeat?`<div class="rt-feat-badge">⭐ FEATURED</div><div class="rt-ev-fx" data-evfx="1" aria-hidden="true"></div>`:'')
+    ):'';
+    const evCls=ev?' rt-event':'';
     const stage=`<div class="rtable-stage">
         <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
         ${seatHTML}
@@ -2934,9 +3024,9 @@
       </div>`;
     const active=(r.players>0||(seats&&seats.length>0))?' rt-active':'';
     if(live){
-      return `<div class="rtable rt-active" onclick="doWatch('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+      return `<div class="rtable rt-active${evCls}" onclick="doWatch('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
         <div class="rtable-glow"></div>
-        ${evTag}
+        ${evDeco}
         <div class="rtable-top"><span class="rtable-name">🔴 LIVE MATCH</span><span class="rtable-tag" style="color:#fca5a5">▶ WATCH</span></div>
         ${stage}
         <div class="rtable-foot">
@@ -2946,9 +3036,9 @@
         </div>
       </div>`;
     }
-    return `<div class="rtable${active}" onclick="doJoin('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+    return `<div class="rtable${active}${evCls}${isFeat?' rt-featured':''}" onclick="doJoin('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
       <div class="rtable-glow"></div>
-      ${evTag}
+      ${evDeco}
       <div class="rtable-top"><span class="rtable-name">ROOM #${code}</span><span class="rtable-tag">● OPEN</span></div>
       ${stage}
       <div class="rtable-foot">
@@ -4024,16 +4114,24 @@
   }
 
   function doJoin(roomId){
+    // Event rooms get a cinematic entry wipe before the screen swaps.
+    EVENT.roomEnter(()=>_doJoinNow(roomId));
+  }
+  function _doJoinNow(roomId){
     S.roomId=roomId;
     S.socket.emit('room:join',{roomId},(res)=>{
       if(!res.success)return toast(res.reason,'e');
       clearInterval(S.roomsTimer);showScreen('room-screen');
       document.getElementById('ridlbl').textContent=`Room: ${roomId.substr(0,8).toUpperCase()}`;
       if(res.state?.players)renderWaiting(res.state.players);refreshRoom();
+      EVENT.enterRoomAmbiance();
     });
   }
   function doWatch(roomId){
     if(!S.socket?.connected) return toast('Not connected','e');
+    EVENT.roomEnter(()=>_doWatchNow(roomId));
+  }
+  function _doWatchNow(roomId){
     S.socket.emit('room:spectate',{roomId},(res)=>{
       if(!res.success) return toast(res.reason||'Could not join as spectator','e');
       S.roomId = roomId;
@@ -4041,6 +4139,7 @@
       clearInterval(S.roomsTimer);
       showScreen('game-screen');
       showChatFab(true);
+      EVENT.enterRoomAmbiance();
       toast('👁️ Watching live!','s');
     });
   }

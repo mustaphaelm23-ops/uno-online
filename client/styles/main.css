@@ -3182,12 +3182,70 @@
     .ev-banner{gap:10px;padding:12px 14px;}
   }
 
-  /* ── event room sticker ── */
-  .rt-evtag{position:absolute;top:8px;right:8px;z-index:6;font-size:15px;
-    width:27px;height:27px;display:flex;align-items:center;justify-content:center;border-radius:50%;
-    background:rgba(0,0,0,.55);border:1px solid color-mix(in srgb,var(--ev,#FFD23F) 60%,transparent);
-    box-shadow:0 0 13px color-mix(in srgb,var(--ev,#FFD23F) 55%,transparent);
-    animation:evTagPulse 2.6s ease-in-out infinite;}
+  /* ── event rooms (lobby grid) — every room transforms during an event ── */
+  #lobby-screen.event-active .rtable{
+    box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06),
+      0 0 28px color-mix(in srgb,var(--ev,#FFD23F) 20%,transparent);}
+  #lobby-screen.event-active .rtable::before{
+    background:linear-gradient(90deg,transparent,var(--ev,#FFD23F),transparent);}
+  #lobby-screen.event-active .rtable .rtable-glow{
+    background:radial-gradient(ellipse,color-mix(in srgb,var(--ev,#FFD23F) 48%,transparent),transparent 70%);}
+  #lobby-screen.event-active .rtable:hover{
+    border-color:color-mix(in srgb,var(--ev,#FFD23F) 60%,transparent);
+    box-shadow:0 30px 62px rgba(0,0,0,.62),0 0 48px color-mix(in srgb,var(--ev,#FFD23F) 32%,transparent);}
+  #lobby-screen.event-active .rt-seat.empty{
+    border-color:color-mix(in srgb,var(--ev,#FFD23F) 32%,rgba(255,255,255,.15));}
+  /* animated event frame — border + inset glow, opacity-pulsed (compositor-only) */
+  .rt-frame{position:absolute;inset:0;border-radius:18px;pointer-events:none;z-index:5;
+    border:2px solid var(--ev,#FFD23F);
+    box-shadow:inset 0 0 16px color-mix(in srgb,var(--ev,#FFD23F) 28%,transparent);
+    animation:rtFramePulse 3.2s ease-in-out infinite;}
+  .rt-frame.feat{box-shadow:inset 0 0 24px color-mix(in srgb,var(--ev,#FFD23F) 46%,transparent);
+    animation-duration:1.7s;}
+  /* corner LIMITED ribbon */
+  .rt-ribbon{position:absolute;top:13px;left:-34px;width:130px;z-index:6;transform:rotate(-45deg);
+    text-align:center;background:linear-gradient(90deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    color:#1a1205;font-size:7.5px;font-weight:900;letter-spacing:.7px;padding:3px 0;
+    box-shadow:0 2px 7px rgba(0,0,0,.5);}
+  /* featured (rotating spotlight) room */
+  .rtable.rt-featured{z-index:3;}
+  #lobby-screen.event-active .rtable.rt-featured{
+    box-shadow:0 18px 44px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08),
+      0 0 44px color-mix(in srgb,var(--ev,#FFD23F) 44%,transparent);}
+  .rtable.rt-featured .rtable-glow{opacity:.9!important;}
+  .rt-feat-badge{position:absolute;top:11px;right:11px;z-index:6;
+    font-size:8px;font-weight:900;letter-spacing:.5px;color:#1a1205;padding:4px 9px;border-radius:20px;
+    background:linear-gradient(135deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    box-shadow:0 3px 13px color-mix(in srgb,var(--ev,#FFD23F) 65%,transparent);
+    animation:rtFeatBadge 1.9s ease-in-out infinite;}
+  /* featured spotlight particles */
+  .rt-ev-fx{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:18px;}
+  .rt-ev-spark{position:absolute;bottom:-6px;width:5px;height:5px;border-radius:50%;
+    background:color-mix(in srgb,var(--ev,#FFD23F) 78%,#fff);
+    box-shadow:0 0 7px var(--ev,#FFD23F);will-change:transform,opacity;
+    animation:rtEvSpark ease-in infinite;}
+
+  /* ── cinematic event-room entry wipe ── */
+  .ev-room-wipe{position:fixed;inset:0;z-index:1350;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--ev2,#FF8A00) 44%,#06070e),#06070e 78%);
+    animation:evModalIn .3s ease both;}
+  .ev-room-wipe.out{animation:evModalOut .38s ease forwards;}
+  .ev-room-wipe-logo{font-size:clamp(64px,14vw,92px);line-height:1;
+    filter:drop-shadow(0 8px 26px color-mix(in srgb,var(--ev,#FFD23F) 78%,transparent));
+    animation:evRoomLogo .85s cubic-bezier(.2,1.3,.3,1) both;}
+
+  /* ── in-room event ambiance — event-tinted vignette + soft particles ── */
+  #eventRoomAmb{position:fixed;inset:0;pointer-events:none;z-index:60;opacity:0;transition:opacity .6s ease;}
+  body.in-event-room #eventRoomAmb{opacity:1;}
+  .era-vignette{position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse 78% 66% at 50% 42%,transparent 52%,color-mix(in srgb,var(--ev,#FFD23F) 18%,transparent)),
+      linear-gradient(180deg,color-mix(in srgb,var(--ev2,#FF8A00) 12%,transparent),transparent 30%);}
+  .era-fx{position:absolute;inset:0;overflow:hidden;}
+  .era-p{position:absolute;top:-4vh;border-radius:50%;will-change:transform;
+    background:color-mix(in srgb,var(--ev,#FFD23F) 70%,#fff);
+    box-shadow:0 0 8px color-mix(in srgb,var(--ev,#FFD23F) 70%,transparent);
+    animation:eraFloat linear infinite;}
 
   /* ── entry cinematic ── */
   .ev-intro{position:fixed;inset:0;z-index:1400;display:flex;flex-direction:column;
@@ -3289,5 +3347,6 @@
   @media (prefers-reduced-motion:reduce){
     .ev-banner,.ev-banner-sheen,.ev-banner-logo,.ev-banner-ann,.ev-intro-logo,.ev-intro-name,
     .ev-intro-kicker,.ev-intro-tag,.ev-intro-glow,.ev-intro-hint,.ev-m-logo,.ev-m-feat-ic,
-    .ev-claim.ready,.rt-evtag,.ev-mission,.ev-fw{animation:none!important;}
+    .ev-claim.ready,.ev-mission,.ev-fw,.rt-frame,.rt-feat-badge,.rt-ev-spark,
+    .ev-room-wipe-logo,.era-p{animation:none!important;}
   }

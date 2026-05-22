@@ -156,7 +156,11 @@
 @keyframes evBannerIn{0%{opacity:0;transform:translateY(-14px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes evSheen{0%,62%{transform:skewX(-18deg) translateX(-180%)}82%,100%{transform:skewX(-18deg) translateX(560%)}}
 @keyframes evLogoBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
-@keyframes evTagPulse{0%,100%{box-shadow:0 0 9px color-mix(in srgb,var(--ev,#FFD23F) 45%,transparent)}50%{box-shadow:0 0 17px color-mix(in srgb,var(--ev,#FFD23F) 80%,transparent)}}
+@keyframes rtFramePulse{0%,100%{opacity:.32}50%{opacity:.78}}
+@keyframes rtFeatBadge{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes rtEvSpark{0%{transform:translateY(0) scale(.4);opacity:0}18%{opacity:1}100%{transform:translateY(-205px) translateX(var(--sd,0px)) scale(1);opacity:0}}
+@keyframes evRoomLogo{0%{transform:scale(.3) rotate(-40deg);opacity:0}60%{opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes eraFloat{0%{transform:translateY(0) translateX(0)}100%{transform:translateY(112vh) translateX(var(--sd,0px))}}
 @keyframes evModalIn{0%{opacity:0}100%{opacity:1}}
 @keyframes evModalOut{0%{opacity:1}100%{opacity:0}}
 @keyframes evIntroGlow{0%,100%{opacity:.6;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
