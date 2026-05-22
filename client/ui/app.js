@@ -2538,16 +2538,22 @@
     const f=live?['#B91C1C','#4a0a0a']:_FELTS[((r.id.charCodeAt(0)||0)+(r.id.charCodeAt(2)||0))%_FELTS.length];
     let seatHTML='';
     for(let i=0;i<max;i++){
+      // seats ride a foreshortened ellipse around the 3D table
       const ang=(-90+360/max*i)*Math.PI/180;
-      const x=(50+Math.cos(ang)*39).toFixed(1), y=(50+Math.sin(ang)*34).toFixed(1);
+      const x=(50+Math.cos(ang)*45).toFixed(1);
+      const y=(42+Math.sin(ang)*23).toFixed(1);
+      const df=(Math.sin(ang)+1)/2;                 // 0 = back row, 1 = front
+      const sc=(0.78+df*0.36).toFixed(3);           // front seats larger (depth)
+      const sz=2+Math.round(df*10);                 // front seats overlap back
       const p=seats[i];
+      const st=`left:${x}%;top:${y}%;--s:${sc};--sz:${sz}`;
       if(p){
         const img=_isImgAvatar(p.avatar);
         const face=img?'':esc(p.avatar||(p.name||'?').charAt(0).toUpperCase());
-        seatHTML+=`<div class="rt-seat filled" style="left:${x}%;top:${y}%" title="${esc(p.name||'')}">`+
+        seatHTML+=`<div class="rt-seat filled" style="${st}" title="${esc(p.name||'')}">`+
           `<div class="rt-av" style="${img?`background-image:url('${p.avatar}')`:''};animation-delay:${i*70}ms">${face}</div></div>`;
       }else{
-        seatHTML+=`<div class="rt-seat empty" style="left:${x}%;top:${y}%"></div>`;
+        seatHTML+=`<div class="rt-seat empty" style="${st}"></div>`;
       }
     }
     const code=r.id.substr(0,6).toUpperCase();
