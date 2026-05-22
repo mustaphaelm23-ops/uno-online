@@ -433,6 +433,98 @@
   }
   @keyframes onlinePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.65)}}
 
+  /* ═══ 3D TABLE ROOMS ═══ */
+  @keyframes rtCardBob{0%,100%{transform:rotate(-12deg) translateY(0)}50%{transform:rotate(-7deg) translateY(-4px)}}
+  @keyframes rtSeatIn{from{transform:translate(-50%,-50%) scale(0)}to{transform:translate(-50%,-50%) scale(1)}}
+  @keyframes rtFeltPulse{0%,100%{box-shadow:0 0 0 9px var(--rim),0 0 0 12px rgba(0,0,0,.5),inset 0 14px 28px rgba(0,0,0,.5),inset 0 -6px 14px rgba(255,255,255,.07),0 24px 38px rgba(0,0,0,.55),0 0 24px transparent}50%{box-shadow:0 0 0 9px var(--rim),0 0 0 12px rgba(0,0,0,.5),inset 0 14px 28px rgba(0,0,0,.5),inset 0 -6px 14px rgba(255,255,255,.07),0 24px 38px rgba(0,0,0,.55),0 0 34px color-mix(in srgb,var(--felt,#16A34A) 45%,transparent)}}
+  .rtable{
+    position:relative;border-radius:18px;cursor:pointer;overflow:hidden;
+    background:linear-gradient(170deg,rgba(32,26,48,.96),rgba(13,10,22,.98));
+    border:1px solid rgba(255,255,255,.09);
+    box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .25s cubic-bezier(.2,.9,.3,1.15),box-shadow .25s,border-color .25s;
+    transform-style:preserve-3d;
+    animation:lobbyEntryUp .5s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .rtable::before{
+    content:'';position:absolute;left:0;top:0;right:0;height:3px;z-index:3;
+    background:linear-gradient(90deg,transparent,var(--felt,#16A34A),transparent);
+  }
+  .rtable:hover{
+    border-color:color-mix(in srgb,var(--felt,#16A34A) 55%,transparent);
+    box-shadow:0 30px 62px rgba(0,0,0,.62),0 0 44px color-mix(in srgb,var(--felt,#16A34A) 24%,transparent);
+  }
+  .rtable-glow{
+    position:absolute;left:50%;top:44%;width:88%;height:62%;transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse,color-mix(in srgb,var(--felt,#16A34A) 55%,transparent),transparent 70%);
+    filter:blur(28px);opacity:.5;pointer-events:none;
+  }
+  .rtable-top{display:flex;align-items:center;justify-content:space-between;padding:13px 15px 0;position:relative;z-index:2;}
+  .rtable-name{font-family:'Bangers',cursive;font-size:16px;letter-spacing:1.4px;color:#fff;}
+  .rtable-tag{font-size:8.5px;font-weight:800;letter-spacing:1px;color:#4ade80;}
+  .rtable-stage{position:relative;height:158px;margin:4px 0;z-index:2;}
+  .rtable-felt{
+    --rim:color-mix(in srgb,var(--felt2,#0a3d1f) 85%,black);
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:60%;height:56%;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 34%,color-mix(in srgb,var(--felt,#16A34A) 78%,white 10%),var(--felt2,#0a3d1f) 76%);
+    animation:rtFeltPulse 3.4s ease-in-out infinite;
+  }
+  .rtable-felt::after{
+    content:'';position:absolute;left:15%;top:9%;width:52%;height:30%;border-radius:50%;
+    background:linear-gradient(180deg,rgba(255,255,255,.18),transparent);
+  }
+  .rtable-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);}
+  .rtable-unocard{
+    width:32px;height:45px;border-radius:6px;
+    background:linear-gradient(150deg,#E8324A,#9B1B2E);
+    border:2px solid rgba(255,255,255,.55);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bangers',cursive;font-size:10px;color:#fff;letter-spacing:.5px;
+    box-shadow:0 7px 16px rgba(0,0,0,.55);
+    animation:rtCardBob 3s ease-in-out infinite;
+  }
+  .rt-seat{
+    position:absolute;width:36px;height:36px;transform:translate(-50%,-50%);
+    border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2;
+  }
+  .rt-seat.empty{border:2px dashed rgba(255,255,255,.15);background:rgba(255,255,255,.025);}
+  .rt-av{
+    width:36px;height:36px;border-radius:50%;
+    background-size:cover;background-position:center;background-color:#2b3155;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:800;color:#fff;
+    border:2px solid color-mix(in srgb,var(--felt,#16A34A) 65%,white 12%);
+    box-shadow:0 5px 13px rgba(0,0,0,.55),0 0 13px color-mix(in srgb,var(--felt,#16A34A) 55%,transparent);
+    animation:rtSeatIn .42s cubic-bezier(.34,1.56,.64,1) backwards;
+  }
+  .rt-seat.filled::after{
+    content:'';position:absolute;right:1px;bottom:1px;width:9px;height:9px;border-radius:50%;
+    background:#22C55E;border:2px solid #15101f;box-shadow:0 0 6px #22C55E;
+  }
+  .rtable-foot{
+    display:flex;align-items:center;gap:8px;padding:11px 15px;
+    background:rgba(0,0,0,.36);border-top:1px solid rgba(255,255,255,.05);
+    position:relative;z-index:2;
+  }
+  .rtable-count{font-size:12px;font-weight:700;color:rgba(255,255,255,.55);}
+  .rtable-count b{color:#fff;font-family:'Bangers',cursive;font-size:16px;letter-spacing:.5px;}
+  .rtable-entry{
+    font-size:11px;font-weight:800;color:#FFD700;
+    background:rgba(255,215,0,.1);padding:3px 9px;border-radius:20px;border:1px solid rgba(255,215,0,.25);
+  }
+  .rtable-join{
+    margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.8px;color:#fff;
+    padding:7px 14px;border-radius:9px;
+    background:linear-gradient(135deg,var(--felt,#16A34A),var(--felt2,#0a3d1f));
+    box-shadow:0 5px 14px color-mix(in srgb,var(--felt,#16A34A) 45%,transparent);
+    transition:all .2s;
+  }
+  .rtable:hover .rtable-join{filter:brightness(1.3);transform:scale(1.06);}
+  @media (prefers-reduced-motion:reduce){
+    .rtable-felt,.rtable-unocard,.rt-av{animation:none!important}
+  }
+
   /* ═══════════════════════════════════════════
     LOBBY POLISH — animations & premium feel
     ═══════════════════════════════════════════ */
@@ -5363,24 +5455,7 @@
         if(live.length){
           liveSec.style.display='';
           liveInfo.textContent = `${live.length} live game${live.length===1?'':'s'} — watch in progress`;
-          liveGrid.innerHTML = live.map(r => `
-            <div class="rcard rcard-live-tile" onclick="doWatch('${r.id}')">
-              <div class="rcard-head">
-                <span class="rcard-code">🔴 LIVE</span>
-                <span class="rcard-badge" style="color:#fca5a5">▶ WATCH</span>
-              </div>
-              <div class="rcard-mid" style="display:block">
-                <div style="font-size:13px;color:#fff;font-weight:800;margin-bottom:8px;text-shadow:0 2px 6px rgba(0,0,0,.4)">${(r.playerNames||[]).map(esc).join(' vs ')}</div>
-                <div style="display:flex;gap:12px;font-size:11px;color:rgba(255,255,255,.6);font-weight:700">
-                  <span>👥 ${r.players}/${r.maxPlayers}</span>
-                  <span>👁️ ${r.spectators||0}</span>
-                </div>
-              </div>
-              <div class="rcard-foot">
-                ${r.bet?`<span class="rcard-bet">🪙 ${r.bet.toLocaleString()}</span>`:'<span class="rcard-bet free">Free play</span>'}
-                <span class="rcard-join" style="background:linear-gradient(135deg,#E8324A,#C1192F);box-shadow:0 5px 14px rgba(232,50,74,.4)">SPECTATE ▶</span>
-              </div>
-            </div>`).join('');
+          liveGrid.innerHTML = live.map(r => _roomTableHTML(r, true)).join('');
         } else {
           liveSec.style.display='none';
         }
@@ -5398,24 +5473,56 @@
           <button class="ec-btn match" onclick="doMM()">🎯 Quick Match</button>
         </div>
       </div>`;return;}
-      g.innerHTML=d.rooms.map(r=>`
-        <div class="rcard" onclick="doJoin('${r.id}')">
-          <div class="rcard-head">
-            <span class="rcard-code">ROOM #${r.id.substr(0,6).toUpperCase()}</span>
-            <span class="rcard-badge">● OPEN</span>
-          </div>
-          <div class="rcard-mid">
-            <div class="rcard-slots">
-              ${Array.from({length:r.maxPlayers},(_,i)=>`<span class="rcard-slot ${i<r.players?'on':''}"></span>`).join('')}
-            </div>
-            <div class="rcard-count"><b>${r.players}</b> / ${r.maxPlayers}</div>
-          </div>
-          <div class="rcard-foot">
-            ${r.bet?`<span class="rcard-bet">🪙 ${r.bet.toLocaleString()}</span>`:'<span class="rcard-bet free">Free play</span>'}
-            <span class="rcard-join">JOIN ▶</span>
-          </div>
-        </div>`).join('');
+      g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false)).join('');
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
+  }
+  // Render one room as a premium 3D table with seated players.
+  const _FELTS=[['#15803D','#08351b'],['#B91C1C','#4a0a0a'],['#1D4ED8','#0a1f52'],['#9333EA','#3b0f63']];
+  function _roomTableHTML(r, live){
+    const max=r.maxPlayers||4;
+    const seats=r.seats||[];
+    const f=live?['#B91C1C','#4a0a0a']:_FELTS[((r.id.charCodeAt(0)||0)+(r.id.charCodeAt(2)||0))%_FELTS.length];
+    let seatHTML='';
+    for(let i=0;i<max;i++){
+      const ang=(-90+360/max*i)*Math.PI/180;
+      const x=(50+Math.cos(ang)*39).toFixed(1), y=(50+Math.sin(ang)*34).toFixed(1);
+      const p=seats[i];
+      if(p){
+        const img=_isImgAvatar(p.avatar);
+        const face=img?'':esc(p.avatar||(p.name||'?').charAt(0).toUpperCase());
+        seatHTML+=`<div class="rt-seat filled" style="left:${x}%;top:${y}%" title="${esc(p.name||'')}">`+
+          `<div class="rt-av" style="${img?`background-image:url('${p.avatar}')`:''};animation-delay:${i*70}ms">${face}</div></div>`;
+      }else{
+        seatHTML+=`<div class="rt-seat empty" style="left:${x}%;top:${y}%"></div>`;
+      }
+    }
+    const code=r.id.substr(0,6).toUpperCase();
+    const stage=`<div class="rtable-stage">
+        <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
+        ${seatHTML}
+      </div>`;
+    if(live){
+      return `<div class="rtable" onclick="doWatch('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+        <div class="rtable-glow"></div>
+        <div class="rtable-top"><span class="rtable-name">🔴 LIVE MATCH</span><span class="rtable-tag" style="color:#fca5a5">▶ WATCH</span></div>
+        ${stage}
+        <div class="rtable-foot">
+          <span class="rtable-count"><b>${r.players}</b>/${max}</span>
+          <span class="rtable-entry" style="color:#93C5FD;background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.25)">👁️ ${r.spectators||0}</span>
+          <span class="rtable-join" style="background:linear-gradient(135deg,#E8324A,#9B1B2E)">SPECTATE ▶</span>
+        </div>
+      </div>`;
+    }
+    return `<div class="rtable" onclick="doJoin('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+      <div class="rtable-glow"></div>
+      <div class="rtable-top"><span class="rtable-name">ROOM #${code}</span><span class="rtable-tag">● OPEN</span></div>
+      ${stage}
+      <div class="rtable-foot">
+        <span class="rtable-count"><b>${r.players}</b>/${max}</span>
+        ${r.bet?`<span class="rtable-entry">🪙 ${r.bet.toLocaleString()}</span>`:'<span class="rtable-entry" style="color:rgba(255,255,255,.45);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08)">Free</span>'}
+        <span class="rtable-join">JOIN ▶</span>
+      </div>
+    </div>`;
   }
 
   // ── Cinematic Arena Setup ───────────────────────────────────────────────
@@ -7203,7 +7310,7 @@
       },{passive:true});
     }
     // UI hover / click sounds — soft and debounced
-    const SEL='.lbtn,.btnA,.btnP,.btnS,.btnI,.rcard,.cat-opt,.coin-pill-hdr,#huser,.game-menu-item';
+    const SEL='.lbtn,.btnA,.btnP,.btnS,.btnI,.rcard,.rtable,.cat-opt,.coin-pill-hdr,#huser,.game-menu-item';
     document.addEventListener('pointerover',e=>{
       const el=e.target.closest&&e.target.closest(SEL);
       if(el&&!el._hv){ el._hv=1; SFX.play('hover'); setTimeout(()=>{el._hv=0;},140); }
@@ -7211,17 +7318,17 @@
     document.addEventListener('click',e=>{
       if(e.target.closest&&e.target.closest(SEL)) SFX.play('click');
     },{passive:true});
-    // 3D pointer-tilt on room tiles — real depth on hover
+    // 3D pointer-tilt on room tables — real depth on hover
     if(!matchMedia('(pointer:coarse)').matches){
       document.addEventListener('pointermove',e=>{
-        const card=e.target.closest&&e.target.closest('.rcard');
+        const card=e.target.closest&&e.target.closest('.rcard,.rtable');
         if(!card) return;
         const r=card.getBoundingClientRect();
         const px=(e.clientX-r.left)/r.width-0.5, py=(e.clientY-r.top)/r.height-0.5;
-        card.style.transform=`perspective(720px) rotateX(${(-py*8).toFixed(2)}deg) rotateY(${(px*11).toFixed(2)}deg) translateY(-6px)`;
+        card.style.transform=`perspective(820px) rotateX(${(-py*9).toFixed(2)}deg) rotateY(${(px*12).toFixed(2)}deg) translateY(-7px)`;
       },{passive:true});
       document.addEventListener('pointerout',e=>{
-        const card=e.target.closest&&e.target.closest('.rcard');
+        const card=e.target.closest&&e.target.closest('.rcard,.rtable');
         if(card&&!card.contains(e.relatedTarget)) card.style.transform='';
       },{passive:true});
     }

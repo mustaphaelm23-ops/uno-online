@@ -415,6 +415,7 @@ app.get('/api/rooms', authMiddleware, (req, res) => {
       id: r.id, hostId: r.hostId, players: r.playerIds.length,
       maxPlayers: r.settings.maxPlayers, status: r.status,
       bet: r.settings.bet || 0,
+      seats: (r.game?.players || []).map(p => ({ name: p.username, avatar: p.avatar || null })),
       settings: { maxPlayers: r.settings.maxPlayers, drawStacking: r.settings.drawStacking },
     }));
   const liveGames = all
@@ -425,6 +426,7 @@ app.get('/api/rooms', authMiddleware, (req, res) => {
       bet: r.settings.bet || 0,
       spectators: r.spectators?.size || 0,
       playerNames: r.game.players.map(p => p.username),
+      seats: (r.game?.players || []).map(p => ({ name: p.username, avatar: p.avatar || null })),
     }));
   const onlineCount = new Set([...socketToUser.values()]).size;
   res.json({ rooms: publicRooms, liveGames, onlineCount });
