@@ -1483,10 +1483,23 @@
     sk.on('game:player_won',(data)=>{showWin(data);SFX.play(data.winnerId===S.user?.id?'win':'error');});
 
     sk.on('matchmaking:matched',({roomId,players})=>{
-      S.roomId=roomId;document.getElementById('mmov').classList.remove('show');
-      toast('Match found!','s');showScreen('room-screen');
-      if(players)renderWaiting(players);
-      document.getElementById('ridlbl').textContent=`Room: ${roomId.substr(0,8).toUpperCase()}`;
+      S.roomId=roomId;
+      // Cinematic "match found" flash on the radar core, then enter the room
+      const g=window.gsap, ov=document.getElementById('mmov');
+      const finish=()=>{
+        ov.classList.remove('show');
+        if(g) g.set(ov,{clearProps:'opacity'});
+        _resetLobbyCamera();
+        toast('Match found!','s'); SFX.play('uno');
+        showScreen('room-screen');
+        if(players)renderWaiting(players);
+        document.getElementById('ridlbl').textContent=`Room: ${roomId.substr(0,8).toUpperCase()}`;
+      };
+      if(g && ov.classList.contains('show') && !_mmReduced()){
+        const core=ov.querySelector('.mm-core');
+        if(core) g.fromTo(core,{scale:1},{scale:1.5,duration:.32,ease:'back.out(2)',yoyo:true,repeat:1});
+        g.to(ov,{opacity:0,duration:.4,delay:.5,ease:'power2.in',onComplete:finish});
+      } else { finish(); }
     });
   }
 
@@ -3703,10 +3716,42 @@
   }
   function doMM(){
     S.socket.emit('matchmaking:join',{},(res)=>{
-      if(res.success){document.getElementById('mmcnt').textContent=`${res.queueSize} ${t('inQueue')}`;document.getElementById('mmov').classList.add('show');}
+      if(res.success){
+        document.getElementById('mmcnt').textContent=`${res.queueSize} ${t('inQueue')}`;
+        _openMatchmaking();
+      }
     });
   }
-  function doLeaveMM(){S.socket.emit('matchmaking:leave',{});document.getElementById('mmov').classList.remove('show');}
+  function _mmReduced(){ return matchMedia('(prefers-reduced-motion:reduce)').matches; }
+  function _openMatchmaking(){
+    const ov=document.getElementById('mmov'); if(!ov) return;
+    ov.classList.add('show');
+    const g=window.gsap;
+    if(g && !_mmReduced()){
+      // Cinematic camera push — the lobby drops back into depth
+      g.to('#lobby-screen',{scale:1.12,opacity:.35,duration:.75,ease:'power2.in',transformOrigin:'50% 44%'});
+      g.fromTo(ov,{opacity:0},{opacity:1,duration:.3,ease:'power1.out'});
+      g.fromTo('.mm-radar',{scale:.45,opacity:0},{scale:1,opacity:1,duration:.7,ease:'back.out(1.7)',delay:.12});
+      g.fromTo(['.mm-title','.mm-sub','.mm-hint','.mm-cancel'],
+        {y:26,opacity:0},{y:0,opacity:1,duration:.5,stagger:.08,ease:'power3.out',delay:.22});
+    }
+  }
+  function _resetLobbyCamera(){
+    const g=window.gsap;
+    if(g) g.set('#lobby-screen',{clearProps:'transform,opacity'});
+    else { const ls=document.getElementById('lobby-screen'); if(ls){ls.style.transform='';ls.style.opacity='';} }
+  }
+  function _closeMatchmaking(){
+    const ov=document.getElementById('mmov'); if(!ov) return;
+    const g=window.gsap;
+    if(g && !_mmReduced()){
+      g.to('#lobby-screen',{scale:1,opacity:1,duration:.5,ease:'power2.out',clearProps:'transform,opacity'});
+      g.to(ov,{opacity:0,duration:.3,ease:'power1.in',onComplete:()=>{ov.classList.remove('show');g.set(ov,{clearProps:'opacity'});}});
+    } else {
+      ov.classList.remove('show'); _resetLobbyCamera();
+    }
+  }
+  function doLeaveMM(){ S.socket.emit('matchmaking:leave',{}); _closeMatchmaking(); }
 
   /* ═══ GAME ACTIONS ═══ */
   function playCard(cardId){

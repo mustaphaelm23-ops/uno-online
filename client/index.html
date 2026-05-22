@@ -378,10 +378,18 @@
 
   <!-- ═══ MATCHMAKING ═══ -->
   <div class="mmov" id="mmov">
-    <div class="mmspin"></div>
-    <div style="font-family:'Bangers',cursive;font-size:34px;letter-spacing:4px" data-i18n="findingMatch">Finding Match...</div>
-    <div style="color:var(--muted);font-weight:700" id="mmcnt">1 in queue</div>
-    <button class="btnP" style="width:auto;padding:12px 28px" onclick="doLeaveMM()" data-i18n="cancel">Cancel</button>
+    <div class="mm-scene" aria-hidden="true"></div>
+    <div class="mm-radar">
+      <div class="mm-ring r1"></div>
+      <div class="mm-ring r2"></div>
+      <div class="mm-ring r3"></div>
+      <div class="mm-sweep"></div>
+      <div class="mm-core">🎯</div>
+    </div>
+    <div class="mm-title"><span data-i18n="findingMatch">Finding Match</span><span class="mm-dots"><i></i><i></i><i></i></span></div>
+    <div class="mm-sub" id="mmcnt">1 in queue</div>
+    <div class="mm-hint">Pairing you with a worthy opponent…</div>
+    <button class="mm-cancel" onclick="doLeaveMM()" data-i18n="cancel">Cancel</button>
   </div>
 
   <!-- ═══ PROFILE ═══ -->
