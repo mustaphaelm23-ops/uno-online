@@ -2538,7 +2538,39 @@
     void pill.offsetWidth;
     pill.style.transition='';
   }
+  // Modal-backed tabs: the pill follows the tab while its overlay is open,
+  // then glides back to Home once it closes — the pill must always show
+  // "where the player IS". (A real full page would keep its tab active.)
+  const _NAV_MODAL={
+    missions:    ()=> !!document.getElementById('navModal'),
+    collection:  ()=> !!document.getElementById('navModal'),
+    leaderboard: ()=> !!document.getElementById('lbOv')?.classList.contains('show'),
+    profile:     ()=> !!document.getElementById('profileOv')?.classList.contains('show'),
+  };
+  let _navWatch=null;
+  function _snapNavHome(){
+    const home=document.querySelector('.lnav-tab[data-tab="home"]');
+    if(!home||home.classList.contains('on')) return;
+    document.querySelectorAll('.lnav-tab').forEach(t=>t.classList.remove('on'));
+    home.classList.add('on');
+    _moveLnavPill(home);                 // CSS transition handles the glide
+  }
+  function _watchNavModalTab(tab){
+    const isOpen=_NAV_MODAL[tab];
+    if(!isOpen) return;
+    if(_navWatch){ clearInterval(_navWatch); _navWatch=null; }
+    let opened=isOpen(), tries=0;        // sync modals are already open here
+    _navWatch=setInterval(()=>{
+      if(!opened){                       // wait for an async modal to appear
+        if(isOpen()) opened=true;
+        else if(++tries>25){ clearInterval(_navWatch); _navWatch=null; _snapNavHome(); }
+        return;
+      }
+      if(!isOpen()){ clearInterval(_navWatch); _navWatch=null; _snapNavHome(); }
+    },120);
+  }
   function navTab(tab, el){
+    if(_navWatch){ clearInterval(_navWatch); _navWatch=null; }   // cancel any pending snap-back
     document.querySelectorAll('.lnav-tab').forEach(t=>t.classList.remove('on'));
     if(el){
       el.classList.add('on');
@@ -2550,10 +2582,10 @@
     if(tab==='home'){
       document.querySelector('.lmain')?.scrollTo({top:0,behavior:'smooth'});
     }
-    else if(tab==='missions') showMissions();
-    else if(tab==='collection') showCollection();
-    else if(tab==='leaderboard') showLeaderboard();
-    else if(tab==='profile') showProfile();
+    else if(tab==='missions'){ showMissions();    _watchNavModalTab('missions'); }
+    else if(tab==='collection'){ showCollection(); _watchNavModalTab('collection'); }
+    else if(tab==='leaderboard'){ showLeaderboard(); _watchNavModalTab('leaderboard'); }
+    else if(tab==='profile'){ showProfile();      _watchNavModalTab('profile'); }
   }
   function _navModal(title, icon, bodyHTML, footHTML){
     const old=document.getElementById('navModal'); if(old) old.remove();

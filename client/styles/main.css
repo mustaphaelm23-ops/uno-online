@@ -663,7 +663,7 @@
     position:absolute;left:50%;bottom:-12px;width:70%;height:28px;
     transform:translateX(-50%) scale(.9);
     background:radial-gradient(ellipse,rgba(245,158,11,.7),transparent 70%);
-    opacity:0;pointer-events:none;
+    opacity:0;pointer-events:none;transition:opacity .3s ease;
   }
   .lnav-tab.on{color:#fff;}
   .lnav-tab.on .lnav-ic{
