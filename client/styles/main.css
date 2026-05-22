@@ -2927,3 +2927,10 @@
     padding:40px;text-align:center;width:min(380px,92vw);
     box-shadow:0 30px 80px rgba(124,58,237,.3);
   }
+
+  /* ═══ GSAP cinematic lobby intro — disable CSS entrance so GSAP owns it ═══ */
+  .intro-gsap .lobby-hero,
+  .intro-gsap .lside .lbtn,
+  .intro-gsap .lside-section,
+  .intro-gsap .lnav,
+  .intro-gsap .rail-panel{ animation:none!important; }

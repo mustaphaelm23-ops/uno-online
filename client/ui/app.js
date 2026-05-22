@@ -2000,6 +2000,7 @@
       _animateCount('scoins',S.user.coins||0);
     }
     renderLobbyHero();
+    playLobbyIntro();
     loadRooms();loadRailFriends();
     clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
     clearInterval(S.railTimer);S.railTimer=setInterval(loadRailFriends,20000);
@@ -3972,6 +3973,26 @@
   }
 
   /* ═══ CINEMATIC LOBBY — 3D cards, parallax, UI sounds ═══ */
+  // GSAP cinematic lobby intro — camera zoom, lights, orchestrated panels.
+  function playLobbyIntro(){
+    const g=window.gsap;
+    const scr=document.getElementById('lobby-screen');
+    if(!g||!scr) return;                       // no GSAP → CSS entrance plays
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    scr.classList.add('intro-gsap');           // hand entrance over to GSAP
+    g.killTweensOf([scr,'.lhdr','.lobby-hero','.lside-section','.lrail .rail-panel','.lnav','.lobby-bg-img','.lobby-3d','.lobby-fx']);
+    const tl=g.timeline({defaults:{ease:'power3.out'},
+      onComplete:()=>g.set(scr,{clearProps:'transform'})});
+    tl.fromTo(scr,{scale:1.05},{scale:1,duration:1.2,ease:'power2.out'},0)
+      .fromTo(['.lobby-bg-img','.lobby-3d','.lobby-fx'],{opacity:0},{opacity:1,duration:.9,stagger:.08},0)
+      .fromTo('.lhdr',{y:-54,opacity:0},{y:0,opacity:1,duration:.6,ease:'back.out(1.4)'},.12)
+      .fromTo('.lobby-hero',{y:34,opacity:0,scale:.96},{y:0,opacity:1,scale:1,duration:.7},.28)
+      .fromTo('.lside-section',{x:-34,opacity:0},{x:0,opacity:1,duration:.5,stagger:.09},.4)
+      .fromTo(['.lmain .public-title','.lmain .public-info'],{y:18,opacity:0},{y:0,opacity:1,duration:.5,stagger:.07},.5)
+      .fromTo('.lrail .rail-panel',{x:40,opacity:0},{x:0,opacity:1,duration:.55,stagger:.1},.55)
+      .fromTo('.lnav',{y:64,opacity:0},{y:0,opacity:1,duration:.6,ease:'back.out(1.5)'},.7);
+  }
+
   function buildLobby3D(){
     const host=document.getElementById('lobby3d');
     if(!host||host.childElementCount) return;
