@@ -288,6 +288,99 @@
   }
   .lmain{flex:1;padding:24px;overflow-y:auto;}
   .stitle{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px;}
+
+  /* ═══ CARD DASHBOARD LOBBY ═══ */
+  @keyframes dashIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+  .dash{
+    flex:1;overflow-y:auto;overflow-x:hidden;
+    padding:22px 26px 44px;display:flex;flex-direction:column;gap:20px;
+    scrollbar-width:thin;scrollbar-color:rgba(245,158,11,.3) transparent;
+  }
+  .dash::-webkit-scrollbar{width:7px}
+  .dash::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:7px}
+  .dash .lobby-hero{margin-bottom:0;cursor:pointer;}
+
+  .cat-grid{
+    display:grid;gap:16px;
+    grid-template-columns:repeat(auto-fit,minmax(272px,1fr));
+  }
+  .cat-card{
+    position:relative;overflow:hidden;
+    background:linear-gradient(165deg,rgba(30,34,60,.92),rgba(14,17,32,.96));
+    border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:18px;
+    box-shadow:0 20px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .3s cubic-bezier(.2,.9,.3,1.15),box-shadow .3s,border-color .3s;
+    animation:dashIn .55s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .cat-card::before{
+    content:'';position:absolute;left:0;top:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--cat),var(--cat2));
+  }
+  .cat-card:hover{
+    transform:translateY(-5px);
+    border-color:color-mix(in srgb,var(--cat) 45%,transparent);
+    box-shadow:0 30px 64px rgba(0,0,0,.62),0 0 40px color-mix(in srgb,var(--cat) 16%,transparent);
+  }
+  .cat-card:nth-child(1){animation-delay:.05s}
+  .cat-card:nth-child(2){animation-delay:.11s}
+  .cat-card:nth-child(3){animation-delay:.17s}
+  .cat-card:nth-child(4){animation-delay:.23s}
+  .cat-glow{
+    position:absolute;left:-50px;top:-70px;width:210px;height:210px;border-radius:50%;
+    background:radial-gradient(circle,var(--cat),transparent 65%);
+    opacity:.20;filter:blur(22px);pointer-events:none;
+  }
+  .cat-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;position:relative;z-index:1;}
+  .cat-ic{
+    width:50px;height:50px;flex-shrink:0;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;font-size:25px;
+    background:linear-gradient(135deg,var(--cat),var(--cat2));
+    box-shadow:0 8px 22px color-mix(in srgb,var(--cat) 48%,transparent),
+               inset 0 1px 0 rgba(255,255,255,.3),inset 0 -3px 8px rgba(0,0,0,.25);
+  }
+  .cat-ttl{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .cat-ttl b{font-family:'Bangers',cursive;font-size:23px;letter-spacing:2px;color:#fff;line-height:1;}
+  .cat-ttl i{font-style:normal;font-size:11px;color:rgba(255,255,255,.5);font-weight:600;}
+
+  .cat-opt{
+    display:flex;align-items:center;gap:11px;width:100%;
+    padding:10px 12px;border-radius:12px;margin-top:8px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+    cursor:pointer;font-family:'Outfit',sans-serif;color:#fff;text-align:left;
+    transition:all .2s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:1;
+  }
+  .cat-opt:hover{
+    background:color-mix(in srgb,var(--cat) 15%,transparent);
+    border-color:color-mix(in srgb,var(--cat) 42%,transparent);
+    transform:translateX(4px);
+  }
+  .cat-opt:active{transform:translateX(1px) scale(.99);}
+  .cat-opt-ic{font-size:18px;width:30px;text-align:center;flex-shrink:0;}
+  .cat-opt-tx{flex:1;font-size:13px;font-weight:700;letter-spacing:.2px;}
+  .cat-opt-go{font-size:19px;color:rgba(255,255,255,.3);font-weight:700;transition:.2s;}
+  .cat-opt:hover .cat-opt-go{color:#fff;transform:translateX(3px);}
+  .cat-opt-hero{
+    background:linear-gradient(135deg,color-mix(in srgb,var(--cat) 30%,transparent),color-mix(in srgb,var(--cat) 8%,transparent));
+    border-color:color-mix(in srgb,var(--cat) 48%,transparent);
+    box-shadow:0 6px 16px color-mix(in srgb,var(--cat) 22%,transparent);
+  }
+  .cat-opt-hero .cat-opt-tx{font-weight:800;letter-spacing:.4px;}
+  .cat-opt-soon{opacity:.62;}
+  .cat-opt-badge{
+    font-size:8px;font-weight:800;letter-spacing:1px;padding:2px 7px;border-radius:20px;
+    background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);
+  }
+
+  .rooms-panel{
+    background:linear-gradient(180deg,rgba(20,12,6,.5),rgba(10,7,4,.6));
+    border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:20px 22px;
+    animation:dashIn .55s cubic-bezier(.16,1,.3,1) .28s backwards;
+  }
+  .rooms-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  @media (max-width:560px){
+    .dash{padding:16px 14px 36px;}
+    .cat-grid{grid-template-columns:1fr;}
+  }
   .btnA{
     padding:12px 16px;border:none;border-radius:10px;
     font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;
@@ -2713,90 +2806,10 @@
       </div>
     </div>
     <div class="lbody">
-      <div class="lside">
-        <div class="lside-section">
-          <div class="lside-title" data-i18n="play">Play</div>
-          <button class="lbtn lbtn-cta" onclick="doCreate()">
-            <span class="lbtn-icon" style="--c:#E8324A;--c2:#C1192F">➕</span>
-            <span class="lbtn-label" data-i18n="createRoom">Create Room</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showJoinByCode()">
-            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#7C3AED">🔑</span>
-            <span class="lbtn-label" data-i18n="joinCode">Join by Code</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="doMM()">
-            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#1D4ED8">🎯</span>
-            <span class="lbtn-label" data-i18n="quickMatch">Quick Match</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showGameCenter()">
-            <span class="lbtn-icon" style="--c:#22D3EE;--c2:#0E7490">🎮</span>
-            <span class="lbtn-label" data-i18n="gameCenter">Game Center</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="doDaily()">
-            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🎁</span>
-            <span class="lbtn-label" data-i18n="dailyReward">Daily Reward</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showRankedLb()">
-            <span class="lbtn-icon" style="--c:#FFD700;--c2:#D97706">🏆</span>
-            <span class="lbtn-label" data-i18n="ranked">Ranked</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showTournaments()">
-            <span class="lbtn-icon" style="--c:#A855F7;--c2:#4C1D95">⚔️</span>
-            <span class="lbtn-label" data-i18n="tournament">Tournament</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="doInsta()">
-            <span class="lbtn-icon" style="--c:#F472B6;--c2:#C13584">📸</span>
-            <span class="lbtn-label" data-i18n="followInsta">Follow + 1000🪙</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-        </div>
-        <div class="lside-section">
-          <div class="lside-title" data-i18n="competitions">Competitions</div>
-          <button class="lbtn" onclick="showLeague()">
-            <span class="lbtn-icon" style="--c:#22C55E;--c2:#14532D">🏆</span>
-            <span class="lbtn-label" data-i18n="league">League</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
-            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#0F1F4A">⚽</span>
-            <span class="lbtn-label" data-i18n="championsLeague">Champions League</span>
-            <span class="lbtn-badge" data-i18n="soon">SOON</span>
-          </button>
-          <button class="lbtn lbtn-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
-            <span class="lbtn-icon" style="--c:#EF4444;--c2:#7F1D1D">🌍</span>
-            <span class="lbtn-label" data-i18n="continentalCups">Continental Cups</span>
-            <span class="lbtn-badge" data-i18n="soon">SOON</span>
-          </button>
-        </div>
-        <div class="lside-section">
-          <div class="lside-title" data-i18n="account">Account</div>
-          <button class="lbtn" onclick="showProfile()">
-            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#5B21B6">👤</span>
-            <span class="lbtn-label" data-i18n="myProfile">My Profile</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showLeaderboard()">
-            <span class="lbtn-icon" style="--c:#F59E0B;--c2:#92400E">🏆</span>
-            <span class="lbtn-label" data-i18n="leaderboard">Leaderboard</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-        </div>
-        <div class="lside-coins" onclick="showCoinsModal()" title="Click for budget details">
-          <div class="lside-coins-shimmer"></div>
-          <div class="lside-coins-lbl">💰 <span data-i18n="coins">Coins</span></div>
-          <div class="lside-coins-val" id="scoins">0</div>
-        </div>
-      </div>
-      <div class="lmain">
-        <!-- Player hero banner -->
-        <div class="lobby-hero" id="lobbyHero">
+      <div class="dash">
+        <span id="scoins" style="display:none"></span>
+        <!-- Player hero banner — click to open profile -->
+        <div class="lobby-hero" id="lobbyHero" onclick="showProfile()" title="View your profile">
           <div class="hero-shine"></div>
           <div class="hero-glow"></div>
           <div class="hero-left">
@@ -2826,18 +2839,122 @@
             </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-          <div>
-            <div class="public-title" data-i18n="publicRooms">🃏 Public Rooms</div>
-            <div class="public-info" id="rinfo">Loading...</div>
+
+        <!-- Category cards -->
+        <div class="cat-grid">
+          <div class="cat-card" style="--cat:#E8324A;--cat2:#C1192F">
+            <div class="cat-glow"></div>
+            <div class="cat-head">
+              <div class="cat-ic">⚔️</div>
+              <div class="cat-ttl"><b data-i18n="play">Play</b><i data-i18n="catPlaySub">Jump straight into a match</i></div>
+            </div>
+            <button class="cat-opt cat-opt-hero" onclick="doCreate()">
+              <span class="cat-opt-ic">➕</span>
+              <span class="cat-opt-tx" data-i18n="createRoom">Create Room</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="doMM()">
+              <span class="cat-opt-ic">🎯</span>
+              <span class="cat-opt-tx" data-i18n="quickMatch">Quick Match</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="showJoinByCode()">
+              <span class="cat-opt-ic">🔑</span>
+              <span class="cat-opt-tx" data-i18n="joinCode">Join by Code</span>
+              <span class="cat-opt-go">›</span>
+            </button>
           </div>
-          <button class="btnI" onclick="loadRooms();this.querySelector('span').style.animation='none';void this.offsetWidth;this.querySelector('span').style.animation='';" title="Refresh rooms"><span>🔄</span></button>
+
+          <div class="cat-card" style="--cat:#F59E0B;--cat2:#B45309">
+            <div class="cat-glow"></div>
+            <div class="cat-head">
+              <div class="cat-ic">🏆</div>
+              <div class="cat-ttl"><b data-i18n="competitions">Compete</b><i data-i18n="catCompeteSub">Climb ranks &amp; win prizes</i></div>
+            </div>
+            <button class="cat-opt" onclick="showRankedLb()">
+              <span class="cat-opt-ic">🏆</span>
+              <span class="cat-opt-tx" data-i18n="ranked">Ranked</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="showTournaments()">
+              <span class="cat-opt-ic">⚔️</span>
+              <span class="cat-opt-tx" data-i18n="tournament">Tournament</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="showLeague()">
+              <span class="cat-opt-ic">🏅</span>
+              <span class="cat-opt-tx" data-i18n="league">League</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="showLeaderboard()">
+              <span class="cat-opt-ic">📊</span>
+              <span class="cat-opt-tx" data-i18n="leaderboard">Leaderboard</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+          </div>
+
+          <div class="cat-card" style="--cat:#06B6D4;--cat2:#0E7490">
+            <div class="cat-glow"></div>
+            <div class="cat-head">
+              <div class="cat-ic">🎮</div>
+              <div class="cat-ttl"><b data-i18n="catExtras">Modes</b><i data-i18n="catExtrasSub">More ways to play</i></div>
+            </div>
+            <button class="cat-opt" onclick="showGameCenter()">
+              <span class="cat-opt-ic">🎮</span>
+              <span class="cat-opt-tx" data-i18n="gameCenter">Game Center</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt cat-opt-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
+              <span class="cat-opt-ic">⚽</span>
+              <span class="cat-opt-tx" data-i18n="championsLeague">Champions League</span>
+              <span class="cat-opt-badge" data-i18n="soon">SOON</span>
+            </button>
+            <button class="cat-opt cat-opt-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
+              <span class="cat-opt-ic">🌍</span>
+              <span class="cat-opt-tx" data-i18n="continentalCups">Continental Cups</span>
+              <span class="cat-opt-badge" data-i18n="soon">SOON</span>
+            </button>
+          </div>
+
+          <div class="cat-card" style="--cat:#16A34A;--cat2:#14532D">
+            <div class="cat-glow"></div>
+            <div class="cat-head">
+              <div class="cat-ic">🎁</div>
+              <div class="cat-ttl"><b data-i18n="catRewards">Rewards</b><i data-i18n="catRewardsSub">Earn free coins</i></div>
+            </div>
+            <button class="cat-opt" onclick="doDaily()">
+              <span class="cat-opt-ic">🎁</span>
+              <span class="cat-opt-tx" data-i18n="dailyReward">Daily Reward</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="doInsta()">
+              <span class="cat-opt-ic">📸</span>
+              <span class="cat-opt-tx" data-i18n="followInsta">Follow + 1000🪙</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+            <button class="cat-opt" onclick="showCoinsModal()">
+              <span class="cat-opt-ic">💰</span>
+              <span class="cat-opt-tx" data-i18n="coins">Coins</span>
+              <span class="cat-opt-go">›</span>
+            </button>
+          </div>
         </div>
-        <div class="rgrid" id="rgrid"></div>
-        <div id="liveSection" style="display:none;margin-top:28px">
-          <div class="public-title" style="font-size:24px;margin-bottom:6px" data-i18n="liveGames">📺 Live Games</div>
-          <div class="public-info" id="liveinfo" style="margin-bottom:14px">Watch in progress matches</div>
-          <div class="rgrid" id="livegrid"></div>
+
+        <!-- Public rooms -->
+        <div class="rooms-panel">
+          <div class="rooms-panel-head">
+            <div>
+              <div class="public-title" data-i18n="publicRooms">🃏 Public Rooms</div>
+              <div class="public-info" id="rinfo">Loading...</div>
+            </div>
+            <button class="btnI" onclick="loadRooms();this.querySelector('span').style.animation='none';void this.offsetWidth;this.querySelector('span').style.animation='';" title="Refresh rooms"><span>🔄</span></button>
+          </div>
+          <div class="rgrid" id="rgrid"></div>
+          <div id="liveSection" style="display:none;margin-top:28px">
+            <div class="public-title" style="font-size:24px;margin-bottom:6px" data-i18n="liveGames">📺 Live Games</div>
+            <div class="public-info" id="liveinfo" style="margin-bottom:14px">Watch in progress matches</div>
+            <div class="rgrid" id="livegrid"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3315,6 +3432,9 @@
         fillAll:'Fill all fields', pwResetOk:'Password reset — you can now log in',
         welcomeBack:'Welcome back', statRating:'Rating', statWins:'Wins', statWinRate:'Win Rate',
         chooseAvatar:'Choose Your Avatar', chooseAvatarSub:'Pick a character — tap to apply it instantly', avatarUpdated:'Avatar updated!',
+        catPlaySub:'Jump straight into a match', catCompeteSub:'Climb ranks & win prizes',
+        catExtras:'Modes', catExtrasSub:'More ways to play',
+        catRewards:'Rewards', catRewardsSub:'Earn free coins',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
@@ -3395,6 +3515,9 @@
         fillAll:'Remplissez tous les champs', pwResetOk:'Mot de passe réinitialisé — vous pouvez vous connecter',
         welcomeBack:'Bon retour', statRating:'Classement', statWins:'Victoires', statWinRate:'Taux de victoire',
         chooseAvatar:'Choisissez votre avatar', chooseAvatarSub:'Choisissez un personnage — touchez pour l\'appliquer', avatarUpdated:'Avatar mis à jour !',
+        catPlaySub:'Lancez-vous dans une partie', catCompeteSub:'Grimpez et gagnez des prix',
+        catExtras:'Modes', catExtrasSub:'D\'autres façons de jouer',
+        catRewards:'Récompenses', catRewardsSub:'Gagnez des pièces gratuites',
       },
       ar:{
         login:'تسجيل الدخول', register:'إنشاء حساب', username:'اسم المستخدم', password:'كلمة المرور',
@@ -3475,6 +3598,9 @@
         fillAll:'املأ جميع الحقول', pwResetOk:'تمت إعادة تعيين كلمة المرور — يمكنك الآن تسجيل الدخول',
         welcomeBack:'مرحباً بعودتك', statRating:'التصنيف', statWins:'انتصارات', statWinRate:'نسبة الفوز',
         chooseAvatar:'اختر صورتك الرمزية', chooseAvatarSub:'اختر شخصية — اضغط لتطبيقها فوراً', avatarUpdated:'تم تحديث الصورة الرمزية!',
+        catPlaySub:'ادخل مباراة مباشرة', catCompeteSub:'تسلّق التصنيف واربح جوائز',
+        catExtras:'الأنماط', catExtrasSub:'طرق أخرى للعب',
+        catRewards:'المكافآت', catRewardsSub:'اربح عملات مجانية',
       },
       de:{
         login:'Anmelden', register:'Registrieren', username:'Benutzername', password:'Passwort',
@@ -3555,6 +3681,9 @@
         fillAll:'Fülle alle Felder aus', pwResetOk:'Passwort zurückgesetzt — du kannst dich jetzt anmelden',
         welcomeBack:'Willkommen zurück', statRating:'Wertung', statWins:'Siege', statWinRate:'Siegquote',
         chooseAvatar:'Wähle deinen Avatar', chooseAvatarSub:'Wähle einen Charakter — zum Anwenden tippen', avatarUpdated:'Avatar aktualisiert!',
+        catPlaySub:'Direkt in ein Spiel springen', catCompeteSub:'Steig auf & gewinne Preise',
+        catExtras:'Modi', catExtrasSub:'Mehr Spielweisen',
+        catRewards:'Belohnungen', catRewardsSub:'Verdiene Gratis-Münzen',
       },
       es:{
         login:'Iniciar sesión', register:'Registrarse', username:'Usuario', password:'Contraseña',
@@ -3635,6 +3764,9 @@
         fillAll:'Rellena todos los campos', pwResetOk:'Contraseña restablecida — ya puedes iniciar sesión',
         welcomeBack:'Bienvenido de nuevo', statRating:'Puntuación', statWins:'Victorias', statWinRate:'Tasa de victorias',
         chooseAvatar:'Elige tu avatar', chooseAvatarSub:'Elige un personaje — toca para aplicarlo', avatarUpdated:'¡Avatar actualizado!',
+        catPlaySub:'Salta directo a una partida', catCompeteSub:'Sube de rango y gana premios',
+        catExtras:'Modos', catExtrasSub:'Más formas de jugar',
+        catRewards:'Recompensas', catRewardsSub:'Gana monedas gratis',
       },
       it:{
         login:'Accedi', register:'Registrati', username:'Nome utente', password:'Password',
@@ -3715,6 +3847,9 @@
         fillAll:'Compila tutti i campi', pwResetOk:'Password reimpostata — ora puoi accedere',
         welcomeBack:'Bentornato', statRating:'Punteggio', statWins:'Vittorie', statWinRate:'Tasso di vittorie',
         chooseAvatar:'Scegli il tuo avatar', chooseAvatarSub:'Scegli un personaggio — tocca per applicarlo', avatarUpdated:'Avatar aggiornato!',
+        catPlaySub:'Salta dritto in partita', catCompeteSub:'Scala le classifiche e vinci premi',
+        catExtras:'Modalità', catExtrasSub:'Altri modi di giocare',
+        catRewards:'Ricompense', catRewardsSub:'Guadagna monete gratis',
       },
       sv:{
         login:'Logga in', register:'Registrera', username:'Användarnamn', password:'Lösenord',
@@ -3795,6 +3930,9 @@
         fillAll:'Fyll i alla fält', pwResetOk:'Lösenordet återställt — du kan nu logga in',
         welcomeBack:'Välkommen tillbaka', statRating:'Rankning', statWins:'Vinster', statWinRate:'Vinstandel',
         chooseAvatar:'Välj din avatar', chooseAvatarSub:'Välj en karaktär — tryck för att använda', avatarUpdated:'Avatar uppdaterad!',
+        catPlaySub:'Hoppa rakt in i en match', catCompeteSub:'Klättra i rank & vinn priser',
+        catExtras:'Lägen', catExtrasSub:'Fler sätt att spela',
+        catRewards:'Belöningar', catRewardsSub:'Tjäna gratis mynt',
       },
     },
   };
