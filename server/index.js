@@ -426,7 +426,8 @@ app.get('/api/rooms', authMiddleware, (req, res) => {
       spectators: r.spectators?.size || 0,
       playerNames: r.game.players.map(p => p.username),
     }));
-  res.json({ rooms: publicRooms, liveGames });
+  const onlineCount = new Set([...socketToUser.values()]).size;
+  res.json({ rooms: publicRooms, liveGames, onlineCount });
 });
 
 app.post('/api/rooms', authMiddleware, (req, res) => {

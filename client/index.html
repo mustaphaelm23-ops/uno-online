@@ -356,6 +356,84 @@
   }
 
   /* ═══════════════════════════════════════════
+    CINEMATIC LOBBY — 3D floating cards + depth
+    ═══════════════════════════════════════════ */
+  @keyframes l3dFloat{
+    0%,100%{transform:translate3d(0,0,0) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) rotateZ(var(--rot,0deg));}
+    50%{transform:translate3d(16px,-38px,70px) rotateX(calc(var(--rx,0deg) + 16deg)) rotateY(calc(var(--ry,0deg) + 26deg)) rotateZ(calc(var(--rot,0deg) + 9deg));}
+  }
+  @keyframes l3dShine{0%,42%{transform:translateX(-180%) skewX(-20deg)}70%,100%{transform:translateX(320%) skewX(-20deg)}}
+  .lobby-3d{
+    position:absolute;inset:0;z-index:2;pointer-events:none;
+    perspective:1200px;perspective-origin:50% 42%;
+    transition:transform .3s cubic-bezier(.2,.8,.3,1);will-change:transform;
+  }
+  .l3d-card{
+    position:absolute;width:88px;height:130px;transform-style:preserve-3d;
+    animation:l3dFloat var(--dur,22s) ease-in-out infinite;
+    animation-delay:var(--delay,0s);
+    opacity:var(--op,.55);
+  }
+  .l3d-inner{
+    width:100%;height:100%;border-radius:14px;position:relative;overflow:hidden;
+    background:linear-gradient(150deg,var(--c1,#E8324A),var(--c2,#9B1B2E));
+    border:2px solid rgba(255,255,255,.22);
+    box-shadow:0 26px 56px rgba(0,0,0,.6),inset 0 0 0 4px rgba(255,255,255,.07),
+               0 0 38px color-mix(in srgb,var(--c1,#E8324A) 38%,transparent);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .l3d-inner::before{
+    content:'';position:absolute;width:64%;height:80%;
+    background:rgba(255,255,255,.16);border-radius:50%;transform:rotate(-32deg);
+  }
+  .l3d-inner span{
+    position:relative;z-index:1;font-family:'Bangers',cursive;font-size:36px;color:#fff;
+    text-shadow:0 3px 7px rgba(0,0,0,.5);letter-spacing:1px;
+  }
+  .l3d-shine{
+    position:absolute;top:0;left:0;width:46%;height:100%;z-index:2;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);
+    animation:l3dShine 6s ease-in-out infinite;animation-delay:var(--delay,0s);
+  }
+  .lobby-fx{
+    position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:
+      radial-gradient(ellipse 55% 40% at 50% 32%,rgba(245,158,11,.12),transparent 72%),
+      radial-gradient(ellipse 40% 50% at 88% 80%,rgba(124,58,237,.10),transparent 70%);
+  }
+  /* Lift content above the drifting cards + glassmorphism */
+  .lbody{z-index:5!important;}
+  .lhdr{
+    background:linear-gradient(180deg,rgba(13,16,30,.82),rgba(13,16,30,.34))!important;
+    backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+    border-bottom:1px solid rgba(255,255,255,.08)!important;
+  }
+  .lside{
+    background:rgba(13,16,30,.55)!important;
+    backdrop-filter:blur(20px) saturate(1.3)!important;-webkit-backdrop-filter:blur(20px) saturate(1.3)!important;
+    border-right:1px solid rgba(255,255,255,.08)!important;
+  }
+  .lmain{
+    background:linear-gradient(180deg,rgba(8,6,14,.34),rgba(8,6,14,.5))!important;
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    border-radius:20px 0 0 0;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .l3d-card,.l3d-shine{animation:none!important}
+  }
+  .online-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-left:8px;padding:3px 10px;border-radius:20px;vertical-align:middle;
+    background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.32);
+    color:#4ade80;font-size:11px;font-weight:800;
+  }
+  .online-dot{
+    width:7px;height:7px;border-radius:50%;background:#22C55E;
+    box-shadow:0 0 9px #22C55E;animation:onlinePulse 2s ease-in-out infinite;
+  }
+  @keyframes onlinePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.65)}}
+
+  /* ═══════════════════════════════════════════
     LOBBY POLISH — animations & premium feel
     ═══════════════════════════════════════════ */
   @keyframes lobbyEntry{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:translateX(0)}}
@@ -2727,6 +2805,8 @@
   <!-- ═══ LOBBY ═══ -->
   <div id="lobby-screen" class="screen">
     <div class="lobby-bg-img" aria-hidden="true"></div>
+    <div class="lobby-3d" id="lobby3d" aria-hidden="true"></div>
+    <div class="lobby-fx" aria-hidden="true"></div>
     <div class="lhdr">
       <div class="llogo">UNO</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -4182,6 +4262,9 @@
           case'win':o.frequency.setValueAtTime(523,now);o.frequency.setValueAtTime(659,now+.15);o.frequency.setValueAtTime(784,now+.3);g.gain.setValueAtTime(.15,now);g.gain.exponentialRampToValueAtTime(.001,now+.6);o.start(now);o.stop(now+.6);break;
           case'turn':o.frequency.setValueAtTime(880,now);g.gain.setValueAtTime(.06,now);g.gain.exponentialRampToValueAtTime(.001,now+.1);o.start(now);o.stop(now+.1);break;
           case'error':o.frequency.setValueAtTime(200,now);g.gain.setValueAtTime(.1,now);g.gain.exponentialRampToValueAtTime(.001,now+.2);o.start(now);o.stop(now+.2);break;
+          case'hover':o.type='sine';o.frequency.setValueAtTime(1320,now);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0008,now+.06);o.start(now);o.stop(now+.06);break;
+          case'click':o.type='triangle';o.frequency.setValueAtTime(620,now);o.frequency.exponentialRampToValueAtTime(960,now+.05);g.gain.setValueAtTime(.07,now);g.gain.exponentialRampToValueAtTime(.001,now+.12);o.start(now);o.stop(now+.12);break;
+          case'open':o.type='sine';o.frequency.setValueAtTime(420,now);o.frequency.exponentialRampToValueAtTime(720,now+.12);g.gain.setValueAtTime(.06,now);g.gain.exponentialRampToValueAtTime(.001,now+.18);o.start(now);o.stop(now+.18);break;
         }
       }catch(e){}
     }
@@ -5241,7 +5324,12 @@
     const sm=document.getElementById('specMsgs'); if(sm) sm.innerHTML='';
     if(Chat.activeTab==='spec') switchChatTab('chat');
     showScreen('lobby-screen');
-    if(S.user){document.getElementById('huser').textContent=S.user.username;document.getElementById('hcoins').textContent=S.user.coins||0;document.getElementById('scoins').textContent=S.user.coins||0;}
+    buildLobby3D(); initLobbyFx();
+    if(S.user){
+      document.getElementById('huser').textContent=S.user.username;
+      _animateCount('hcoins',S.user.coins||0);
+      _animateCount('scoins',S.user.coins||0);
+    }
     renderLobbyHero();
     loadRooms();clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
   }
@@ -5252,16 +5340,20 @@
     const lg=u.league||{};
     const lgEl=document.getElementById('heroLeague'); if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.name||'Bronze'}`;
     const gp=u.stats?.gamesPlayed||0, gw=u.stats?.gamesWon||0;
-    const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
-    set('heroCoins',(u.coins||0).toLocaleString());
-    set('heroElo',u.elo??1000);
-    set('heroWins',gw);
-    set('heroWinRate',gp?Math.round(gw/gp*100)+'%':'0%');
+    _animateCount('heroCoins',u.coins||0);
+    _animateCount('heroElo',u.elo??1000);
+    _animateCount('heroWins',gw);
+    const wrEl=document.getElementById('heroWinRate'); if(wrEl) wrEl.textContent=(gp?Math.round(gw/gp*100):0)+'%';
   }
   async function loadRooms(){
     try{
       const d=await api('GET','/rooms'),g=document.getElementById('rgrid');
-      document.getElementById('rinfo').textContent=`${d.rooms.length} room(s) available`;
+      {
+        const on=d.onlineCount||0;
+        document.getElementById('rinfo').innerHTML=
+          `${d.rooms.length} room${d.rooms.length===1?'':'s'} available `+
+          `<span class="online-pill"><span class="online-dot"></span>${on} online</span>`;
+      }
       // Render live games (spectatable)
       const live = d.liveGames || [];
       const liveSec = document.getElementById('liveSection');
@@ -7067,6 +7159,71 @@
       const d=document.createElement('div');d.className='auth-bg-card';
       d.style.cssText=`left:${Math.random()*90}%;top:${Math.random()*90}%;background:${cols[i%cols.length]};--r:${(Math.random()-.5)*40}deg;transform:rotate(var(--r));animation-delay:${Math.random()*5}s;animation-duration:${7+Math.random()*6}s;`;
       bg.appendChild(d);
+    }
+  }
+
+  /* ═══ CINEMATIC LOBBY — 3D cards, parallax, UI sounds ═══ */
+  function buildLobby3D(){
+    const host=document.getElementById('lobby3d');
+    if(!host||host.childElementCount) return;
+    const cols=[['#FF5577','#9B1B2E'],['#FBBF24','#92400E'],['#34D399','#14532D'],
+                ['#60A5FA','#1E3A8A'],['#A78BFA','#4C1D95'],['#F472B6','#9D174D']];
+    const vals=['7','+2','★','4','↺','+4','9','3','6'];
+    const X=[7,23,41,61,81,91,15,49,73], Y=[15,63,29,71,19,52,84,8,42];
+    const rot=[-18,22,-12,16,-26,12,-8,28,-15];
+    const rx=[10,-8,14,-12,8,-14,12,-6,10], ry=[-16,20,-10,18,-22,14,-12,24,-14];
+    for(let i=0;i<9;i++){
+      const c=cols[i%cols.length];
+      const card=document.createElement('div');
+      card.className='l3d-card';
+      card.style.cssText=`left:${X[i]}%;top:${Y[i]}%;`+
+        `--rot:${rot[i]}deg;--rx:${rx[i]}deg;--ry:${ry[i]}deg;`+
+        `--dur:${19+i*2.3}s;--delay:${(i*-2.7).toFixed(1)}s;`+
+        `--op:${(0.30+(i%3)*0.16).toFixed(2)};`;
+      card.innerHTML=`<div class="l3d-inner" style="--c1:${c[0]};--c2:${c[1]}"><span>${vals[i]}</span><div class="l3d-shine"></div></div>`;
+      host.appendChild(card);
+    }
+  }
+  let _lobbyFxInit=false;
+  function initLobbyFx(){
+    if(_lobbyFxInit) return; _lobbyFxInit=true;
+    const layer=document.getElementById('lobby3d');
+    const scr=document.getElementById('lobby-screen');
+    // Mouse parallax — soft camera drift on the floating cards
+    if(layer&&scr&&!matchMedia('(prefers-reduced-motion:reduce)').matches){
+      let tx=0,ty=0,cx=0,cy=0,raf=null;
+      const loop=()=>{
+        cx+=(tx-cx)*0.07; cy+=(ty-cy)*0.07;
+        layer.style.transform=`translate3d(${(-cx*32).toFixed(1)}px,${(-cy*30).toFixed(1)}px,0)`;
+        raf=(Math.abs(tx-cx)>5e-4||Math.abs(ty-cy)>5e-4)?requestAnimationFrame(loop):null;
+      };
+      scr.addEventListener('pointermove',e=>{
+        tx=e.clientX/innerWidth-0.5; ty=e.clientY/innerHeight-0.5;
+        if(!raf) raf=requestAnimationFrame(loop);
+      },{passive:true});
+    }
+    // UI hover / click sounds — soft and debounced
+    const SEL='.lbtn,.btnA,.btnP,.btnS,.btnI,.rcard,.cat-opt,.coin-pill-hdr,#huser,.game-menu-item';
+    document.addEventListener('pointerover',e=>{
+      const el=e.target.closest&&e.target.closest(SEL);
+      if(el&&!el._hv){ el._hv=1; SFX.play('hover'); setTimeout(()=>{el._hv=0;},140); }
+    },{passive:true});
+    document.addEventListener('click',e=>{
+      if(e.target.closest&&e.target.closest(SEL)) SFX.play('click');
+    },{passive:true});
+    // 3D pointer-tilt on room tiles — real depth on hover
+    if(!matchMedia('(pointer:coarse)').matches){
+      document.addEventListener('pointermove',e=>{
+        const card=e.target.closest&&e.target.closest('.rcard');
+        if(!card) return;
+        const r=card.getBoundingClientRect();
+        const px=(e.clientX-r.left)/r.width-0.5, py=(e.clientY-r.top)/r.height-0.5;
+        card.style.transform=`perspective(720px) rotateX(${(-py*8).toFixed(2)}deg) rotateY(${(px*11).toFixed(2)}deg) translateY(-6px)`;
+      },{passive:true});
+      document.addEventListener('pointerout',e=>{
+        const card=e.target.closest&&e.target.closest('.rcard');
+        if(card&&!card.contains(e.relatedTarget)) card.style.transform='';
+      },{passive:true});
     }
   }
 
