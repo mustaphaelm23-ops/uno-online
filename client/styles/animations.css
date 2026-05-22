@@ -146,3 +146,25 @@
 @keyframes rtAvGlow{0%,100%{box-shadow:0 5px 13px rgba(0,0,0,.55),0 0 12px color-mix(in srgb,var(--felt,#16A34A) 50%,transparent)}50%{box-shadow:0 6px 16px rgba(0,0,0,.55),0 0 20px color-mix(in srgb,var(--felt,#16A34A) 80%,transparent)}}
 @keyframes wFall{0%{transform:translateY(-12vh) translateX(0) rotate(0)}100%{transform:translateY(112vh) translateX(var(--drift,0px)) rotate(360deg)}}
 @keyframes wRise{0%{transform:translateY(112vh) translateX(0) scale(1)}100%{transform:translateY(-12vh) translateX(var(--drift,0px)) scale(.4)}}
+
+/* ── Seasonal Events ── */
+@keyframes evConfFall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(116vh) translateX(var(--sway,0px)) rotate(540deg)}}
+@keyframes evConfBurst{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--sway,0px),58vh) rotate(620deg);opacity:0}}
+@keyframes evPropFloat{0%{transform:translateY(112vh) translateX(0) rotate(-14deg)}100%{transform:translateY(-16vh) translateX(var(--sway,0px)) rotate(14deg)}}
+@keyframes evPropRise{0%{transform:translateY(112vh) translateX(0)}100%{transform:translateY(-16vh) translateX(var(--sway,0px))}}
+@keyframes evFwPop{0%{transform:scale(.15);opacity:0}14%{opacity:1}40%{transform:scale(1.5);opacity:.95}68%,100%{transform:scale(2.5);opacity:0}}
+@keyframes evBannerIn{0%{opacity:0;transform:translateY(-14px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes evSheen{0%,62%{transform:skewX(-18deg) translateX(-180%)}82%,100%{transform:skewX(-18deg) translateX(560%)}}
+@keyframes evLogoBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@keyframes evTagPulse{0%,100%{box-shadow:0 0 9px color-mix(in srgb,var(--ev,#FFD23F) 45%,transparent)}50%{box-shadow:0 0 17px color-mix(in srgb,var(--ev,#FFD23F) 80%,transparent)}}
+@keyframes evModalIn{0%{opacity:0}100%{opacity:1}}
+@keyframes evModalOut{0%{opacity:1}100%{opacity:0}}
+@keyframes evIntroGlow{0%,100%{opacity:.6;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes evIntroLogo{0%{opacity:0;transform:scale(0) rotate(-120deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes evIntroName{0%{opacity:0;transform:translateY(26px) scale(.9)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes evIntroUp{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes evSpark{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--tx,0px),var(--ty,0px)) scale(.2);opacity:0}}
+@keyframes evHintPulse{0%,100%{opacity:.32}50%{opacity:.72}}
+@keyframes evSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes evMissionIn{0%{opacity:0;transform:translateX(-16px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes evClaimPulse{0%,100%{box-shadow:0 4px 14px -2px color-mix(in srgb,var(--ev,#FFD23F) 50%,transparent)}50%{box-shadow:0 4px 22px 1px color-mix(in srgb,var(--ev,#FFD23F) 85%,transparent)}}

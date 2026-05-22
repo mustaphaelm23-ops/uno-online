@@ -365,6 +365,12 @@ app.post('/api/auth/login', async (req, res) => {
     user.migrationBonus = true;
     console.log(`[Auth] Migration bonus: +1000 for ${username}`);
   }
+  // One-time +1,000,000 grant for Mustapha1 & Mustapha2
+  if (['mustapha1', 'mustapha2'].includes(username.toLowerCase()) && !user.grant_million_may2026) {
+    user.coins = (user.coins || 0) + 1000000;
+    user.grant_million_may2026 = true;
+    console.log(`[Grant] +1,000,000 coins to ${user.username} (total: ${user.coins})`);
+  }
   user.lastLoginAt = now;
   saveUsers();
 
@@ -1122,6 +1128,152 @@ app.post('/api/battlepass/unlock', authMiddleware, (req, res) => {
   bp.premium = true;
   saveUsers();
   res.json({ success:true, coins:user.coins, premium:true });
+});
+
+// ─────────────────────────────────────────
+// SEASONAL EVENTS — temporary live overlays layered ABOVE the base themes.
+// An event is a time-boxed layer: decorations, particles, missions and a
+// featured reward. Activate/deactivate purely by editing startsAt/endsAt —
+// no code path changes. getActiveEvent() picks whichever window covers now.
+// ─────────────────────────────────────────
+const EVENTS = [
+  {
+    id: 'anniversary',
+    name: 'Grand Anniversary',
+    tagline: 'One year of UNO — celebrate with golden rewards',
+    icon: '🎉', logo: '👑',
+    color: '#FFD23F', color2: '#FF8A00',
+    prop: 'confetti',
+    startsAt: new Date('2026-05-01T00:00:00Z').getTime(),
+    endsAt:   new Date('2026-06-15T23:59:59Z').getTime(),
+    announcements: [
+      '🎉 The Grand Anniversary is LIVE — golden rewards all event!',
+      '👑 Finish every mission to bank the Anniversary Crown bonus',
+      '🪙 Celebration coins are doubled — grind while it lasts',
+      '⏳ Limited time — the golden tables vanish when the event ends',
+    ],
+    featured: { icon:'👑', name:'Anniversary Crown', desc:'Exclusive golden avatar frame', rarity:'legendary' },
+    missions: [
+      { id:'login',  icon:'📅', name:'Welcome to the Party',    desc:'Log in during the event',         stat:'login',  target:1,  reward:1000 },
+      { id:'play',   icon:'🎮', name:'Party Starter',           desc:'Play 5 games during the event',   stat:'played', target:5,  reward:1500 },
+      { id:'win',    icon:'🏆', name:'Golden Touch',            desc:'Win 3 games during the event',    stat:'won',    target:3,  reward:3000 },
+      { id:'grind',  icon:'🔥', name:'Celebration Marathon',    desc:'Play 20 games during the event',  stat:'played', target:20, reward:6000 },
+    ],
+  },
+  {
+    id: 'halloween',
+    name: 'Halloween Nights',
+    tagline: 'The tables turn dark — spooky rewards await',
+    icon: '🎃', logo: '🎃',
+    color: '#FF7518', color2: '#7B2CBF',
+    prop: 'pumpkin',
+    startsAt: new Date('2026-10-24T00:00:00Z').getTime(),
+    endsAt:   new Date('2026-11-02T23:59:59Z').getTime(),
+    announcements: [
+      '🎃 Halloween Nights has crept in — spooky rewards await',
+      '👻 Win games to earn the Haunted card back',
+      '🦇 Limited-time — the dark tables fade after November 2',
+    ],
+    featured: { icon:'🦇', name:'Haunted Card Back', desc:'Glowing purple card skin', rarity:'epic' },
+    missions: [
+      { id:'login', icon:'🕯️', name:'Enter the Haunt', desc:'Log in during the event', stat:'login',  target:1, reward:800 },
+      { id:'play',  icon:'🎮', name:'Trick or Treat',  desc:'Play 6 games',           stat:'played', target:6, reward:1200 },
+      { id:'win',   icon:'👻', name:'Ghost Hunter',    desc:'Win 4 games',            stat:'won',    target:4, reward:2600 },
+    ],
+  },
+  {
+    id: 'newyear',
+    name: 'New Year Countdown',
+    tagline: 'Ring in the new year — fireworks & fortune',
+    icon: '🎆', logo: '🎆',
+    color: '#7DF9FF', color2: '#F59E0B',
+    prop: 'firework',
+    startsAt: new Date('2026-12-28T00:00:00Z').getTime(),
+    endsAt:   new Date('2027-01-03T23:59:59Z').getTime(),
+    announcements: [
+      '🎆 New Year Countdown — fireworks light up the lobby',
+      '🥂 Complete missions before midnight for bonus fortune',
+      '✨ A fresh year, a fresh stack of rewards',
+    ],
+    featured: { icon:'🎇', name:'Fireworks Emote', desc:'Celebratory in-game emote', rarity:'epic' },
+    missions: [
+      { id:'login', icon:'🎇', name:'Happy New Year',   desc:'Log in during the event', stat:'login',  target:1, reward:2027 },
+      { id:'play',  icon:'🎮', name:'Countdown Begins', desc:'Play 5 games',           stat:'played', target:5, reward:1500 },
+      { id:'win',   icon:'🥂', name:'Toast to Victory', desc:'Win 3 games',            stat:'won',    target:3, reward:3000 },
+    ],
+  },
+];
+
+function getActiveEvent(now = Date.now()) {
+  return EVENTS.find(e => now >= e.startsAt && now <= e.endsAt) || null;
+}
+
+function ensureEventState(user, ev) {
+  // Snapshot the player's stats when they first see an event so mission
+  // progress is scoped to the event window, not their lifetime totals.
+  if (!user.eventState || user.eventState.id !== ev.id) {
+    user.eventState = {
+      id: ev.id,
+      claimed: [],
+      base: { played: user.stats?.gamesPlayed || 0, won: user.stats?.gamesWon || 0 },
+      joinedAt: Date.now(),
+    };
+  }
+  if (!Array.isArray(user.eventState.claimed)) user.eventState.claimed = [];
+  return user.eventState;
+}
+
+function eventMissionProgress(user, m) {
+  const base = user.eventState?.base || { played: 0, won: 0 };
+  if (m.stat === 'login')  return 1;
+  if (m.stat === 'played') return Math.max(0, (user.stats?.gamesPlayed || 0) - (base.played || 0));
+  if (m.stat === 'won')    return Math.max(0, (user.stats?.gamesWon || 0) - (base.won || 0));
+  return 0;
+}
+
+app.get('/api/event', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const ev = getActiveEvent();
+  if (!ev) return res.json({ active: false });
+  const st = ensureEventState(user, ev);
+  saveUsers();
+  const missions = ev.missions.map(m => {
+    const cur = eventMissionProgress(user, m);
+    return {
+      id: m.id, icon: m.icon, name: m.name, desc: m.desc, target: m.target, reward: m.reward,
+      current: Math.min(cur, m.target),
+      complete: cur >= m.target,
+      claimed: st.claimed.includes(m.id),
+    };
+  });
+  res.json({
+    active: true,
+    id: ev.id, name: ev.name, tagline: ev.tagline, icon: ev.icon, logo: ev.logo,
+    color: ev.color, color2: ev.color2, prop: ev.prop,
+    startsAt: ev.startsAt, endsAt: ev.endsAt,
+    announcements: ev.announcements,
+    featured: ev.featured,
+    missions,
+    coins: user.coins,
+  });
+});
+
+app.post('/api/event/claim', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const ev = getActiveEvent();
+  if (!ev) return res.status(400).json({ error: 'No active event' });
+  const st = ensureEventState(user, ev);
+  const m = ev.missions.find(x => x.id === String(req.body?.mission || ''));
+  if (!m) return res.status(400).json({ error: 'Unknown mission' });
+  if (st.claimed.includes(m.id)) return res.status(400).json({ error: 'Already claimed' });
+  if (eventMissionProgress(user, m) < m.target) return res.status(400).json({ error: 'Mission not complete' });
+  st.claimed.push(m.id);
+  user.coins += m.reward;
+  logReward(user, ev.icon, `${ev.name} — ${m.name}`, m.reward);
+  saveUsers();
+  res.json({ success: true, coins: user.coins, reward: m.reward, mission: m.id });
 });
 
 // Admin: reset password

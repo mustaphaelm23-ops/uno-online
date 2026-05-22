@@ -3112,3 +3112,182 @@
   #lobby-screen.theme-summer  .lobby-tint{opacity:1;background:linear-gradient(160deg,rgba(255,170,60,.4),rgba(0,200,180,.35));}
   #lobby-screen.theme-halloween .lobby-tint{opacity:1;background:linear-gradient(170deg,rgba(150,40,200,.45),rgba(255,110,20,.35));}
   #lobby-screen.theme-gold    .lobby-tint{opacity:1;background:linear-gradient(160deg,rgba(255,200,40,.5),rgba(180,90,10,.4));}
+
+  /* ═══ SEASONAL EVENTS — live overlay layered ABOVE the theme ═══ */
+  /* background colour wash (sits over the scene, under the UI) */
+  .event-tint{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;
+    transition:opacity 1s ease;
+    background:
+      radial-gradient(ellipse 72% 56% at 50% 26%,color-mix(in srgb,var(--ev,#FFD23F) 32%,transparent),transparent 70%),
+      linear-gradient(180deg,color-mix(in srgb,var(--ev2,#FF8A00) 20%,transparent),transparent 58%);}
+  #lobby-screen.event-active .event-tint{opacity:1;}
+
+  /* temporary particle / floating-prop layer */
+  .event-layer{position:absolute;inset:0;z-index:29;pointer-events:none;overflow:hidden;}
+  .ev-confetti{position:absolute;top:-6vh;border-radius:2px;will-change:transform;
+    animation:evConfFall linear infinite;}
+  .ev-confetti.burst{top:36%;border-radius:2px;animation:evConfBurst cubic-bezier(.2,.6,.4,1) forwards;}
+  .ev-prop{position:absolute;top:0;line-height:1;will-change:transform;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));}
+  .ev-prop.float{animation:evPropFloat linear infinite;}
+  .ev-prop.rise{animation:evPropRise linear infinite;}
+  .ev-fw{position:absolute;width:11px;height:11px;border-radius:50%;will-change:transform,opacity;
+    background:radial-gradient(circle,#fff,color-mix(in srgb,var(--ev,#FFD23F) 75%,transparent) 42%,transparent 72%);
+    box-shadow:0 0 26px 7px color-mix(in srgb,var(--ev,#FFD23F) 55%,transparent);
+    animation:evFwPop ease-out infinite;}
+
+  /* ── animated lobby banner ── */
+  .ev-banner{position:relative;width:100%;display:flex;align-items:center;gap:14px;
+    margin-bottom:16px;padding:14px 18px;cursor:pointer;overflow:hidden;
+    border:1.5px solid color-mix(in srgb,var(--ev,#FFD23F) 55%,transparent);border-radius:18px;
+    font-family:inherit;text-align:left;
+    background:linear-gradient(120deg,color-mix(in srgb,var(--ev2,#FF8A00) 26%,#141526),
+      color-mix(in srgb,var(--ev,#FFD23F) 15%,#11121f) 56%,#11121f);
+    box-shadow:0 14px 38px -10px color-mix(in srgb,var(--ev,#FFD23F) 50%,transparent),
+      inset 0 1px 0 rgba(255,255,255,.07);
+    transition:transform .2s ease,box-shadow .2s ease;
+    animation:evBannerIn .6s cubic-bezier(.2,.8,.3,1);}
+  .ev-banner:hover{transform:translateY(-2px);
+    box-shadow:0 20px 48px -10px color-mix(in srgb,var(--ev,#FFD23F) 62%,transparent),inset 0 1px 0 rgba(255,255,255,.1);}
+  .ev-banner-sheen{position:absolute;top:0;left:0;width:36%;height:100%;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);
+    transform:skewX(-18deg) translateX(-180%);animation:evSheen 4.8s ease-in-out infinite;}
+  .ev-ribbon{position:absolute;top:11px;left:-36px;width:132px;transform:rotate(-45deg);
+    text-align:center;z-index:3;
+    background:linear-gradient(90deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    color:#1a1205;font-size:8px;font-weight:900;letter-spacing:1px;padding:3px 0;
+    box-shadow:0 2px 7px rgba(0,0,0,.45);}
+  .ev-banner-logo{font-size:38px;line-height:1;flex-shrink:0;z-index:1;
+    filter:drop-shadow(0 3px 9px color-mix(in srgb,var(--ev,#FFD23F) 65%,transparent));
+    animation:evLogoBob 3s ease-in-out infinite;}
+  .ev-banner-mid{flex:1;min-width:0;z-index:1;}
+  .ev-banner-name{font-family:'Bangers',cursive;font-size:22px;letter-spacing:1.5px;color:#fff;line-height:1.1;
+    text-shadow:0 2px 12px color-mix(in srgb,var(--ev,#FFD23F) 70%,transparent);}
+  .ev-banner-ann{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.82);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    transition:opacity .26s ease,transform .26s ease;}
+  .ev-banner-ann.swap{opacity:0;transform:translateY(-6px);}
+  .ev-banner-right{flex-shrink:0;text-align:center;z-index:1;padding:5px 12px;border-radius:12px;
+    background:rgba(0,0,0,.34);border:1px solid color-mix(in srgb,var(--ev,#FFD23F) 35%,transparent);}
+  .ev-cd{font-family:'Bangers',cursive;font-size:19px;letter-spacing:1px;color:var(--ev,#FFD23F);line-height:1;}
+  .ev-cd-lbl{font-size:8px;font-weight:800;letter-spacing:.5px;color:rgba(255,255,255,.55);margin-top:2px;}
+  .ev-banner-cta{flex-shrink:0;z-index:1;font-size:11px;font-weight:900;color:#1a1205;
+    padding:9px 12px;border-radius:10px;
+    background:linear-gradient(135deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    box-shadow:0 4px 12px -2px color-mix(in srgb,var(--ev,#FFD23F) 60%,transparent);}
+  @media (max-width:620px){
+    .ev-banner-cta{display:none;}
+    .ev-banner-name{font-size:18px;}
+    .ev-banner-logo{font-size:30px;}
+    .ev-banner{gap:10px;padding:12px 14px;}
+  }
+
+  /* ── event room sticker ── */
+  .rt-evtag{position:absolute;top:8px;right:8px;z-index:6;font-size:15px;
+    width:27px;height:27px;display:flex;align-items:center;justify-content:center;border-radius:50%;
+    background:rgba(0,0,0,.55);border:1px solid color-mix(in srgb,var(--ev,#FFD23F) 60%,transparent);
+    box-shadow:0 0 13px color-mix(in srgb,var(--ev,#FFD23F) 55%,transparent);
+    animation:evTagPulse 2.6s ease-in-out infinite;}
+
+  /* ── entry cinematic ── */
+  .ev-intro{position:fixed;inset:0;z-index:1400;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;cursor:pointer;
+    background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--ev2,#FF8A00) 30%,#05060d),#05060d 76%);
+    animation:evModalIn .4s ease both;}
+  .ev-intro.out{animation:evModalOut .42s ease forwards;}
+  .ev-intro-glow{position:absolute;width:120vw;height:120vw;max-width:880px;max-height:880px;
+    border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,color-mix(in srgb,var(--ev,#FFD23F) 38%,transparent),transparent 62%);
+    animation:evIntroGlow 3s ease-in-out infinite;}
+  .ev-intro-burst{position:absolute;top:42%;left:50%;width:0;height:0;}
+  .ev-spark{position:absolute;left:0;top:0;width:9px;height:9px;border-radius:50%;
+    will-change:transform,opacity;animation:evSpark 1.5s cubic-bezier(.15,.7,.3,1) forwards;}
+  .ev-intro-logo{font-size:clamp(64px,16vw,104px);line-height:1;position:relative;z-index:1;
+    filter:drop-shadow(0 8px 28px color-mix(in srgb,var(--ev,#FFD23F) 78%,transparent));
+    animation:evIntroLogo .9s cubic-bezier(.2,1.4,.3,1) both;}
+  .ev-intro-kicker{font-size:12px;font-weight:900;letter-spacing:4px;color:var(--ev,#FFD23F);
+    position:relative;z-index:1;animation:evIntroUp .5s ease .45s both;}
+  .ev-intro-name{font-family:'Bangers',cursive;font-size:clamp(38px,9vw,76px);letter-spacing:3px;
+    color:#fff;position:relative;z-index:1;text-align:center;padding:0 18px;
+    text-shadow:0 4px 32px color-mix(in srgb,var(--ev,#FFD23F) 80%,transparent);
+    animation:evIntroName .6s cubic-bezier(.2,1.3,.3,1) .56s both;}
+  .ev-intro-tag{font-size:13px;font-weight:700;color:rgba(255,255,255,.7);position:relative;z-index:1;
+    text-align:center;padding:0 24px;animation:evIntroUp .5s ease .84s both;}
+  .ev-intro-hint{position:absolute;bottom:9%;font-size:11px;font-weight:800;letter-spacing:2px;
+    color:rgba(255,255,255,.4);animation:evHintPulse 1.7s ease-in-out 1.2s infinite;}
+
+  /* ── event missions modal ── */
+  #evModal{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(4,6,14,.84);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:evModalIn .25s ease;}
+  #evModal.out{animation:evModalOut .22s ease forwards;}
+  .ev-modal{width:min(460px,95vw);max-height:90vh;overflow-y:auto;
+    background:linear-gradient(180deg,#1b1f38,#11142a);
+    border:1px solid color-mix(in srgb,var(--ev,#FFD23F) 30%,rgba(255,255,255,.08));
+    border-radius:22px;box-shadow:0 40px 100px rgba(0,0,0,.75);}
+  .ev-modal-load{padding:60px 20px;text-align:center;color:rgba(255,255,255,.6);
+    font-weight:700;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .ev-spin{width:34px;height:34px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.12);border-top-color:var(--ev,#FFD23F);
+    animation:evSpin .8s linear infinite;}
+  .ev-m-hero{position:relative;text-align:center;padding:26px 20px 20px;border-radius:22px 22px 0 0;overflow:hidden;
+    background:
+      radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--ev2,#FF8A00) 42%,transparent),transparent 70%),
+      linear-gradient(180deg,color-mix(in srgb,var(--ev,#FFD23F) 14%,transparent),transparent);}
+  .ev-m-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;border:none;
+    background:rgba(0,0,0,.42);color:#fff;font-size:20px;line-height:1;cursor:pointer;}
+  .ev-m-logo{font-size:54px;line-height:1;
+    filter:drop-shadow(0 4px 15px color-mix(in srgb,var(--ev,#FFD23F) 72%,transparent));
+    animation:evLogoBob 3s ease-in-out infinite;}
+  .ev-m-title{font-family:'Bangers',cursive;font-size:30px;letter-spacing:2px;color:#fff;margin-top:6px;}
+  .ev-m-sub{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);margin-top:2px;}
+  .ev-m-cd{display:inline-block;margin-top:10px;font-size:11px;font-weight:800;color:var(--ev,#FFD23F);
+    background:rgba(0,0,0,.36);padding:5px 12px;border-radius:20px;
+    border:1px solid color-mix(in srgb,var(--ev,#FFD23F) 35%,transparent);}
+  .ev-m-body{padding:16px 18px 20px;}
+  .ev-m-featured{position:relative;display:flex;align-items:center;gap:13px;padding:14px;border-radius:16px;
+    margin-bottom:16px;overflow:hidden;--rar:#A855F7;
+    background:linear-gradient(120deg,color-mix(in srgb,var(--rar) 26%,#15172b),#15172b 70%);
+    border:1.5px solid color-mix(in srgb,var(--rar) 55%,transparent);
+    box-shadow:0 10px 30px -8px color-mix(in srgb,var(--rar) 48%,transparent);}
+  .ev-m-featured.rar-common{--rar:#9CA3AF;}
+  .ev-m-featured.rar-rare{--rar:#3B82F6;}
+  .ev-m-featured.rar-epic{--rar:#A855F7;}
+  .ev-m-featured.rar-legendary{--rar:#F59E0B;}
+  .ev-m-feat-ic{font-size:40px;line-height:1;flex-shrink:0;
+    filter:drop-shadow(0 3px 11px color-mix(in srgb,var(--rar) 70%,transparent));
+    animation:evLogoBob 3.4s ease-in-out infinite;}
+  .ev-m-feat-txt{flex:1;min-width:0;}
+  .ev-m-feat-lbl{font-size:8.5px;font-weight:900;letter-spacing:1.5px;color:var(--rar);}
+  .ev-m-feat-name{font-size:15px;font-weight:900;color:#fff;margin-top:1px;}
+  .ev-m-feat-desc{font-size:11px;font-weight:600;color:rgba(255,255,255,.6);margin-top:1px;}
+  .ev-m-feat-rar{flex-shrink:0;align-self:flex-start;font-size:8.5px;font-weight:900;letter-spacing:1px;
+    color:#15172b;background:var(--rar);padding:4px 8px;border-radius:7px;}
+  .ev-m-list{display:flex;flex-direction:column;gap:9px;}
+  .ev-mission{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;
+    background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);
+    animation:evMissionIn .4s ease both;}
+  .ev-mission.ready{border-color:color-mix(in srgb,var(--ev,#FFD23F) 55%,transparent);
+    background:color-mix(in srgb,var(--ev,#FFD23F) 9%,rgba(255,255,255,.035));}
+  .ev-mission.claimed{opacity:.58;}
+  .ev-mission-ic{font-size:24px;line-height:1;flex-shrink:0;width:30px;text-align:center;}
+  .ev-mission-main{flex:1;min-width:0;}
+  .ev-mission-name{font-size:13px;font-weight:800;color:#fff;}
+  .ev-mission-desc{font-size:10.5px;font-weight:600;color:rgba(255,255,255,.52);margin:1px 0 5px;}
+  .ev-mission-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;}
+  .ev-mission-fill{height:100%;border-radius:3px;
+    background:linear-gradient(90deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    transition:width .5s cubic-bezier(.2,.8,.3,1);}
+  .ev-claim{flex-shrink:0;min-width:78px;border:none;font-family:inherit;font-size:10.5px;font-weight:900;
+    padding:9px 11px;border-radius:10px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.06);cursor:default;}
+  .ev-claim.ready{cursor:pointer;color:#1a1205;
+    background:linear-gradient(135deg,var(--ev,#FFD23F),var(--ev2,#FF8A00));
+    box-shadow:0 4px 14px -2px color-mix(in srgb,var(--ev,#FFD23F) 60%,transparent);
+    animation:evClaimPulse 1.8s ease-in-out infinite;}
+  .ev-claim.claimed{color:color-mix(in srgb,var(--ev,#FFD23F) 65%,#888);background:rgba(255,255,255,.04);}
+
+  @media (prefers-reduced-motion:reduce){
+    .ev-banner,.ev-banner-sheen,.ev-banner-logo,.ev-banner-ann,.ev-intro-logo,.ev-intro-name,
+    .ev-intro-kicker,.ev-intro-tag,.ev-intro-glow,.ev-intro-hint,.ev-m-logo,.ev-m-feat-ic,
+    .ev-claim.ready,.rt-evtag,.ev-mission,.ev-fw{animation:none!important;}
+  }
