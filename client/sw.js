@@ -4,10 +4,13 @@
  */
 'use strict';
 
-const VERSION = 'uno-shell-v4';
+const VERSION = 'uno-shell-v5';
 const SHELL = [
   '/',
   '/index.html',
+  '/styles/main.css',
+  '/styles/animations.css',
+  '/ui/app.js',
   '/manifest.json',
   '/icon.svg',
   '/lobby-bg.png',
