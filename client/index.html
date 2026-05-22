@@ -599,6 +599,110 @@
   .rail-chat-send:hover{filter:brightness(1.15);transform:scale(1.06);}
   @media (max-width:1080px){ .lrail{display:none;} }
 
+  /* ═══ BOTTOM NAVIGATION ═══ */
+  @keyframes lnavIn{from{opacity:0;transform:translateX(-50%) translateY(34px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes lnavPop{0%{transform:scale(1)}38%{transform:scale(1.45) rotate(-9deg)}68%{transform:scale(.88)}100%{transform:scale(1)}}
+  .lnav{
+    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+    z-index:25;display:flex;gap:4px;padding:7px;
+    background:rgba(13,16,30,.74);
+    backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);
+    border:1px solid rgba(255,255,255,.1);border-radius:21px;
+    box-shadow:0 20px 48px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);
+    animation:lnavIn .6s cubic-bezier(.2,.9,.3,1.2) .15s backwards;
+  }
+  .lnav-tab{
+    position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 19px;border:none;border-radius:14px;cursor:pointer;
+    background:transparent;color:rgba(255,255,255,.5);font-family:'Outfit',sans-serif;
+    transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lnav-tab:hover{color:#fff;background:rgba(255,255,255,.05);}
+  .lnav-ic{font-size:21px;line-height:1;transition:transform .3s cubic-bezier(.34,1.8,.5,1);}
+  .lnav-ic.pop{animation:lnavPop .46s cubic-bezier(.34,1.7,.5,1);}
+  .lnav-lbl{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;}
+  .lnav-glow{
+    position:absolute;left:50%;bottom:-14px;width:64%;height:26px;transform:translateX(-50%);
+    background:radial-gradient(ellipse,rgba(245,158,11,.65),transparent 70%);
+    opacity:0;transition:opacity .3s;pointer-events:none;
+  }
+  .lnav-tab.on{
+    color:#fff;background:linear-gradient(180deg,rgba(245,158,11,.24),rgba(245,158,11,.05));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+  }
+  .lnav-tab.on .lnav-ic{transform:translateY(-2px) scale(1.16);filter:drop-shadow(0 3px 9px rgba(245,158,11,.65));}
+  .lnav-tab.on .lnav-lbl{color:#FFD700;}
+  .lnav-tab.on .lnav-glow{opacity:1;}
+  .lnav-tab.on::before{
+    content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:42%;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,transparent,#FFD700,transparent);
+  }
+  .lside,.lmain{padding-bottom:96px!important;}
+  @media (max-width:560px){
+    .lnav{bottom:8px;gap:0;padding:5px;width:calc(100% - 16px);justify-content:space-around;}
+    .lnav-tab{padding:7px 4px;flex:1;}
+    .lnav-lbl{font-size:7.5px;letter-spacing:.3px;}
+    .lnav-ic{font-size:19px;}
+  }
+
+  /* Nav-launched modals (Missions / Collection) */
+  .nm-panel{
+    width:min(560px,95vw);max-height:88vh;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(30,34,60,.97),rgba(16,20,36,.99));
+    border:1px solid rgba(255,255,255,.09);border-radius:22px;overflow:hidden;
+    box-shadow:0 40px 100px rgba(0,0,0,.75);
+    animation:profileIn .45s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .nm-head{
+    display:flex;align-items:center;justify-content:space-between;padding:18px 20px;
+    background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(124,58,237,.08));
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .nm-title{font-family:'Bangers',cursive;font-size:24px;letter-spacing:2px;color:#fff;}
+  .nm-close{
+    width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:22px;line-height:1;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+    color:rgba(255,255,255,.7);font-family:inherit;transition:all .2s;
+  }
+  .nm-close:hover{background:rgba(232,50,74,.2);border-color:rgba(232,50,74,.5);color:#fff;transform:rotate(90deg);}
+  .nm-body{padding:18px 20px;overflow-y:auto;}
+  .nm-grid{display:flex;flex-direction:column;gap:10px;}
+  .nm-mission{
+    display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:14px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+    animation:profileStatIn .45s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .nm-mission.done{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3);}
+  .nm-mission-ic{
+    width:46px;height:46px;flex-shrink:0;border-radius:12px;font-size:22px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.05);
+  }
+  .nm-mission.done .nm-mission-ic{background:rgba(34,197,94,.16);}
+  .nm-mission-main{flex:1;min-width:0;}
+  .nm-mission-name{font-weight:800;font-size:14px;color:#fff;}
+  .nm-mission-desc{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;margin:2px 0 7px;}
+  .nm-bar{height:6px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .nm-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#F59E0B,#FFD700);transition:width .8s cubic-bezier(.16,1,.3,1);}
+  .nm-mission.done .nm-bar-fill{background:linear-gradient(90deg,#16A34A,#4ade80);}
+  .nm-mission-rw{
+    flex-shrink:0;font-size:11px;font-weight:800;color:#FFD700;text-align:right;
+  }
+  .nm-mission.done .nm-mission-rw{color:#4ade80;}
+  .nm-coll{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;}
+  .nm-coll-item{
+    padding:12px 6px 9px;border-radius:13px;text-align:center;
+    background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.06);
+    transition:all .2s cubic-bezier(.34,1.56,.64,1);
+    animation:profileStatIn .4s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .nm-coll-item:hover{transform:translateY(-3px);border-color:rgba(245,158,11,.35);}
+  .nm-coll-item.on{border-color:#F59E0B;background:rgba(245,158,11,.1);box-shadow:0 6px 18px rgba(245,158,11,.25);}
+  .nm-coll-face{font-size:30px;line-height:1;margin-bottom:5px;}
+  .nm-coll-name{font-size:8.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.55);}
+  .nm-coll-item.on .nm-coll-name{color:#F59E0B;}
+
   /* ═══════════════════════════════════════════
     LOBBY POLISH — animations & premium feel
     ═══════════════════════════════════════════ */
@@ -3140,6 +3244,28 @@
         </div>
       </div>
     </div>
+    <div class="lnav" id="lnav">
+      <button class="lnav-tab on" data-tab="home" onclick="navTab('home',this)">
+        <span class="lnav-ic">🏠</span><span class="lnav-lbl">Home</span>
+        <span class="lnav-glow"></span>
+      </button>
+      <button class="lnav-tab" data-tab="missions" onclick="navTab('missions',this)">
+        <span class="lnav-ic">🎯</span><span class="lnav-lbl">Missions</span>
+        <span class="lnav-glow"></span>
+      </button>
+      <button class="lnav-tab" data-tab="collection" onclick="navTab('collection',this)">
+        <span class="lnav-ic">🃏</span><span class="lnav-lbl">Collection</span>
+        <span class="lnav-glow"></span>
+      </button>
+      <button class="lnav-tab" data-tab="leaderboard" onclick="navTab('leaderboard',this)">
+        <span class="lnav-ic">🏆</span><span class="lnav-lbl">Ranking</span>
+        <span class="lnav-glow"></span>
+      </button>
+      <button class="lnav-tab" data-tab="profile" onclick="navTab('profile',this)">
+        <span class="lnav-ic">👤</span><span class="lnav-lbl">Profile</span>
+        <span class="lnav-glow"></span>
+      </button>
+    </div>
   </div>
 
   <!-- ═══ ROOM WAITING ═══ -->
@@ -5577,6 +5703,79 @@
       g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false)).join('');
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
   }
+  // ── Bottom navigation ──
+  function navTab(tab, el){
+    document.querySelectorAll('.lnav-tab').forEach(t=>t.classList.remove('on'));
+    if(el){
+      el.classList.add('on');
+      const ic=el.querySelector('.lnav-ic');
+      if(ic){ ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); }
+    }
+    try{ SFX.play('click'); }catch(e){}
+    if(tab==='home'){
+      document.querySelector('.lmain')?.scrollTo({top:0,behavior:'smooth'});
+    }
+    else if(tab==='missions') showMissions();
+    else if(tab==='collection') showCollection();
+    else if(tab==='leaderboard') showLeaderboard();
+    else if(tab==='profile') showProfile();
+  }
+  function _navModal(title, icon, bodyHTML, footHTML){
+    const old=document.getElementById('navModal'); if(old) old.remove();
+    const ov=document.createElement('div');
+    ov.id='navModal';
+    ov.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(4,6,14,.84);'+
+      'backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);'+
+      'display:flex;align-items:center;justify-content:center;padding:20px;animation:screenIn .25s ease';
+    ov.innerHTML=`<div class="nm-panel">
+      <div class="nm-head">
+        <div class="nm-title">${icon} ${esc(title)}</div>
+        <button class="nm-close" onclick="document.getElementById('navModal').remove()" aria-label="Close">×</button>
+      </div>
+      <div class="nm-body">${bodyHTML}${footHTML||''}</div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown',e=>{ if(e.target===ov) ov.remove(); });
+  }
+  function showMissions(){
+    const u=S.user||{};
+    const gp=u.stats?.gamesPlayed||0, gw=u.stats?.gamesWon||0, coins=u.coins||0, elo=u.elo||1000;
+    const M=[
+      {ic:'🎮',n:'Warm Up',     d:'Play 5 games',         cur:gp,   tgt:5,    rw:200},
+      {ic:'🏆',n:'First Blood', d:'Win 3 games',          cur:gw,   tgt:3,    rw:300},
+      {ic:'⚔️',n:'Competitor',  d:'Play 25 games',        cur:gp,   tgt:25,   rw:600},
+      {ic:'🔥',n:'Hot Streak',  d:'Win 15 games',         cur:gw,   tgt:15,   rw:1000},
+      {ic:'🪙',n:'Treasurer',   d:'Hold 5,000 coins',     cur:coins,tgt:5000, rw:500},
+      {ic:'⚡',n:'Rising Star', d:'Reach 1,200 rating',   cur:elo,  tgt:1200, rw:800},
+    ];
+    const done=M.filter(m=>m.cur>=m.tgt).length;
+    const body=`<div class="nm-grid">${M.map((m,i)=>{
+      const ok=m.cur>=m.tgt, pct=Math.min(100,Math.round(m.cur/m.tgt*100));
+      return `<div class="nm-mission ${ok?'done':''}" style="animation-delay:${i*55}ms">
+        <div class="nm-mission-ic">${ok?'✅':m.ic}</div>
+        <div class="nm-mission-main">
+          <div class="nm-mission-name">${m.n}</div>
+          <div class="nm-mission-desc">${m.d} · ${Math.min(m.cur,m.tgt).toLocaleString()}/${m.tgt.toLocaleString()}</div>
+          <div class="nm-bar"><div class="nm-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="nm-mission-rw">${ok?'✓ DONE':'🪙 '+m.rw}</div>
+      </div>`;
+    }).join('')}</div>`;
+    const foot=`<div style="text-align:center;font-size:12px;color:rgba(255,255,255,.5);font-weight:700;margin-top:14px">${done}/${M.length} missions complete — keep playing!</div>`;
+    _navModal('Missions','🎯',body,foot);
+  }
+  function showCollection(){
+    const cur=S.user?.avatar;
+    const owned=(typeof AVATARS!=='undefined')?AVATARS:[];
+    const body=`<div class="nm-coll">${owned.map((a,i)=>`
+      <div class="nm-coll-item ${a.e===cur?'on':''}" style="animation-delay:${i*22}ms">
+        <div class="nm-coll-face">${a.e}</div>
+        <div class="nm-coll-name">${esc(a.n)}</div>
+      </div>`).join('')}</div>`;
+    const foot=`<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.45);font-weight:600;margin-top:14px">${owned.length} characters unlocked · open Profile to equip one</div>`;
+    _navModal('Collection','🃏',body,foot);
+  }
+
   // ── Right rail: Friends Online + World Chat ──
   async function loadRailFriends(){
     const box=document.getElementById('railFriends');
