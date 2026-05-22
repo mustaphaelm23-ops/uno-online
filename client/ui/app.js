@@ -2216,6 +2216,7 @@
     const stage=`<div class="rtable-stage">
         <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
         ${seatHTML}
+        <div class="rt-energy" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       </div>`;
     if(live){
       return `<div class="rtable" onclick="doWatch('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">

@@ -137,3 +137,8 @@
 @keyframes mmCoreBob{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 @keyframes mmDot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
 @keyframes winRays{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes rtGlowBreath{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(.9)}50%{opacity:.62;transform:translate(-50%,-50%) scale(1.06)}}
+@keyframes rtStageBreath{0%,100%{transform:translateY(0)}50%{transform:translateY(-3.5px)}}
+@keyframes rtSweep{to{transform:translateX(130%)}}
+@keyframes rtSpark{0%,100%{opacity:0;transform:translateY(0) scale(.6)}25%{opacity:.9;transform:translateY(-7px) scale(1)}55%{opacity:.5;transform:translateY(-13px) scale(.85)}}
+@keyframes rtOnlinePulse{0%,100%{box-shadow:0 0 6px #22C55E}50%{box-shadow:0 0 11px #22C55E,0 0 3px #fff}}
