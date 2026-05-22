@@ -4183,28 +4183,57 @@
       return map[v] || v.toUpperCase();
     },
 
-    // Deal: fly cards from center to player hand
+    // Deal: cards arc from the deck into the player's hand with impact.
     deal(count = 7, targetEl){
       if(!this.el || !targetEl) return;
+      const g = window.gsap;
+      const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
       const tr = targetEl.getBoundingClientRect();
-      const cx = window.innerWidth/2, cy = window.innerHeight/2;
-      for(let i=0;i<count;i++){
-        setTimeout(()=>{
+      const deck = document.getElementById('drawpile');
+      const dr = deck ? deck.getBoundingClientRect()
+                      : {left:innerWidth/2-37,top:innerHeight/2-55,width:74,height:110};
+      const sx = dr.left + dr.width/2, sy = dr.top + dr.height/2;
+      const n = Math.min(count, 12);
+      if(g && !reduced){
+        for(let i=0;i<n;i++){
           const c = document.createElement('div');
-          c.className = 'anim-card back deal-anim-card';
-          c.style.cssText = `left:${cx}px;top:${cy}px;animation-delay:0s;`;
-          // animate toward hand area
-          c.style.setProperty('--tx', `${tr.left + tr.width/2 - cx}px`);
-          c.style.setProperty('--ty', `${tr.top + tr.height/2 - cy}px`);
-          // Use keyframe override for target
-          c.animate([
-            {transform:`translate(0,0) rotate(-15deg) scale(.5)`,opacity:0},
-            {transform:`translate(${tr.left+tr.width/2-cx}px,${tr.top+tr.height/2-cy}px) rotate(0) scale(1)`,opacity:1,offset:.7},
-            {transform:`translate(${tr.left+tr.width/2-cx}px,${tr.top+tr.height/2-cy}px) rotate(0) scale(1)`,opacity:0}
-          ],{duration:700,delay:i*80,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+          c.className = 'anim-card back';
+          c.style.cssText = `left:${sx-37}px;top:${sy-55}px;opacity:0;will-change:transform,opacity;`;
           this.el.appendChild(c);
-          setTimeout(()=>c.remove(), 700+i*80+200);
-        }, i*40);
+          const slotX = tr.left + tr.width * (n>1 ? 0.16 + 0.68*(i/(n-1)) : 0.5);
+          const tx = slotX - sx;
+          const ty = (tr.top + tr.height*0.42) - sy;
+          const apexY = ty - (88 + Math.random()*54);     // arc apex above the hand
+          const rot = Math.random()*26 - 13;
+          g.timeline({delay:i*0.072})
+            .set(c,{opacity:1})
+            .to(c,{keyframes:[
+              {x:tx*0.5, y:apexY, rotation:rot*0.5, scale:1.14, duration:0.22, ease:'power2.out'},
+              {x:tx, y:ty+9, rotation:rot, scale:0.99, duration:0.2, ease:'power2.in'}
+            ]},0)
+            .to(c,{y:ty, scale:1, duration:0.22, ease:'back.out(3)',
+              onStart:()=>{ if(i%2===0){ try{SFX.play('draw');}catch(e){} } }})
+            .to(c,{opacity:0, duration:0.16, delay:0.06, onComplete:()=>c.remove()});
+        }
+        if(deck) g.fromTo(deck,{scale:1},{scale:0.93,duration:0.1,yoyo:true,repeat:1,
+          ease:'power1.inOut',transformOrigin:'50% 100%',clearProps:'scale'});
+        return;
+      }
+      // Fallback (no GSAP / reduced motion): simple flight
+      for(let i=0;i<n;i++){
+        setTimeout(()=>{
+          const c=document.createElement('div');
+          c.className='anim-card back';
+          c.style.cssText=`left:${sx-37}px;top:${sy-55}px;`;
+          const tx=tr.left+tr.width/2-sx, ty=tr.top+tr.height/2-sy;
+          c.animate([
+            {transform:'translate(0,0) scale(.6)',opacity:0},
+            {transform:`translate(${tx}px,${ty}px) scale(1)`,opacity:1,offset:.75},
+            {transform:`translate(${tx}px,${ty}px) scale(1)`,opacity:0}
+          ],{duration:600,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+          this.el.appendChild(c);
+          setTimeout(()=>c.remove(),650);
+        }, i*55);
       }
     },
 
