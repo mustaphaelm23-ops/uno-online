@@ -353,27 +353,31 @@
 
   <!-- ═══ WIN ═══ -->
   <div class="winov" id="winov">
-    <div class="wtitle" id="wtitle">YOU WIN!</div>
-    <div style="font-size:18px;color:var(--muted);font-weight:700;animation:fadeIn .6s ease .3s backwards" id="wdet"></div>
-    <div style="font-size:36px;font-weight:900;color:var(--yellow);animation:fadeIn .6s ease .5s backwards" id="wcoins"></div>
-    <div style="font-size:13px;color:var(--muted);animation:fadeIn .6s ease .7s backwards" id="wbet"></div>
-    <div id="mvpBadge" class="mvp-badge" style="display:none">
-      <div class="mvp-avatar" id="mvpAvatar">⭐</div>
-      <div class="mvp-info">
-        <div class="mvp-label">⭐ MAN OF THE MATCH</div>
-        <div class="mvp-name" id="mvpName">—</div>
-        <div class="mvp-reason" id="mvpReason">—</div>
+    <div class="win-rays" aria-hidden="true"></div>
+    <div class="win-spot" aria-hidden="true"></div>
+    <div class="win-content" id="winContent">
+      <div class="wtitle" id="wtitle">YOU WIN!</div>
+      <div class="win-det" id="wdet"></div>
+      <div class="win-coins" id="wcoins">+0 🪙</div>
+      <div class="win-bet" id="wbet"></div>
+      <div id="mvpBadge" class="mvp-badge" style="display:none">
+        <div class="mvp-avatar" id="mvpAvatar">⭐</div>
+        <div class="mvp-info">
+          <div class="mvp-label">⭐ MAN OF THE MATCH</div>
+          <div class="mvp-name" id="mvpName">—</div>
+          <div class="mvp-reason" id="mvpReason">—</div>
+        </div>
       </div>
-    </div>
-    <div id="crowdFav" class="crowd-fav" style="display:none">
-      <div class="crowd-fav-avatar" id="crowdFavAvatar">🗳️</div>
-      <div class="crowd-fav-info">
-        <div class="crowd-fav-label">🎉 CROWD FAVORITE</div>
-        <div class="crowd-fav-name" id="crowdFavName">—</div>
-        <div class="crowd-fav-meta" id="crowdFavMeta">—</div>
+      <div id="crowdFav" class="crowd-fav" style="display:none">
+        <div class="crowd-fav-avatar" id="crowdFavAvatar">🗳️</div>
+        <div class="crowd-fav-info">
+          <div class="crowd-fav-label">🎉 CROWD FAVORITE</div>
+          <div class="crowd-fav-name" id="crowdFavName">—</div>
+          <div class="crowd-fav-meta" id="crowdFavMeta">—</div>
+        </div>
       </div>
+      <button class="btnP win-back" style="width:auto;padding:14px 36px" onclick="backLobby()" data-i18n="backToLobby">Back to Lobby</button>
     </div>
-    <button class="btnP" style="width:auto;padding:14px 36px;animation:fadeIn .6s ease .9s backwards" onclick="backLobby()" data-i18n="backToLobby">Back to Lobby</button>
   </div>
 
   <!-- ═══ MATCHMAKING ═══ -->

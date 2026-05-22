@@ -3866,16 +3866,18 @@
   /* ═══ WIN ═══ */
   function showWin(data){
     const iWon=data.winnerId===S.user?.id;
-    // Show ELO change
     if(data.eloChange) showEloPopup(data.eloChange, iWon);
     const bet=data.bet||0;
     const forfeit=data.forfeit||false;
     if(iWon&&data.coinsEarned){S.user.coins=(S.user.coins||0)+data.coinsEarned;localStorage.setItem('uno_user',JSON.stringify(S.user));}
     else if(!iWon){S.user.coins=Math.max(0,(S.user.coins||0)-bet);localStorage.setItem('uno_user',JSON.stringify(S.user));}
-    document.getElementById('wtitle').textContent=iWon?'🏆 YOU WIN!':'💀 GAME OVER';
-    document.getElementById('wtitle').className=`wtitle ${iWon?'w':'l'}`;
+    const wt=document.getElementById('wtitle');
+    wt.textContent=iWon?'🏆 YOU WIN!':'💀 GAME OVER';
+    wt.className=`wtitle ${iWon?'w':'l'}`;
     document.getElementById('wdet').textContent=iWon?(forfeit?`${data.quitter} left the game!`:`Score: ${data.score}`):`${data.username} won!`;
-    document.getElementById('wcoins').textContent=iWon?`+${data.coinsEarned} 🪙`:`-${bet} 🪙`;
+    const finalCoins=iWon?(data.coinsEarned||0):-bet;
+    const coinsEl=document.getElementById('wcoins');
+    coinsEl.textContent=(finalCoins>=0?'+':'')+'0 🪙';
     document.getElementById('wbet').textContent=bet?`Bet was 🪙${bet} per player`:'';
     // Man of the Match
     const mvpBox=document.getElementById('mvpBadge');
@@ -3903,8 +3905,66 @@
     } else if(cfBox){
       cfBox.style.display='none';
     }
+    const rays=document.querySelector('.win-rays'), spot=document.querySelector('.win-spot');
+    if(rays) rays.style.display=iWon?'':'none';
+    if(spot) spot.style.display=iWon?'':'none';
     document.getElementById('winov').classList.add('show');
-    if(iWon)confetti();
+    const g=window.gsap, reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if(g && !reduced){
+      _playWinSeq(iWon, finalCoins);
+    } else {
+      coinsEl.textContent=(finalCoins>=0?'+':'')+finalCoins+' 🪙';
+      if(iWon){ confetti(); SFX.play('win'); } else SFX.play('error');
+    }
+  }
+  // Cinematic victory sequence — anticipation, slam, shake, confetti, coins.
+  function _playWinSeq(iWon, coins){
+    const g=window.gsap;
+    const ov=document.getElementById('winov'), content=document.getElementById('winContent');
+    const wt=document.getElementById('wtitle'), coinsEl=document.getElementById('wcoins');
+    const reward=['wdet','wcoins','wbet'].map(id=>document.getElementById(id))
+      .concat([document.getElementById('mvpBadge'),document.getElementById('crowdFav'),ov.querySelector('.win-back')])
+      .filter(el=>el && el.style.display!=='none');
+    g.killTweensOf([ov,content,wt,'.win-rays','.win-spot']);
+    const tl=g.timeline();
+    tl.fromTo(ov,{opacity:0},{opacity:1,duration:.28,ease:'power1.out'});
+    if(iWon){
+      tl.fromTo('.win-spot',{scale:0,opacity:0},{scale:1,opacity:1,duration:.7,ease:'power2.out'},0)
+        .fromTo('.win-rays',{scale:.4,opacity:0},{scale:1,opacity:1,duration:1,ease:'power2.out'},0)
+        .fromTo(wt,{scale:2.7,opacity:0,filter:'blur(10px)'},
+          {scale:1,opacity:1,filter:'blur(0px)',duration:.5,ease:'back.out(1.7)',
+           onComplete:()=>g.set(wt,{clearProps:'transform,filter,opacity'})},.16)
+        .call(()=>{ try{SFX.play('win');}catch(e){} confetti(); })
+        .fromTo(content,{x:-11},{x:11,duration:.05,repeat:5,yoyo:true,ease:'none',clearProps:'x'},'>-0.03')
+        .call(()=>{ _winCoinCount(coinsEl,coins); if(coins>0) _coinBurst(coinsEl); })
+        .fromTo(reward,{y:26,opacity:0},{y:0,opacity:1,duration:.5,stagger:.09,ease:'power3.out'},'>-0.12');
+    } else {
+      coinsEl.textContent=(coins>=0?'+':'')+coins+' 🪙';
+      tl.fromTo(content,{y:26,opacity:0},{y:0,opacity:1,duration:.55,ease:'power2.out'},0);
+      try{ SFX.play('error'); }catch(e){}
+    }
+  }
+  function _winCoinCount(el,target){
+    const g=window.gsap, sign=target<0?'-':'+', abs=Math.abs(target), o={v:0};
+    g.to(o,{v:abs,duration:1.15,ease:'power2.out',
+      onUpdate:()=>{ el.textContent=sign+Math.round(o.v).toLocaleString()+' 🪙'; },
+      onComplete:()=>{ el.textContent=sign+abs.toLocaleString()+' 🪙'; }});
+  }
+  function _coinBurst(originEl){
+    const g=window.gsap;
+    const r=originEl.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    for(let i=0;i<18;i++){
+      const c=document.createElement('div');
+      c.className='win-coin-particle'; c.textContent='🪙';
+      c.style.left=cx+'px'; c.style.top=cy+'px';
+      document.body.appendChild(c);
+      const ang=Math.random()*Math.PI*2, dist=130+Math.random()*240;
+      g.to(c,{x:Math.cos(ang)*dist,y:Math.sin(ang)*dist-60-Math.random()*120,
+        rotation:(Math.random()-.5)*620,scale:.5+Math.random()*1.1,
+        duration:.95+Math.random()*.5,ease:'power3.out'});
+      g.to(c,{opacity:0,duration:.45,delay:.6+Math.random()*.3,onComplete:()=>c.remove()});
+    }
   }
 
   /* ═══ CLUTCH MOMENTS ═══

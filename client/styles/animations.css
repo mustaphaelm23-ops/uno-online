@@ -136,3 +136,4 @@
 @keyframes mmSweep{to{transform:rotate(360deg)}}
 @keyframes mmCoreBob{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 @keyframes mmDot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+@keyframes winRays{to{transform:translate(-50%,-50%) rotate(360deg)}}
