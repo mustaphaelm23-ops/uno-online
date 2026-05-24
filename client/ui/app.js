@@ -17,6 +17,12 @@
     if(e.code==='KeyC')doCancel();
   });
 
+  // Pause the hover-focused room scene when the tab is hidden — saves GPU/battery.
+  // No auto-resume needed: the next hover on the lobby will re-focus naturally.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden && typeof RoomScene!=='undefined') RoomScene.stop();
+  });
+
   /* ═══ PWA: Service Worker ═══ */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

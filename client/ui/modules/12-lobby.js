@@ -24,6 +24,7 @@
     requestAnimationFrame(_initLnav);   // align the floating-dock pill with the active tab
     loadRooms();loadRailFriends();
     EVENT.load();   // refresh the seasonal event overlay (banner, props, intro)
+    if(typeof RoomScene!=='undefined'){ RoomScene.boot(); RoomScene.start(); }   // hover-focused mini-scene
     clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
     clearInterval(S.railTimer);S.railTimer=setInterval(loadRailFriends,20000);
   }

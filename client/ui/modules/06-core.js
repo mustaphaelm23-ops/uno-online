@@ -23,6 +23,8 @@
     document.getElementById('lobbyMenu')?.classList.remove('show');
     // event-room ambiance only belongs on the room/game screens
     if(id!=='game-screen'&&id!=='room-screen') document.body.classList.remove('in-event-room');
+    // hover-focused room scene pauses immediately when leaving the lobby (no GPU work)
+    if(id!=='lobby-screen' && typeof RoomScene!=='undefined') RoomScene.stop();
     if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
   function toast(msg,type='i'){const w=document.getElementById('twrap'),t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500);}
   async function api(method,path,body){
