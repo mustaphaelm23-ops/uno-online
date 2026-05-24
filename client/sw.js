@@ -4,13 +4,32 @@
  */
 'use strict';
 
-const VERSION = 'uno-shell-v31';
+const VERSION = 'uno-shell-v32';
 const SHELL = [
   '/',
   '/index.html',
   '/styles/main.css',
   '/styles/animations.css',
   '/ui/app.js',
+  '/ui/modules/01-i18n.js',
+  '/ui/modules/02-themes.js',
+  '/ui/modules/03-events.js',
+  '/ui/modules/04-voice-sound.js',
+  '/ui/modules/05-chat.js',
+  '/ui/modules/06-core.js',
+  '/ui/modules/07-auth.js',
+  '/ui/modules/08-socket.js',
+  '/ui/modules/09-state.js',
+  '/ui/modules/10-league.js',
+  '/ui/modules/11-render.js',
+  '/ui/modules/12-lobby.js',
+  '/ui/modules/13-battlepass.js',
+  '/ui/modules/14-game.js',
+  '/ui/modules/15-cinematic.js',
+  '/ui/modules/16-emoji.js',
+  '/ui/modules/17-room-code.js',
+  '/ui/modules/18-friends.js',
+  '/ui/modules/19-competitions.js',
   '/manifest.json',
   '/icon.svg',
   '/lobby-bg.png',

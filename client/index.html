@@ -682,6 +682,26 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- App modules — load order is significant (sequential classic scripts, global scope) -->
+  <script src="ui/modules/01-i18n.js"></script>
+  <script src="ui/modules/02-themes.js"></script>
+  <script src="ui/modules/03-events.js"></script>
+  <script src="ui/modules/04-voice-sound.js"></script>
+  <script src="ui/modules/05-chat.js"></script>
+  <script src="ui/modules/06-core.js"></script>
+  <script src="ui/modules/07-auth.js"></script>
+  <script src="ui/modules/08-socket.js"></script>
+  <script src="ui/modules/09-state.js"></script>
+  <script src="ui/modules/10-league.js"></script>
+  <script src="ui/modules/11-render.js"></script>
+  <script src="ui/modules/12-lobby.js"></script>
+  <script src="ui/modules/13-battlepass.js"></script>
+  <script src="ui/modules/14-game.js"></script>
+  <script src="ui/modules/15-cinematic.js"></script>
+  <script src="ui/modules/16-emoji.js"></script>
+  <script src="ui/modules/17-room-code.js"></script>
+  <script src="ui/modules/18-friends.js"></script>
+  <script src="ui/modules/19-competitions.js"></script>
   <script src="ui/app.js"></script>
   </body>
   </html>
