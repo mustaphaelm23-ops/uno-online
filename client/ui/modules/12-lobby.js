@@ -31,6 +31,7 @@
     setTimeout(()=>{
       if(!document.getElementById('lobby-screen')?.classList.contains('active')) return;
       if(typeof LobbyScene!=='undefined'){ LobbyScene.boot(); LobbyScene.start(); }
+      if(typeof Parallax!=='undefined'){ Parallax.boot(); Parallax.start(); }      // layered depth response
     }, 1300);
     clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
     clearInterval(S.railTimer);S.railTimer=setInterval(loadRailFriends,20000);

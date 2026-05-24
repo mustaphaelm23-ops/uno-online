@@ -25,8 +25,10 @@
     if(document.hidden){
       if(typeof RoomScene!=='undefined')  RoomScene.stop();
       if(typeof LobbyScene!=='undefined') LobbyScene.stop();
+      if(typeof Parallax!=='undefined')   Parallax.stop();
     } else if(onLobby){
       if(typeof LobbyScene!=='undefined') LobbyScene.start();
+      if(typeof Parallax!=='undefined')   Parallax.start();
     }
   });
 

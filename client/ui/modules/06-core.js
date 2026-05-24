@@ -26,6 +26,7 @@
     // hover-focused room scene pauses immediately when leaving the lobby (no GPU work)
     if(id!=='lobby-screen' && typeof RoomScene!=='undefined') RoomScene.stop();
     if(id!=='lobby-screen' && typeof LobbyScene!=='undefined') LobbyScene.stop();
+    if(id!=='lobby-screen' && typeof Parallax!=='undefined') Parallax.stop();
     if(id!=='game-screen'){document.getElementById('emojiBtn')?.classList.remove('visible');document.getElementById('chatFab')?.classList.remove('visible');document.getElementById('emojiPicker')?.classList.remove('show');document.getElementById('micBtn')?.classList.remove('visible');if(typeof VoiceChat!=='undefined'&&VoiceChat.isOn)VoiceChat.leave();}}
   function toast(msg,type='i'){const w=document.getElementById('twrap'),t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;w.appendChild(t);setTimeout(()=>t.remove(),3500);}
   async function api(method,path,body){
