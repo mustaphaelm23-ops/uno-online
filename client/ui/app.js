@@ -17,10 +17,17 @@
     if(e.code==='KeyC')doCancel();
   });
 
-  // Pause the hover-focused room scene when the tab is hidden — saves GPU/battery.
-  // No auto-resume needed: the next hover on the lobby will re-focus naturally.
+  // Pause the WebGL scenes when the tab is hidden — saves GPU/battery.
+  // Auto-resume the lobby atmosphere when the tab is visible again (if still on lobby);
+  // the room scene re-focuses naturally on the next hover.
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden && typeof RoomScene!=='undefined') RoomScene.stop();
+    const onLobby=document.getElementById('lobby-screen')?.classList.contains('active');
+    if(document.hidden){
+      if(typeof RoomScene!=='undefined')  RoomScene.stop();
+      if(typeof LobbyScene!=='undefined') LobbyScene.stop();
+    } else if(onLobby){
+      if(typeof LobbyScene!=='undefined') LobbyScene.start();
+    }
   });
 
   /* ═══ PWA: Service Worker ═══ */

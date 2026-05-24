@@ -25,6 +25,13 @@
     loadRooms();loadRailFriends();
     EVENT.load();   // refresh the seasonal event overlay (banner, props, intro)
     if(typeof RoomScene!=='undefined'){ RoomScene.boot(); RoomScene.start(); }   // hover-focused mini-scene
+    // Atmospheric WebGL backdrop — boots after the lobby intro completes so
+    // it doesn't compete with the GSAP entrance animation. Self-guarded
+    // against the user navigating away within the delay window.
+    setTimeout(()=>{
+      if(!document.getElementById('lobby-screen')?.classList.contains('active')) return;
+      if(typeof LobbyScene!=='undefined'){ LobbyScene.boot(); LobbyScene.start(); }
+    }, 1300);
     clearInterval(S.roomsTimer);S.roomsTimer=setInterval(loadRooms,5000);
     clearInterval(S.railTimer);S.railTimer=setInterval(loadRailFriends,20000);
   }
