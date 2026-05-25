@@ -239,7 +239,10 @@
         rgba(255,200,120,.05) 66%,
         transparent 82%),
       radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.10) 0%,transparent 65%),
-      radial-gradient(ellipse 115% 88% at 50% 50%,transparent 44%,rgba(0,0,0,.62) 100%),
+      /* Richer peripheral falloff — intermediate stop adds a soft mid-band so
+         the edge darkening reads as dimensional atmospheric depth, not a flat
+         vignette ring. */
+      radial-gradient(ellipse 115% 88% at 50% 50%,transparent 44%,rgba(0,0,0,.26) 70%,rgba(0,0,0,.62) 100%),
       linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.04) 30%,rgba(0,0,0,.78) 100%),
       linear-gradient(180deg,transparent 38%,rgba(255,225,195,.045) 52%,rgba(255,225,195,.030) 62%,transparent 76%);
     animation:lobbyGlowBreath 6s ease-in-out infinite alternate;
