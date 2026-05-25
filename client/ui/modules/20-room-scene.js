@@ -43,7 +43,7 @@
     renderer:null, scene:null, camera:null, canvas:null,
     feltMat:null, feltRimMat:null, cardMesh:null, glowMat:null, particles:null,
     // v2 social presence — seats around the table + reflection plane
-    seats:[], reflMat:null, _rimActive:false,
+    seats:[], reflMat:null, refl:null, _rimActive:false,
     // hover state
     focusedEl:null, focusAt:0,
     pendingEnter:null, pendingLeave:null, lastHovered:null,
@@ -214,6 +214,7 @@
       const refl=new T.Mesh(new T.PlaneGeometry(2.2, 2.2), reflMat);
       refl.rotation.x=-Math.PI/2;
       refl.position.y=0.005;                                  // just above felt to avoid z-fighting
+      this.refl=refl;
       scene.add(refl);
 
       // 6 seat billboards around the felt — populated per-room in _configureScene.
@@ -510,19 +511,38 @@
     _renderFrame(dt){
       const rd=this._getRoomData(this.focusedEl);
       const isHero = this.focusedEl === this.heroEl;
-      // card slow bob + yaw — lights produce moving specular highlights
+      // card slow bob + yaw — lights produce moving specular highlights.
+      // Hero adds a tiny lateral sway (±2cm @ 0.4 Hz) so the centerpiece reads
+      // as "ambient idle motion" rather than a perfectly static prop.
       const cardY=0.9+Math.sin(dt*1.3+rd.phase)*0.08;
       this.cardMesh.position.y=cardY;
+      this.cardMesh.position.x=isHero ? Math.sin(dt*0.4+rd.phase)*0.02 : 0;
       this.cardMesh.rotation.y=dt*0.42+rd.phase;
       this.cardMesh.rotation.x=-0.18+Math.sin(dt*0.8+rd.phase)*0.05;
       // particles drift
       this.particles.rotation.y=dt*0.18+rd.phase*0.4;
+      // Hero felt micro-breathing — slow emissive warm/cool oscillation. Reads
+      // as the fabric subtly catching and releasing the stage light. Skipped
+      // for secondary rooms to keep their look stable.
+      if(isHero && this.feltMat){
+        const warm=0.12 + Math.sin(dt*0.32+rd.phase)*0.025;
+        this.feltMat.emissive.set(rd.felt).multiplyScalar(warm);
+      }
       // reflection breathes inversely with card height — higher card = fainter reflection.
       // Hero gets a +0.10 baseline boost so the table reads as a glossier centerpiece.
       if(this.reflMat){
         const heroBoost = isHero ? 0.10 : 0;
         const breathe=0.28 + (1-(cardY-0.82)/0.16)*0.10 + heroBoost;
         this.reflMat.opacity=Math.max(0.18, Math.min(0.55, breathe));
+      }
+      // Hero reflection drifts very slowly along the table — sells "moving light".
+      // Position offsets are tiny (±6cm / ±4cm) so it stays a felt impression, not motion.
+      if(isHero && this.refl){
+        this.refl.position.x = Math.sin(dt*0.30+rd.phase)*0.06;
+        this.refl.position.z = Math.cos(dt*0.25+rd.phase)*0.04;
+      } else if(this.refl){
+        this.refl.position.x = 0;
+        this.refl.position.z = 0;
       }
       // Rim emissive — a permanent low gold base on the hero ("expensive, calm")
       // plus the active-room pulse on top when seats are filled.

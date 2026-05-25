@@ -400,6 +400,47 @@
   .rt-hero-frame{
     position:absolute;inset:0;pointer-events:none;z-index:1;border-radius:26px;
     background:radial-gradient(60% 90% at 50% 100%,color-mix(in srgb,var(--felt,#16A34A) 30%,transparent),transparent 70%);
+    overflow:hidden;                       /* keep the conic shimmer clipped to the hero shape */
+  }
+  /* Hero edge shimmer — a soft golden slice slowly orbits the card perimeter.
+     conic-gradient + heavy blur reads as a moving light reflection on the rim
+     rather than a literal animated border. Very slow (24s) so it stays calm. */
+  .rt-hero-frame::before{
+    content:'';position:absolute;
+    left:-30%;top:-30%;width:160%;height:160%;
+    background:conic-gradient(from 0deg,
+      transparent 0deg,
+      transparent 60deg,
+      rgba(255,235,180,.18) 90deg,
+      rgba(255,220,140,.05) 130deg,
+      transparent 160deg,
+      transparent 360deg);
+    filter:blur(14px);
+    transform-origin:50% 50%;
+    animation:rtHeroPerimeter 24s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes rtHeroPerimeter{
+    0%  {transform:rotate(0deg);}
+    100%{transform:rotate(360deg);}
+  }
+  /* Spotlight-cone dust — three ultra-soft motes floating in the warm zone
+     just above the hero card, extending the spotlight atmosphere outward
+     from the stage into the surrounding lobby air. */
+  .hero-stage::before{
+    content:'';position:absolute;left:50%;top:-30px;
+    width:70%;height:60px;transform:translateX(-50%);
+    background:
+      radial-gradient(circle 1.3px at 28% 60%,rgba(255,230,170,.45),transparent 65%),
+      radial-gradient(circle 1.6px at 56% 35%,rgba(255,220,150,.5),transparent 65%),
+      radial-gradient(circle 1.2px at 78% 70%,rgba(255,225,160,.4),transparent 65%);
+    pointer-events:none;z-index:2;
+    animation:rtSpotDust 32s ease-in-out infinite alternate;
+  }
+  @keyframes rtSpotDust{
+    0%  {transform:translate(calc(-50% + 0px),0px);opacity:.6;}
+    50% {transform:translate(calc(-50% + 6px),-4px);opacity:.95;}
+    100%{transform:translate(calc(-50% - 5px),3px);opacity:.65;}
   }
   @keyframes rtHeroBreath{
     0%,100%{box-shadow:0 44px 110px rgba(0,0,0,.7),0 0 0 1px rgba(255,210,63,.18),0 0 90px color-mix(in srgb,var(--felt,#16A34A) 32%,transparent),inset 0 2px 0 rgba(255,255,255,.08);}
