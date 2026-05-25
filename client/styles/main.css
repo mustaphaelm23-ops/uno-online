@@ -228,13 +228,19 @@
   #lobby-screen::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
     background:
-      radial-gradient(ellipse 62% 38% at 50% 55%,rgba(255,205,130,.20) 0%,transparent 78%),
+      /* Hero spotlight — richer multi-stop falloff (brighter inner core, soft
+         mid, gentle outer). The inner-core alpha is calc()'d with --hero-pulse,
+         a CSS variable RoomScene writes during the card energy beat. World
+         warm pool therefore brightens IN SYNC with the hero's pulse — the
+         environment answers the table without any new effect being added. */
+      radial-gradient(ellipse 62% 38% at 50% 55%,
+        rgba(255,210,140,calc(.24 + var(--hero-pulse,0) * .09)) 0%,
+        rgba(255,205,130,.14) 38%,
+        rgba(255,200,120,.05) 66%,
+        transparent 82%),
       radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.10) 0%,transparent 65%),
       radial-gradient(ellipse 115% 88% at 50% 50%,transparent 44%,rgba(0,0,0,.62) 100%),
       linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.04) 30%,rgba(0,0,0,.78) 100%),
-      /* Ultra-thin warm haze band at the hero's vertical zone — atmospheric
-         perspective layer that lives BETWEEN the hero and the lobby BG.
-         Wide, almost imperceptible; you feel separation without seeing fog. */
       linear-gradient(180deg,transparent 38%,rgba(255,225,195,.045) 52%,rgba(255,225,195,.030) 62%,transparent 76%);
     animation:lobbyGlowBreath 6s ease-in-out infinite alternate;
   }
@@ -336,10 +342,24 @@
     border-color:rgba(255,255,255,.04);
     filter:saturate(.72) brightness(.82) blur(.6px);
     transition:filter .3s ease,transform .25s cubic-bezier(.2,.9,.3,1.15),box-shadow .25s,border-color .25s;
+    /* Preserve the base entry animation + add an ultra-soft ambient depth
+       breath (opacity .94 -> 1.00 over 22s). Hover overrides opacity to 1. */
+    animation:lobbyEntryUp .5s cubic-bezier(.16,1,.3,1) backwards,
+              rtSupportDepth 22s ease-in-out infinite alternate;
+  }
+  /* Stagger via nth-child negative delays + slightly varied durations so the
+     supporting world breathes asynchronously, like distant ambient life. */
+  .hero-stage+.rgrid .rtable:nth-child(2n){animation-delay:0s,-6s;animation-duration:.5s,26s;}
+  .hero-stage+.rgrid .rtable:nth-child(3n){animation-delay:0s,-13s;animation-duration:.5s,24s;}
+  .hero-stage+.rgrid .rtable:nth-child(5n){animation-delay:0s,-9s;animation-duration:.5s,28s;}
+  @keyframes rtSupportDepth{
+    0%  {opacity:1;}
+    100%{opacity:.92;}
   }
   .hero-stage+.rgrid .rtable:hover{
     filter:saturate(1.06) brightness(1.06) blur(0);
     border-color:color-mix(in srgb,var(--felt,#16A34A) 55%,transparent);
+    opacity:1;                  /* hover snaps a distant room back to the foreground */
   }
   .hero-stage+.rgrid .rtable-stage{height:148px;}
   .hero-stage+.rgrid .rtable-name{font-size:14px;}

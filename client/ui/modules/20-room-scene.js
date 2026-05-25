@@ -102,6 +102,11 @@
       // Drop the hero anchor — when the user re-enters the lobby, loadRooms()
       // will call setHero() again with a fresh element reference.
       this.heroEl=null; this._pendingHero=null;
+      // Reset the world's pulse coupling so other screens don't inherit a stuck warm pool.
+      if(this._lastPulseVar !== 0){
+        try{ document.body.style.setProperty('--hero-pulse','0'); }catch(e){}
+        this._lastPulseVar = 0;
+      }
       if(this.focusedEl){
         // hard cancel — no fade (we're leaving the lobby)
         if(this.canvas){
@@ -596,6 +601,18 @@
       // (card + felt + reflection).
       if(this.cardMesh && this.cardMesh.material){
         this.cardMesh.material.emissiveIntensity = 0.08 + energy*0.18;
+      }
+      // Publish the pulse to the lobby vignette via a CSS variable so the
+      // world's warm spotlight pool brightens in sync with the table. Throttled
+      // to meaningful deltas to avoid pointless style writes between beats.
+      if(isHero){
+        if(Math.abs(energy - (this._lastPulseVar||0)) > 0.01){
+          document.body.style.setProperty('--hero-pulse', energy.toFixed(3));
+          this._lastPulseVar = energy;
+        }
+      } else if(this._lastPulseVar !== 0){
+        document.body.style.setProperty('--hero-pulse','0');
+        this._lastPulseVar = 0;
       }
       // camera cinematic dolly during the first 280ms of focus
       // pulled back to (0, 4.8, 6.6) so the whole table reads, seats included
