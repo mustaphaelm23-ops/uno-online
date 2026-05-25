@@ -288,13 +288,33 @@
      visually dominates the lobby so the eye locks onto "the main table",
      while the .hero-stage+.rgrid selector demotes the secondary rooms to
      smaller, tighter tiles that read as "supporting world". */
-  /* Hero stage container — provides the positioning anchor for the grounding
-     shadow blob (::after below). position:relative is intentional so the blob
-     doesn't escape the hero zone. */
-  .hero-stage{position:relative;margin-bottom:28px;}
+  /* Hero stage container — provides the positioning anchor for environmental
+     layers (halo + light rays above, grounding shadow below). Generous vertical
+     margins so the hero can breathe instead of feeling boxed against siblings. */
+  .hero-stage{position:relative;margin:22px 0 44px;}
+  /* Environmental atmosphere BEHIND the hero — wide warm halo + faint vertical
+     light rays that bleed out into the surrounding lobby air. This is what
+     dissolves the "card" feeling: the hero stops having a sharp edge against
+     the world and starts feeling embedded in atmosphere. Heavy blur, very
+     pointer-events:none. */
+  .hero-stage::before{
+    content:'';position:absolute;
+    left:-12%;top:-40px;width:124%;height:calc(100% + 80px);
+    background:
+      /* Subtle vertical god-rays — very faint, just hints of light direction */
+      linear-gradient(180deg,transparent 0%,rgba(255,210,130,.05) 25%,rgba(255,210,130,.02) 55%,transparent 75%),
+      /* Wide warm halo behind the card — felt-toned environmental glow */
+      radial-gradient(ellipse 55% 60% at 50% 50%,rgba(255,200,120,.16),transparent 75%);
+    filter:blur(28px);
+    pointer-events:none;z-index:0;
+    animation:rtHeroHalo 11s ease-in-out infinite alternate;
+  }
+  @keyframes rtHeroHalo{
+    0%  {opacity:.78;transform:scale(1);}
+    100%{opacity:1;transform:scale(1.04);}
+  }
   /* Deep grounding shadow under the hero — sells the "weight" of the card,
-     like a heavy table sitting on the lobby floor. Pure decoration, can't
-     intercept clicks (pointer-events:none). */
+     like a heavy table sitting on the lobby floor. */
   .hero-stage::after{
     content:'';position:absolute;left:50%;bottom:-22px;
     width:78%;height:54px;transform:translateX(-50%);
@@ -303,36 +323,57 @@
   }
   .hero-stage+.rgrid{
     grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
-    gap:11px;opacity:.94;
+    gap:11px;opacity:.9;
   }
-  /* Supporting rooms — visually demoted under the hero. Soft desaturation +
-     dim so they recede into the atmosphere; hover restores full vibrancy so
-     they feel "lit up" when the user examines them. */
+  /* Supporting rooms — pushed deeper into the atmosphere. Stronger desaturation,
+     deeper dim, hair of blur, softer border + smaller radius so they read as
+     small "world tiles" further away rather than competing UI panels. Hover
+     pulls one back into the foreground — full vibrancy, no blur, lifted. */
   .hero-stage+.rgrid .rtable{
-    border-radius:14px;
-    filter:saturate(.9) brightness(.93);
+    border-radius:12px;
+    border-color:rgba(255,255,255,.05);
+    filter:saturate(.78) brightness(.86) blur(.4px);
     transition:filter .3s ease,transform .25s cubic-bezier(.2,.9,.3,1.15),box-shadow .25s,border-color .25s;
   }
-  .hero-stage+.rgrid .rtable:hover{filter:saturate(1.04) brightness(1.04);}
+  .hero-stage+.rgrid .rtable:hover{
+    filter:saturate(1.05) brightness(1.05) blur(0);
+    border-color:color-mix(in srgb,var(--felt,#16A34A) 55%,transparent);
+  }
   .hero-stage+.rgrid .rtable-stage{height:148px;}
   .hero-stage+.rgrid .rtable-name{font-size:14px;}
   .rtable.rtable-hero{
-    position:relative;z-index:1;                  /* sit above .hero-stage::after grounding shadow */
-    width:100%;border-radius:26px;
+    position:relative;z-index:1;                  /* sit above .hero-stage::before halo + ::after grounding */
+    width:100%;border-radius:28px;
+    /* Background is now atmospheric — strong centre, fades to near-transparent
+       at the edges so the card has no hard rectangular boundary. The lobby
+       vignette + halo show through, making the hero feel like a glowing zone
+       in the world rather than a container with stuff in it. */
     background:
-      radial-gradient(ellipse 85% 65% at 50% 28%,color-mix(in srgb,var(--felt,#16A34A) 22%,transparent),transparent 70%),
-      linear-gradient(170deg,rgba(40,32,58,.97),rgba(13,10,22,.99));
-    border:1px solid color-mix(in srgb,var(--felt,#16A34A) 35%,rgba(255,210,63,.45));
-    /* Cinematic edge lighting — outer drop shadow + warm rim glow + top inner
-       highlight (lit from above) + bottom inner darkness (grounded below). */
+      radial-gradient(ellipse 80% 70% at 50% 35%,color-mix(in srgb,var(--felt,#16A34A) 22%,transparent),transparent 75%),
+      radial-gradient(ellipse 110% 110% at 50% 50%,rgba(28,22,42,.92) 30%,rgba(13,10,22,.72) 75%,rgba(13,10,22,.35) 100%);
+    /* Border softened to a barely-there top highlight — the card no longer
+       reads as "outlined". Real visual separation now comes from the halo
+       glow + grounding shadow, not from a hard line. */
+    border:1px solid rgba(255,210,63,.10);
+    /* Cinematic edge lighting + WIDE atmospheric halo via the last shadow ring,
+       which bleeds felt colour ~180px outward into the surrounding lobby air.
+       That's what makes the hero feel embedded in the environment instead of
+       glued on top of the page. */
     box-shadow:
-      0 44px 110px rgba(0,0,0,.72),
-      0 0 0 1px rgba(255,210,63,.20),
-      0 0 90px color-mix(in srgb,var(--felt,#16A34A) 32%,transparent),
-      inset 0 2px 0 rgba(255,235,180,.14),
-      inset 0 -40px 60px rgba(0,0,0,.35);
+      0 50px 130px rgba(0,0,0,.7),
+      0 0 0 1px rgba(255,210,63,.10),
+      inset 0 2px 0 rgba(255,235,180,.10),
+      inset 0 -50px 80px rgba(0,0,0,.28),
+      0 0 180px 30px color-mix(in srgb,var(--felt,#16A34A) 22%,transparent);
     animation:lobbyEntryUp .8s cubic-bezier(.16,1,.3,1) backwards,
               rtHeroBreath 7s ease-in-out infinite;
+  }
+  /* Hero foot — no more hard horizontal bar. Soft vertical fade with a faint
+     top hairline so it reads as the bottom of an atmospheric zone, not a UI
+     footer panel. */
+  .rtable.rtable-hero .rtable-foot{
+    background:linear-gradient(180deg,rgba(0,0,0,.10) 0%,rgba(0,0,0,.40) 100%);
+    border-top:1px solid rgba(255,255,255,.04);
   }
   .rtable.rtable-hero::before{
     height:4px;
@@ -443,8 +484,18 @@
     100%{transform:translate(calc(-50% - 5px),3px);opacity:.65;}
   }
   @keyframes rtHeroBreath{
-    0%,100%{box-shadow:0 44px 110px rgba(0,0,0,.7),0 0 0 1px rgba(255,210,63,.18),0 0 90px color-mix(in srgb,var(--felt,#16A34A) 32%,transparent),inset 0 2px 0 rgba(255,255,255,.08);}
-    50%{box-shadow:0 54px 140px rgba(0,0,0,.8),0 0 0 1px rgba(255,210,63,.34),0 0 130px color-mix(in srgb,var(--felt,#16A34A) 50%,transparent),inset 0 2px 0 rgba(255,255,255,.12);}
+    0%,100%{box-shadow:
+      0 50px 130px rgba(0,0,0,.70),
+      0 0 0 1px rgba(255,210,63,.10),
+      inset 0 2px 0 rgba(255,235,180,.10),
+      inset 0 -50px 80px rgba(0,0,0,.28),
+      0 0 160px 24px color-mix(in srgb,var(--felt,#16A34A) 18%,transparent);}
+    50%{box-shadow:
+      0 60px 160px rgba(0,0,0,.78),
+      0 0 0 1px rgba(255,210,63,.20),
+      inset 0 2px 0 rgba(255,235,180,.14),
+      inset 0 -50px 80px rgba(0,0,0,.30),
+      0 0 220px 40px color-mix(in srgb,var(--felt,#16A34A) 30%,transparent);}
   }
   @keyframes rtHeroLabel{
     0%,100%{transform:scale(1);}
