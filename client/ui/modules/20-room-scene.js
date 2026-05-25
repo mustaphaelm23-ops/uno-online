@@ -525,19 +525,25 @@
       this.cardMesh.rotation.x=-0.18+Math.sin(dt*0.8+rd.phase)*0.05;
       // particles drift
       this.particles.rotation.y=dt*0.18+rd.phase*0.4;
-      // Hero felt micro-breathing — slow emissive warm/cool oscillation. Reads
-      // as the fabric subtly catching and releasing the stage light. Skipped
-      // for secondary rooms to keep their look stable.
+      // Hero card energy pulse pre-compute — also drives felt + reflection
+      // response so the table MATERIAL answers the beat, not just the card.
+      const energy = isHero ? Math.pow(Math.max(0, Math.sin(dt*0.5 + rd.phase)), 6) : 0;
+      // Hero felt micro-breathing + tiny pulse response — reads as the fabric
+      // catching and releasing the stage light, with a small bump whenever
+      // the card's energy beat fires.
       if(isHero && this.feltMat){
-        const warm=0.12 + Math.sin(dt*0.32+rd.phase)*0.025;
+        const warm=0.12 + Math.sin(dt*0.32+rd.phase)*0.025 + energy*0.06;
         this.feltMat.emissive.set(rd.felt).multiplyScalar(warm);
       }
       // reflection breathes inversely with card height — higher card = fainter reflection.
-      // Hero gets a +0.10 baseline boost so the table reads as a glossier centerpiece.
+      // Hero gets a +0.10 baseline boost + a small bump (+0.07*energy) so the
+      // reflection brightens at the beat, like the table catches the energy
+      // before releasing it. All three (card / felt / reflection) speak the
+      // same low-frequency pulse.
       if(this.reflMat){
-        const heroBoost = isHero ? 0.10 : 0;
+        const heroBoost = isHero ? (0.10 + energy*0.07) : 0;
         const breathe=0.28 + (1-(cardY-0.82)/0.16)*0.10 + heroBoost;
-        this.reflMat.opacity=Math.max(0.18, Math.min(0.55, breathe));
+        this.reflMat.opacity=Math.max(0.18, Math.min(0.62, breathe));
       }
       // Hero reflection drifts very slowly along the table — sells "moving light".
       // Position offsets are tiny (±6cm / ±4cm) so it stays a felt impression, not motion.
@@ -585,15 +591,11 @@
           sp.position.y = sp.userData.baseY;
         }
       }
-      // Hero card energy pulse — a soft, sharp-peaked emissive bump every
-      // ~12.5s. Reads as "table energy" or a quiet deal beat. Subtle enough
-      // to be felt without being seen as an effect.
-      if(isHero && this.cardMesh && this.cardMesh.material){
-        const peak = Math.max(0, Math.sin(dt*0.5 + rd.phase));
-        const energy = Math.pow(peak, 6);              // sharp peak, mostly 0
+      // Hero card energy pulse — the shared `energy` peak computed above
+      // also drives the card's emissive bump. Single beat, three responses
+      // (card + felt + reflection).
+      if(this.cardMesh && this.cardMesh.material){
         this.cardMesh.material.emissiveIntensity = 0.08 + energy*0.18;
-      } else if(this.cardMesh && this.cardMesh.material){
-        this.cardMesh.material.emissiveIntensity = 0.08;
       }
       // camera cinematic dolly during the first 280ms of focus
       // pulled back to (0, 4.8, 6.6) so the whole table reads, seats included

@@ -231,7 +231,11 @@
       radial-gradient(ellipse 62% 38% at 50% 55%,rgba(255,205,130,.20) 0%,transparent 78%),
       radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.10) 0%,transparent 65%),
       radial-gradient(ellipse 115% 88% at 50% 50%,transparent 44%,rgba(0,0,0,.62) 100%),
-      linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.04) 30%,rgba(0,0,0,.78) 100%);
+      linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.04) 30%,rgba(0,0,0,.78) 100%),
+      /* Ultra-thin warm haze band at the hero's vertical zone — atmospheric
+         perspective layer that lives BETWEEN the hero and the lobby BG.
+         Wide, almost imperceptible; you feel separation without seeing fog. */
+      linear-gradient(180deg,transparent 38%,rgba(255,225,195,.045) 52%,rgba(255,225,195,.030) 62%,transparent 76%);
     animation:lobbyGlowBreath 6s ease-in-out infinite alternate;
   }
   
