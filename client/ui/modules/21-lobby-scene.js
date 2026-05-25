@@ -58,6 +58,8 @@
     dome:null, domeMat:null, orbs:[], dust:null, fog:null,
     // venue shell — physical environment (floor / ceiling / columns / back wall)
     floor:null, ceiling:null, ceilingStrip:null, columns:[], venueLights:[], backWall:null,
+    // venue life — distant twinkling sprites + volumetric light shafts
+    twinkles:[], shafts:[],
     // pointer parallax target / current (lerped)
     mx:0, my:0, cx:0, cy:0,
     // palette state — current colours are lerped toward target
@@ -318,6 +320,80 @@
       accent.position.set(0, -2, -22);
       this.scene.add(accent);
       this.venueLights.push(accent);
+
+      // Distant twinkling lights near the back wall — additive sprites at
+      // varied positions / colours / phases. Reads as far-off activity in
+      // the venue (lounge patrons, distant pendants, screens), not effects.
+      // Each twinkle pulses opacity on its own slow phase so they never sync.
+      const twinkleTex=this._orbTexture();
+      const twinklePos=[
+        {x:-9.5, y:-1.8, z:-25.5, c:0xFFB47A, base:0.45, sc:0.42},
+        {x:-3.2, y: 1.2, z:-26.0, c:0x90D8FF, base:0.40, sc:0.38},
+        {x: 1.4, y:-2.4, z:-25.0, c:0xCC80FF, base:0.50, sc:0.48},
+        {x: 4.8, y: 0.6, z:-26.5, c:0xFFC890, base:0.42, sc:0.40},
+        {x: 9.6, y:-1.2, z:-25.5, c:0x90D8FF, base:0.45, sc:0.42},
+        {x:-6.0, y: 2.0, z:-26.0, c:0xCC80FF, base:0.38, sc:0.36},
+      ];
+      for(const p of twinklePos){
+        const m=new T.SpriteMaterial({
+          map:twinkleTex, color:p.c, transparent:true, opacity:p.base,
+          blending:T.AdditiveBlending, depthWrite:false,
+        });
+        const s=new T.Sprite(m);
+        s.position.set(p.x, p.y, p.z);
+        s.scale.set(p.sc, p.sc, 1);
+        s.userData={
+          base:p.base, phase:Math.random()*Math.PI*2,
+          freq:0.35+Math.random()*0.5,
+        };
+        this.scene.add(s);
+        this.twinkles.push(s);
+      }
+
+      // Volumetric light shafts under each of the 3 rail lights — fake-fog
+      // cones suggesting magenta light cutting through the venue atmosphere.
+      // Additive sprites that always face the camera; the heavy vertical
+      // gradient texture reads as a soft light beam descending through dust.
+      const shaftTex=this._shaftTexture();
+      for(const z of railZs){
+        const m=new T.SpriteMaterial({
+          map:shaftTex, color:0xFF55D0, transparent:true, opacity:0.16,
+          blending:T.AdditiveBlending, depthWrite:false,
+        });
+        const s=new T.Sprite(m);
+        s.position.set(0, 0, z);
+        s.scale.set(4.2, 8.2, 1);
+        this.scene.add(s);
+        this.shafts.push(s);
+      }
+    },
+
+    /* Vertical light-shaft texture — bright near the top, tapered narrow,
+       fades to transparent at the bottom. Combined with additive blending,
+       reads as a soft volumetric beam descending from the ceiling rail. */
+    _shaftTexture(){
+      const T=window.THREE, cv=document.createElement('canvas');
+      cv.width=128; cv.height=256;
+      const ctx=cv.getContext('2d');
+      // Vertical fade — brightest near the top
+      const g=ctx.createLinearGradient(0,0,0,256);
+      g.addColorStop(0.00,'rgba(255,255,255,0)');
+      g.addColorStop(0.12,'rgba(255,255,255,.55)');
+      g.addColorStop(0.45,'rgba(255,255,255,.20)');
+      g.addColorStop(1.00,'rgba(255,255,255,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,128,256);
+      // Side fade — cone taper (wider at top, narrower at bottom isn't
+      // possible with composite-out alone, so just symmetrically soften sides)
+      ctx.globalCompositeOperation='destination-out';
+      const h=ctx.createLinearGradient(0,0,128,0);
+      h.addColorStop(0.00,'rgba(0,0,0,1)');
+      h.addColorStop(0.18,'rgba(0,0,0,0)');
+      h.addColorStop(0.82,'rgba(0,0,0,0)');
+      h.addColorStop(1.00,'rgba(0,0,0,1)');
+      ctx.fillStyle=h; ctx.fillRect(0,0,128,256);
+      const tex=new T.CanvasTexture(cv);
+      tex.anisotropy=4;
+      return tex;
     },
 
     /* Canvas-baked distant city skyline — vertical thin window-light streaks
@@ -502,6 +578,15 @@
           if(pa.array[yi]>9.5) pa.array[yi]=-9.5;
         }
         pa.needsUpdate=true;
+      }
+
+      // Distant twinkles — slow individual opacity pulse on independent
+      // phases / frequencies. Reads as far-off venue life, never as synced UI.
+      if(this.twinkles){
+        for(let i=0;i<this.twinkles.length;i++){
+          const t=this.twinkles[i], u=t.userData;
+          t.material.opacity = u.base + Math.sin(dt*u.freq + u.phase) * 0.25;
+        }
       }
 
       this.renderer.render(this.scene, this.camera);

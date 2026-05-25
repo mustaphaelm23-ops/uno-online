@@ -319,23 +319,32 @@
   #lobbyMenu.game-menu{z-index:60!important;}
   #gameMenu.game-menu{z-index:60!important;}
   /* Side rail — strong glass plate. The lobby venue (cyan / magenta) shows
-     THROUGH the panel rather than the panel sitting opaquely on top. Neon
-     hairline border on the inner edge ties the rail visually to the venue. */
+     THROUGH the panel rather than the panel sitting opaquely on top.
+     Border removed; separation now comes from a soft magenta glow leaking
+     from the inner edge — light-defined separation rather than a hairline. */
   .lside{
     background:linear-gradient(180deg,rgba(18,22,38,.58),rgba(11,14,28,.78))!important;
     backdrop-filter:blur(22px) saturate(1.45);
     -webkit-backdrop-filter:blur(22px) saturate(1.45);
-    border-right:1px solid rgba(204,68,255,.14)!important;
-    box-shadow:1px 0 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)!important;
+    border-right:none!important;
+    box-shadow:
+      4px 0 32px rgba(0,0,0,.45),
+      4px 0 24px rgba(204,68,255,.08),
+      inset 1px 0 0 rgba(204,68,255,.12),
+      inset 0 1px 0 rgba(255,255,255,.06)!important;
   }
-  /* Top header — glass with cyan accent hairline along the bottom edge.
-     The venue lighting reads through the header instead of being blocked. */
+  /* Top header — glass. Border replaced with a soft cyan glow leaking down
+     from the bottom edge, so separation reads as light, not as a line. */
   .lhdr{
     background:linear-gradient(180deg,rgba(18,22,42,.70) 0%,rgba(18,22,42,.32) 70%,transparent 100%);
     backdrop-filter:blur(18px) saturate(1.45);
     -webkit-backdrop-filter:blur(18px) saturate(1.45);
-    border-bottom:1px solid rgba(120,200,255,.14);
-    box-shadow:0 12px 32px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);
+    border-bottom:none;
+    box-shadow:
+      0 16px 40px rgba(0,0,0,.40),
+      0 4px 18px rgba(120,200,255,.07),
+      inset 0 -1px 0 rgba(120,200,255,.10),
+      inset 0 1px 0 rgba(255,255,255,.08);
     padding:14px 22px;
     display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
   }
