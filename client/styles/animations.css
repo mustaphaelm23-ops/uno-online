@@ -27,12 +27,13 @@
 @keyframes authLangBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes lobbyBgZoom{
     /* Depth-darkened BG with baked contrast + blur (otherwise overridden by
-       this animation). Brightness stays in a low band .78 -> .84 so the BG
-       always sits visually behind the hero foreground; the narrow oscillation
-       doubles as the environmental "luminance drift" — slow, almost imperceptible. */
-    0%  {transform:scale(1) rotate(0deg);     filter:saturate(.98) brightness(.78) contrast(1.06) blur(.6px)}
-    50% {transform:scale(1.06) rotate(.6deg); filter:saturate(1.04) brightness(.84) contrast(1.06) blur(.6px)}
-    100%{transform:scale(1.03) rotate(-.4deg);filter:saturate(1.01) brightness(.81) contrast(1.06) blur(.6px)}
+       this animation). Blur pushed from .6 -> .9px and brightness band
+       lowered (.76 -> .82) so the BG plane sits a clear layer further back
+       from the midground hero. The narrow brightness oscillation doubles as
+       the environmental "luminance drift" — slow, almost imperceptible. */
+    0%  {transform:scale(1) rotate(0deg);     filter:saturate(.96) brightness(.76) contrast(1.06) blur(.9px)}
+    50% {transform:scale(1.06) rotate(.6deg); filter:saturate(1.02) brightness(.82) contrast(1.06) blur(.9px)}
+    100%{transform:scale(1.03) rotate(-.4deg);filter:saturate(.99) brightness(.79) contrast(1.06) blur(.9px)}
   }
 @keyframes lobbyGlowBreath{
     from{opacity:.85}

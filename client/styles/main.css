@@ -12,6 +12,40 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent;}
 
+  /* ─────── FOREGROUND ATMOSPHERE — cinematic-lens layer ───────
+     A body-level near-camera haze pass that lives ABOVE the lobby content
+     (z-index 65 > #atmosphere's 60 > lobby content). The layer is mostly
+     invisible (opacity .04 in the gradient stops) but adds a very slow
+     drifting warm light band across the viewport, like sunlight angling
+     through a window or a soft lens flare crossing the camera. Combined
+     with the deeper-blurred background and the midground hero, this is what
+     gives the lobby foreground / midground / background separation.
+     Lobby-only via :has(); pointer-events:none; cannot block anything. */
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:65;
+    background:
+      /* Diagonal warm light pass — drifts across via background-position anim */
+      linear-gradient(118deg,
+        transparent 28%,
+        rgba(255,215,160,.045) 46%,
+        rgba(255,225,180,.025) 56%,
+        transparent 72%),
+      /* Ultra-soft top vignette adds a tiny "near-camera" warmth in the top corner */
+      radial-gradient(ellipse 60% 25% at 18% -5%,rgba(255,220,170,.05),transparent 70%);
+    background-size:240% 100%, 100% 100%;
+    background-position:-40% 50%, 0 0;
+    opacity:0;
+    transition:opacity 800ms ease;
+  }
+  body:has(#lobby-screen.active)::before{
+    opacity:1;
+    animation:fgLightDrift 42s linear infinite;
+  }
+  @keyframes fgLightDrift{
+    0%  {background-position:-40% 50%, 0 0;}
+    100%{background-position: 200% 50%, 0 0;}
+  }
+
   /* ═══ GLOBAL ANIMATIONS ═══ */
   
   
@@ -208,10 +242,18 @@
     position:absolute;inset:-3%;pointer-events:none;z-index:0;
     background:url('lobby-bg.png') center center / cover no-repeat;
     animation:lobbyBgZoom 18s ease-in-out infinite alternate;
-    /* Pushed deeper: stronger darken + a hair of blur drops the background a
-       layer further back, sharpening the foreground / background separation
-       around the hero. */
-    filter:saturate(1) brightness(.82) contrast(1.06) blur(.6px);
+    /* Initial filter — superseded by lobbyBgZoom keyframes which carry the
+       authoritative depth values (saturate ~1, brightness .76-.82, blur .9px,
+       contrast 1.06). Tuned for a clearly distant background plane. */
+    filter:saturate(1) brightness(.78) contrast(1.06) blur(.9px);
+  }
+  /* Distant light bloom on the background — suggests a far-off ambient light
+     source (skylight / ceiling), pushing the BG plane further back through
+     atmospheric implication rather than blur alone. Inherits the parent's
+     filter so it stays inside the BG depth band. */
+  #lobby-screen .lobby-bg-img::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 70% 38% at 50% 6%,rgba(255,220,170,.16),transparent 65%);
   }
   
   /* Lobby composition layer — 4 stacked gradients that orbit the eye around
