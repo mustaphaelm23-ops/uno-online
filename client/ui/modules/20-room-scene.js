@@ -42,6 +42,8 @@
     enabled:false, booted:false, booting:false, disabled:false,
     renderer:null, scene:null, camera:null, canvas:null,
     feltMat:null, feltRimMat:null, cardMesh:null, glowMat:null, particles:null,
+    // v2 social presence — seats around the table + reflection plane
+    seats:[], reflMat:null, _rimActive:false,
     // hover state
     focusedEl:null, focusAt:0,
     pendingEnter:null, pendingLeave:null, lastHovered:null,
@@ -176,6 +178,31 @@
       this.particles=new T.Points(pGeo, pMat);
       scene.add(this.particles);
 
+      // soft reflection plane just under the card — additive radial gradient
+      // gives the card a "glossy table" presence without expensive mirror shaders
+      const reflTex=this._reflTexture();
+      const reflMat=new T.MeshBasicMaterial({map:reflTex, transparent:true, opacity:0.32,
+        blending:T.AdditiveBlending, depthWrite:false, side:T.DoubleSide});
+      this.reflMat=reflMat;
+      const refl=new T.Mesh(new T.PlaneGeometry(2.2, 2.2), reflMat);
+      refl.rotation.x=-Math.PI/2;
+      refl.position.y=0.005;                                  // just above felt to avoid z-fighting
+      scene.add(refl);
+
+      // 6 seat billboards around the felt — populated per-room in _configureScene
+      const seatTex0=this._seatTexture(false,null,'#16A34A');
+      for(let i=0;i<6;i++){
+        const m=new T.SpriteMaterial({map:seatTex0, transparent:true, opacity:0,
+          depthWrite:false});
+        const sp=new T.Sprite(m);
+        sp.scale.set(0.65, 0.65, 1);
+        sp.position.set(0, -0.02, 0);
+        sp.visible=false;
+        sp.userData={ phase:Math.random()*Math.PI*2, baseY:-0.02, filled:false };
+        scene.add(sp);
+        this.seats.push(sp);
+      }
+
       // graceful fail on GPU context loss — bail to CSS, don't try to recover
       cv.addEventListener('webglcontextlost', (e)=>{
         e.preventDefault();
@@ -220,6 +247,76 @@
       g.addColorStop(1,'rgba(255,255,255,0)');
       ctx.fillStyle=g; ctx.fillRect(0,0,128,128);
       return new T.CanvasTexture(cv);
+    },
+    _reflTexture(){
+      const T=window.THREE, cv=document.createElement('canvas');
+      cv.width=256; cv.height=256;
+      const ctx=cv.getContext('2d');
+      const g=ctx.createRadialGradient(128,128,4,128,128,128);
+      g.addColorStop(0,'rgba(255,255,255,.85)');
+      g.addColorStop(.35,'rgba(255,255,255,.18)');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,256,256);
+      return new T.CanvasTexture(cv);
+    },
+    _seatTexture(filled, avatarChar, feltColor){
+      const T=window.THREE, cv=document.createElement('canvas');
+      cv.width=128; cv.height=128;
+      const ctx=cv.getContext('2d');
+      // disc base — felt-tinted so seat reads as belonging to this room
+      const r=46;
+      ctx.beginPath(); ctx.arc(64,64,r,0,Math.PI*2);
+      if(filled){
+        const g=ctx.createRadialGradient(64,52,4,64,64,r);
+        g.addColorStop(0,'rgba(255,255,255,.18)');
+        g.addColorStop(1, feltColor||'#16A34A');
+        ctx.fillStyle=g; ctx.fill();
+        // white border ring
+        ctx.lineWidth=4; ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.stroke();
+        // avatar character
+        ctx.fillStyle='#fff'; ctx.font='800 44px system-ui, sans-serif';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText((avatarChar||'?').toString().slice(0,1).toUpperCase(), 64, 66);
+        // online green dot bottom-right
+        ctx.beginPath(); ctx.arc(96, 96, 9, 0, Math.PI*2);
+        ctx.fillStyle='#22C55E'; ctx.fill();
+        ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
+      } else {
+        // empty seat — dashed ring, faint inner glow
+        ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fill();
+        ctx.setLineDash([6,5]); ctx.lineWidth=3;
+        ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      const tex=new T.CanvasTexture(cv);
+      tex.anisotropy=4;
+      return tex;
+    },
+    _parseRoomSeats(rtable){
+      // Read the .rt-seat children that the lobby renders for each room.
+      // Each seat exposes data on its element; we extract: filled? + display char.
+      const out=[];
+      const seatEls=rtable.querySelectorAll('.rt-seat');
+      seatEls.forEach((el)=>{
+        const filled=!el.classList.contains('empty');
+        let ch='?';
+        if(filled){
+          const txt=(el.textContent||'').trim();
+          ch=txt ? txt[0] : (el.getAttribute('data-name')?.[0] || '?');
+        }
+        out.push({filled, ch});
+      });
+      return out;
+    },
+    _seatLayout(count, radius){
+      // Evenly spaced angles around the table, starting at the front (-π/2).
+      const pts=[];
+      const start=-Math.PI/2;
+      for(let i=0;i<count;i++){
+        const a=start + (i/Math.max(1,count))*Math.PI*2;
+        pts.push({x:Math.cos(a)*radius, z:Math.sin(a)*radius, a});
+      }
+      return pts;
     },
     _getRoomData(rtable){
       let d=this._rooms.get(rtable);
@@ -271,10 +368,36 @@
 
     /* ── focus transitions ── */
     _configureScene(rtable){
+      const T=window.THREE;
       const rd=this._getRoomData(rtable);
       this.feltMat.color.set(rd.felt);
       this.feltMat.emissive.set(rd.felt).multiplyScalar(0.12);
-      this.glowMat.color.set(rd.felt).lerp(new window.THREE.Color(0xFFD23F), 0.55);
+      this.glowMat.color.set(rd.felt).lerp(new T.Color(0xFFD23F), 0.55);
+      // reflection picks up felt colour, kept faint
+      if(this.reflMat) this.reflMat.color.set(rd.felt).lerp(new T.Color(0xffffff), 0.55);
+      // active-room rim flag — pulse in render loop
+      this._rimActive = rtable.classList.contains('rt-active');
+      // seats — read from DOM, generate textures, position around the table
+      const parsed=this._parseRoomSeats(rtable);
+      const layout=this._seatLayout(Math.max(parsed.length, 1), 1.95);
+      for(let i=0;i<this.seats.length;i++){
+        const sp=this.seats[i];
+        if(i<parsed.length){
+          const p=parsed[i], pos=layout[i];
+          const tex=this._seatTexture(p.filled, p.ch, rd.felt);
+          // free previous texture map to avoid GPU leak across hovers
+          if(sp.material.map) sp.material.map.dispose();
+          sp.material.map=tex;
+          sp.material.opacity=p.filled?0.95:0.55;
+          sp.material.needsUpdate=true;
+          sp.position.set(pos.x, -0.02, pos.z);
+          sp.userData.filled=p.filled;
+          sp.userData.baseY=-0.02;
+          sp.visible=true;
+        } else {
+          sp.visible=false;
+        }
+      }
     },
     _focus(rtable){
       const stage=rtable.querySelector('.rtable-stage'); if(!stage) return;
@@ -343,15 +466,42 @@
     _renderFrame(dt){
       const rd=this._getRoomData(this.focusedEl);
       // card slow bob + yaw — lights produce moving specular highlights
-      this.cardMesh.position.y=0.9+Math.sin(dt*1.3+rd.phase)*0.08;
+      const cardY=0.9+Math.sin(dt*1.3+rd.phase)*0.08;
+      this.cardMesh.position.y=cardY;
       this.cardMesh.rotation.y=dt*0.42+rd.phase;
       this.cardMesh.rotation.x=-0.18+Math.sin(dt*0.8+rd.phase)*0.05;
       // particles drift
       this.particles.rotation.y=dt*0.18+rd.phase*0.4;
+      // reflection breathes inversely with card height — higher card = fainter reflection
+      if(this.reflMat){
+        const breathe=0.28 + (1-(cardY-0.82)/0.16)*0.10;
+        this.reflMat.opacity=Math.max(0.18, Math.min(0.42, breathe));
+      }
+      // active-room rim pulse — subtle emissive glow on the metallic ring
+      if(this.feltRimMat){
+        const pulse=this._rimActive ? (0.18 + Math.sin(dt*2.4)*0.10) : 0;
+        if(pulse>0){
+          this.feltRimMat.emissive ||= new window.THREE.Color(0x000000);
+          this.feltRimMat.emissive.set(rd.felt).multiplyScalar(pulse);
+        } else if(this.feltRimMat.emissive){
+          this.feltRimMat.emissive.setHex(0x000000);
+        }
+      }
+      // seats — gentle individual bob so filled seats feel alive (not just stickers)
+      for(let i=0;i<this.seats.length;i++){
+        const sp=this.seats[i];
+        if(!sp.visible) continue;
+        if(sp.userData.filled){
+          sp.position.y = sp.userData.baseY + Math.sin(dt*1.1 + sp.userData.phase)*0.04;
+        } else {
+          sp.position.y = sp.userData.baseY;
+        }
+      }
       // camera cinematic dolly during the first 280ms of focus
+      // pulled back to (0, 4.8, 6.6) so the whole table reads, seats included
       const dollyT=Math.min(1, (performance.now()-this.focusAt)/280);
       const eo=1-Math.pow(1-dollyT, 3);                       // ease-out cubic
-      this.camera.position.set(0, 4.6-eo*0.25, 5.6-eo*0.35);
+      this.camera.position.set(0, 4.8-eo*0.25, 6.6-eo*0.4);
       this.camera.lookAt(0, 0.4, 0);
       this.renderer.render(this.scene, this.camera);
     },
