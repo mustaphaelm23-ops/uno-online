@@ -268,6 +268,79 @@
   }
   .btnS:hover{border-color:var(--accent);background:rgba(245,158,11,.05);}
   .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px;}
+  /* ── HERO STAGE — one dominant centerpiece above the supporting grid ─────
+     The hero is full-width, taller, gold-rimmed and gently breathing. It
+     visually dominates the lobby so the eye locks onto "the main table",
+     while the .hero-stage+.rgrid selector demotes the secondary rooms to
+     smaller, tighter tiles that read as "supporting world". */
+  .hero-stage{margin-bottom:20px;}
+  .hero-stage+.rgrid{
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+    gap:11px;opacity:.94;
+  }
+  .hero-stage+.rgrid .rtable{border-radius:14px;}
+  .hero-stage+.rgrid .rtable-stage{height:148px;}
+  .hero-stage+.rgrid .rtable-name{font-size:14px;}
+  .rtable.rtable-hero{
+    width:100%;border-radius:26px;
+    background:
+      radial-gradient(ellipse 85% 65% at 50% 28%,color-mix(in srgb,var(--felt,#16A34A) 22%,transparent),transparent 70%),
+      linear-gradient(170deg,rgba(40,32,58,.97),rgba(13,10,22,.99));
+    border:1px solid color-mix(in srgb,var(--felt,#16A34A) 35%,rgba(255,210,63,.45));
+    box-shadow:
+      0 44px 110px rgba(0,0,0,.7),
+      0 0 0 1px rgba(255,210,63,.18),
+      0 0 90px color-mix(in srgb,var(--felt,#16A34A) 32%,transparent),
+      inset 0 2px 0 rgba(255,255,255,.08);
+    animation:lobbyEntryUp .8s cubic-bezier(.16,1,.3,1) backwards,
+              rtHeroBreath 7s ease-in-out infinite;
+  }
+  .rtable.rtable-hero::before{
+    height:4px;
+    background:linear-gradient(90deg,transparent,var(--felt,#16A34A) 40%,#FFD23F 50%,var(--felt,#16A34A) 60%,transparent);
+  }
+  .rtable.rtable-hero .rtable-top{padding:20px 26px 0;}
+  .rtable.rtable-hero .rtable-name{font-size:28px;letter-spacing:2.4px;}
+  .rtable.rtable-hero .rtable-stage{height:380px;perspective:1100px;perspective-origin:50% 36%;}
+  .rtable.rtable-hero .rtable-foot{padding:18px 28px;gap:14px;}
+  .rtable.rtable-hero .rtable-count{font-size:15px;}
+  .rtable.rtable-hero .rtable-count b{font-size:28px;}
+  .rtable.rtable-hero .rtable-entry{font-size:13px;padding:5px 13px;}
+  .rtable.rtable-hero .rtable-join{
+    font-size:14px;padding:12px 26px;letter-spacing:1.2px;
+    background:linear-gradient(135deg,#FFD23F,#F59E0B);color:#1a0e08;
+    box-shadow:0 8px 24px rgba(245,158,11,.45),inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .rtable.rtable-hero .rtable-glow{filter:blur(40px);opacity:.85;}
+  .rt-hero-label{
+    position:absolute;top:18px;right:22px;z-index:5;
+    padding:7px 16px;border-radius:999px;
+    background:linear-gradient(135deg,#FFD23F,#F59E0B);
+    color:#1a0e08;font-weight:900;font-size:11px;letter-spacing:1.6px;
+    box-shadow:0 8px 22px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.45);
+    animation:rtHeroLabel 2.4s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .rt-hero-frame{
+    position:absolute;inset:0;pointer-events:none;z-index:1;border-radius:26px;
+    background:radial-gradient(60% 90% at 50% 100%,color-mix(in srgb,var(--felt,#16A34A) 30%,transparent),transparent 70%);
+  }
+  @keyframes rtHeroBreath{
+    0%,100%{box-shadow:0 44px 110px rgba(0,0,0,.7),0 0 0 1px rgba(255,210,63,.18),0 0 90px color-mix(in srgb,var(--felt,#16A34A) 32%,transparent),inset 0 2px 0 rgba(255,255,255,.08);}
+    50%{box-shadow:0 54px 140px rgba(0,0,0,.8),0 0 0 1px rgba(255,210,63,.34),0 0 130px color-mix(in srgb,var(--felt,#16A34A) 50%,transparent),inset 0 2px 0 rgba(255,255,255,.12);}
+  }
+  @keyframes rtHeroLabel{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.07);}
+  }
+  /* Narrow screens — hero shrinks to a sensible height, supporting grid stays usable */
+  @media (max-width:720px){
+    .rtable.rtable-hero{border-radius:20px;}
+    .rtable.rtable-hero .rtable-name{font-size:22px;}
+    .rtable.rtable-hero .rtable-stage{height:260px;}
+    .rtable.rtable-hero .rtable-count b{font-size:22px;}
+    .rt-hero-label{top:12px;right:14px;padding:5px 12px;font-size:10px;}
+  }
   /* ── Strong FIFA-style room tiles ── */
   .rcard{
     background:linear-gradient(160deg,rgba(38,30,56,.96),rgba(17,13,27,.98));

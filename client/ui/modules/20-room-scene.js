@@ -50,6 +50,9 @@
     raf:null, t0:0,
     _rooms:new WeakMap(),
     _bound:false,
+    // hero mode — when set, the canvas is anchored to this element and
+    // automatically returns there whenever the user stops hovering a secondary.
+    heroEl:null, _pendingHero:null,
 
     /* ── lifecycle ── */
     async boot(){
@@ -66,6 +69,27 @@
       this._build();
       this._attachListeners();
       this.enabled=true; this.booting=false;
+      // If lobby called setHero() before Three.js finished loading, apply it now.
+      if(this._pendingHero){ const h=this._pendingHero; this._pendingHero=null; this.setHero(h); }
+    },
+    // Pin the scene to a "hero" rtable. The canvas attaches there immediately
+    // and returns there whenever the user stops hovering any secondary room.
+    // Safe to call repeatedly — no-ops when the hero hasn't changed.
+    setHero(rtable){
+      if(this.disabled) return;
+      if(!rtable) return;
+      if(!this.enabled){ this._pendingHero=rtable; return; }
+      if(this.heroEl===rtable && this.heroEl.isConnected) return;
+      const oldHero=this.heroEl;
+      this.heroEl=rtable;
+      // If we were focused on the previous hero (or it was detached), move to the new hero.
+      // If focused on a secondary, leave it — pendingLeave will return to the new hero.
+      if(this.focusedEl===oldHero || (this.focusedEl && !this.focusedEl.isConnected)){
+        this.focusedEl=null;
+        this._focus(rtable);
+      } else if(!this.focusedEl){
+        this._focus(rtable);
+      }
     },
     // Called from goLobby — RoomScene is alive during the lobby session.
     // Render loop only ticks when a room is focused; idle = 0 GPU.
@@ -75,6 +99,9 @@
     stop(){
       clearTimeout(this.pendingEnter); this.pendingEnter=null;
       clearTimeout(this.pendingLeave); this.pendingLeave=null;
+      // Drop the hero anchor — when the user re-enters the lobby, loadRooms()
+      // will call setHero() again with a fresh element reference.
+      this.heroEl=null; this._pendingHero=null;
       if(this.focusedEl){
         // hard cancel — no fade (we're leaving the lobby)
         if(this.canvas){
@@ -356,12 +383,19 @@
           else this._focus(rtable);
         }, 150);
       } else {
-        // Off any rtable — schedule unfocus
+        // Off any rtable — schedule return-to-hero (or unfocus if no hero).
         clearTimeout(this.pendingEnter); this.pendingEnter=null;
         if(!this.focusedEl||this.pendingLeave) return;
         this.pendingLeave=setTimeout(()=>{
           this.pendingLeave=null;
-          if(this.focusedEl && !this.focusedEl.matches(':hover')) this._unfocus();
+          if(!this.focusedEl) return;
+          if(this.focusedEl.matches(':hover')) return;
+          if(this.heroEl && this.heroEl.isConnected && this.focusedEl!==this.heroEl){
+            this._retarget(this.heroEl);             // hero is always-on — return there
+          } else if(!this.heroEl){
+            this._unfocus();                          // no hero anchor — fade out as before
+          }
+          // else: already on hero, stay focused
         }, 150);
       }
     },

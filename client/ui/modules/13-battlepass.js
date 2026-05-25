@@ -388,7 +388,7 @@
 
   // Render one room as a premium 3D table with seated players.
   const _FELTS=[['#15803D','#08351b'],['#B91C1C','#4a0a0a'],['#1D4ED8','#0a1f52'],['#9333EA','#3b0f63']];
-  function _roomTableHTML(r, live, featId){
+  function _roomTableHTML(r, live, featId, isHero){
     const max=r.maxPlayers||4;
     const seats=r.seats||[];
     const f=live?['#B91C1C','#4a0a0a']:_FELTS[((r.id.charCodeAt(0)||0)+(r.id.charCodeAt(2)||0))%_FELTS.length];
@@ -442,7 +442,12 @@
         </div>
       </div>`;
     }
-    return `<div class="rtable${active}${evCls}${isFeat?' rt-featured':''}" onclick="doJoin('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+    const heroDeco=isHero?(
+      `<div class="rt-hero-label">${isFeat?'⭐ FEATURED STAGE':'⭐ MAIN STAGE'}</div>`+
+      `<div class="rt-hero-frame" aria-hidden="true"></div>`
+    ):'';
+    return `<div class="rtable${active}${evCls}${isFeat?' rt-featured':''}${isHero?' rtable-hero':''}" onclick="doJoin('${r.id}')" style="--felt:${f[0]};--felt2:${f[1]}">
+      ${heroDeco}
       <div class="rtable-glow"></div>
       ${evDeco}
       <div class="rtable-top"><span class="rtable-name">ROOM #${code}</span><span class="rtable-tag">● OPEN</span></div>

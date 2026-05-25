@@ -51,6 +51,16 @@
   async function loadRooms(){
     try{
       const d=await api('GET','/rooms'),g=document.getElementById('rgrid');
+      // ── Hero stage container — single dominant centerpiece above the supporting grid.
+      // Created once, then surgically updated so the RoomScene canvas inside doesn't flicker
+      // every 5s when the rooms list refreshes.
+      let heroStage=document.getElementById('heroStage');
+      if(!heroStage){
+        heroStage=document.createElement('div');
+        heroStage.id='heroStage';
+        heroStage.className='hero-stage';
+        g.parentElement.insertBefore(heroStage, g);
+      }
       {
         const on=d.onlineCount||0;
         document.getElementById('rinfo').innerHTML=
@@ -71,23 +81,69 @@
           liveSec.style.display='none';
         }
       }
-      if(!d.rooms.length){g.innerHTML=`<div class="rooms-empty">
-        <div class="rooms-empty-cards">
-          <div class="ec red"><span>1</span></div>
-          <div class="ec yellow"><span>+2</span></div>
-          <div class="ec blue"><span>↺</span></div>
-        </div>
-        <div class="rooms-empty-title">No rooms yet</div>
-        <div class="rooms-empty-sub">Create your own room or jump into a quick match — let's play! 🎮</div>
-        <div class="rooms-empty-actions">
-          <button class="ec-btn create" onclick="doCreate()">➕ Create Room</button>
-          <button class="ec-btn match" onclick="doMM()">🎯 Quick Match</button>
-        </div>
-      </div>`;return;}
-      const featId=EVENT.pickFeatured(d.rooms);
-      g.innerHTML=d.rooms.map(r=>_roomTableHTML(r,false,featId)).join('');
+      const rooms=d.rooms||[];
+      // Pick the hero room: featured > most-active > first.
+      // The hero never goes empty — when there are zero rooms, we show a decorative
+      // "Main Stage" centerpiece with a Create CTA so the eye still has a focal point.
+      const featId=EVENT.pickFeatured(rooms);
+      let heroRoom=null;
+      if(rooms.length){
+        if(featId) heroRoom=rooms.find(r=>r.id===featId)||null;
+        if(!heroRoom){
+          heroRoom=rooms.slice().sort((a,b)=>{
+            const ap=a.players||0, bp=b.players||0;
+            if(bp!==ap) return bp-ap;
+            return ((b.seats||[]).length)-((a.seats||[]).length);
+          })[0];
+        }
+      }
+      const newHeroId = heroRoom ? heroRoom.id : '__mainstage__';
+      const heroChanged = heroStage.dataset.heroId !== newHeroId;
+      if(heroChanged){
+        heroStage.innerHTML = heroRoom
+          ? _roomTableHTML(heroRoom, false, featId, /*isHero*/ true)
+          : _mainStageHTML();
+        heroStage.dataset.heroId = newHeroId;
+      } else if(heroRoom){
+        // Same hero room — patch dynamic values inline so the always-on
+        // canvas inside the hero card doesn't flicker every 5s.
+        const card=heroStage.querySelector('.rtable');
+        if(card){
+          const cb=card.querySelector('.rtable-count b'); if(cb) cb.textContent=heroRoom.players;
+        }
+      }
+      // Supporting rooms — everything except the hero, in a tighter grid below.
+      const restRooms = heroRoom ? rooms.filter(r=>r.id!==heroRoom.id) : [];
+      g.innerHTML = restRooms.map(r=>_roomTableHTML(r,false,featId)).join('');
       EVENT.decorateRooms();
+      // Pin RoomScene to the (possibly new) hero element — always-on focus.
+      if(heroChanged && typeof RoomScene!=='undefined' && RoomScene.setHero){
+        const heroEl=heroStage.querySelector('.rtable');
+        if(heroEl) requestAnimationFrame(()=>RoomScene.setHero(heroEl));
+      }
     }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
+  }
+  // Decorative Main Stage — shown when there are zero rooms.
+  // Same .rtable shell so RoomScene hover/focus still attaches its canvas.
+  function _mainStageHTML(){
+    return `<div class="rtable rtable-hero rt-active" style="--felt:#15803D;--felt2:#08351b">
+      <div class="rt-hero-label">⭐ MAIN STAGE</div>
+      <div class="rt-hero-frame" aria-hidden="true"></div>
+      <div class="rtable-glow"></div>
+      <div class="rtable-top">
+        <span class="rtable-name">UNO ARENA</span>
+        <span class="rtable-tag" style="color:#FFD23F">● OPEN STAGE</span>
+      </div>
+      <div class="rtable-stage">
+        <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
+        <div class="rt-energy" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="rtable-foot">
+        <span class="rtable-count" style="font-size:13px;font-weight:600;color:rgba(255,255,255,.65)">No rooms yet — be the first to take the stage.</span>
+        <span class="rtable-join" onclick="event.stopPropagation();doCreate()" style="margin-left:auto;cursor:pointer">➕ CREATE ROOM</span>
+        <span class="rtable-join" onclick="event.stopPropagation();doMM()" style="cursor:pointer;background:linear-gradient(135deg,#60A5FA,#3B82F6)">🎯 QUICK MATCH</span>
+      </div>
+    </div>`;
   }
   // ── Bottom navigation — premium floating dock ──
   // Slide the glowing pill behind the active tab (measured, so it works
