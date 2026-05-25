@@ -438,6 +438,10 @@
           sp.position.set(pos.x, -0.02, pos.z);
           sp.userData.filled=p.filled;
           sp.userData.baseY=-0.02;
+          sp.userData.baseScale=seatScale;
+          sp.userData.baseOpacity=p.filled?0.95:0.55;
+          // staggered per-seat life-pulse frequency so seats don't move in unison
+          sp.userData.lifeFreq=0.32 + (i*0.07);
           sp.visible=true;
         } else {
           sp.visible=false;
@@ -562,15 +566,34 @@
           this.feltRimMat.emissive.setHex(0x000000);
         }
       }
-      // seats — gentle individual bob so filled seats feel alive (not just stickers)
+      // Seats — gentle bob + (hero only) per-seat life pulse: tiny independent
+      // scale + opacity oscillations on each filled seat, staggered phases so
+      // they don't move in unison. Reads as "people quietly at the table".
       for(let i=0;i<this.seats.length;i++){
         const sp=this.seats[i];
         if(!sp.visible) continue;
         if(sp.userData.filled){
           sp.position.y = sp.userData.baseY + Math.sin(dt*1.1 + sp.userData.phase)*0.04;
+          if(isHero){
+            const lf = sp.userData.lifeFreq || 0.4;
+            const lifePulse = 1 + Math.sin(dt*lf + sp.userData.phase*1.7)*0.035;
+            const bs = sp.userData.baseScale || 0.82;
+            sp.scale.set(bs*lifePulse, bs*lifePulse, 1);
+            sp.material.opacity = (sp.userData.baseOpacity||0.95) + Math.sin(dt*lf*0.7 + sp.userData.phase)*0.04;
+          }
         } else {
           sp.position.y = sp.userData.baseY;
         }
+      }
+      // Hero card energy pulse — a soft, sharp-peaked emissive bump every
+      // ~12.5s. Reads as "table energy" or a quiet deal beat. Subtle enough
+      // to be felt without being seen as an effect.
+      if(isHero && this.cardMesh && this.cardMesh.material){
+        const peak = Math.max(0, Math.sin(dt*0.5 + rd.phase));
+        const energy = Math.pow(peak, 6);              // sharp peak, mostly 0
+        this.cardMesh.material.emissiveIntensity = 0.08 + energy*0.18;
+      } else if(this.cardMesh && this.cardMesh.material){
+        this.cardMesh.material.emissiveIntensity = 0.08;
       }
       // camera cinematic dolly during the first 280ms of focus
       // pulled back to (0, 4.8, 6.6) so the whole table reads, seats included

@@ -208,9 +208,10 @@
     position:absolute;inset:-3%;pointer-events:none;z-index:0;
     background:url('lobby-bg.png') center center / cover no-repeat;
     animation:lobbyBgZoom 18s ease-in-out infinite alternate;
-    /* Slight darken + softer saturation pushes the background visually further
-       back, giving the hero foreground stronger depth separation. */
-    filter:saturate(1.04) brightness(.88) contrast(1.04);
+    /* Pushed deeper: stronger darken + a hair of blur drops the background a
+       layer further back, sharpening the foreground / background separation
+       around the hero. */
+    filter:saturate(1) brightness(.82) contrast(1.06) blur(.6px);
   }
   
   /* Lobby composition layer — 4 stacked gradients that orbit the eye around
@@ -227,10 +228,10 @@
   #lobby-screen::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
     background:
-      radial-gradient(ellipse 62% 38% at 50% 55%,rgba(255,205,130,.18) 0%,transparent 78%),
+      radial-gradient(ellipse 62% 38% at 50% 55%,rgba(255,205,130,.20) 0%,transparent 78%),
       radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.10) 0%,transparent 65%),
-      radial-gradient(ellipse 115% 88% at 50% 50%,transparent 48%,rgba(0,0,0,.48) 100%),
-      linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.05) 32%,rgba(0,0,0,.68) 100%);
+      radial-gradient(ellipse 115% 88% at 50% 50%,transparent 44%,rgba(0,0,0,.62) 100%),
+      linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.04) 30%,rgba(0,0,0,.78) 100%);
     animation:lobbyGlowBreath 6s ease-in-out infinite alternate;
   }
   
@@ -292,20 +293,17 @@
      layers (halo + light rays above, grounding shadow below). Generous vertical
      margins so the hero can breathe instead of feeling boxed against siblings. */
   .hero-stage{position:relative;margin:22px 0 44px;}
-  /* Environmental atmosphere BEHIND the hero — wide warm halo + faint vertical
-     light rays that bleed out into the surrounding lobby air. This is what
-     dissolves the "card" feeling: the hero stops having a sharp edge against
-     the world and starts feeling embedded in atmosphere. Heavy blur, very
-     pointer-events:none. */
+  /* Environmental atmosphere BEHIND the hero — extends well beyond the column
+     bounds so the hero glow visibly bleeds into the surrounding lobby and even
+     into the supporting grid below. Heavy blur turns it into pure atmosphere
+     rather than a visible gradient shape. pointer-events:none. */
   .hero-stage::before{
     content:'';position:absolute;
-    left:-12%;top:-40px;width:124%;height:calc(100% + 80px);
+    left:-22%;top:-72px;width:144%;height:calc(100% + 160px);
     background:
-      /* Subtle vertical god-rays — very faint, just hints of light direction */
-      linear-gradient(180deg,transparent 0%,rgba(255,210,130,.05) 25%,rgba(255,210,130,.02) 55%,transparent 75%),
-      /* Wide warm halo behind the card — felt-toned environmental glow */
-      radial-gradient(ellipse 55% 60% at 50% 50%,rgba(255,200,120,.16),transparent 75%);
-    filter:blur(28px);
+      linear-gradient(180deg,transparent 0%,rgba(255,210,130,.06) 22%,rgba(255,210,130,.025) 55%,transparent 78%),
+      radial-gradient(ellipse 58% 62% at 50% 48%,rgba(255,200,120,.18),transparent 78%);
+    filter:blur(34px);
     pointer-events:none;z-index:0;
     animation:rtHeroHalo 11s ease-in-out infinite alternate;
   }
@@ -331,12 +329,12 @@
      pulls one back into the foreground — full vibrancy, no blur, lifted. */
   .hero-stage+.rgrid .rtable{
     border-radius:12px;
-    border-color:rgba(255,255,255,.05);
-    filter:saturate(.78) brightness(.86) blur(.4px);
+    border-color:rgba(255,255,255,.04);
+    filter:saturate(.72) brightness(.82) blur(.6px);
     transition:filter .3s ease,transform .25s cubic-bezier(.2,.9,.3,1.15),box-shadow .25s,border-color .25s;
   }
   .hero-stage+.rgrid .rtable:hover{
-    filter:saturate(1.05) brightness(1.05) blur(0);
+    filter:saturate(1.06) brightness(1.06) blur(0);
     border-color:color-mix(in srgb,var(--felt,#16A34A) 55%,transparent);
   }
   .hero-stage+.rgrid .rtable-stage{height:148px;}
