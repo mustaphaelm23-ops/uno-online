@@ -247,19 +247,16 @@
        contrast 1.06). Tuned for a clearly distant background plane. */
     filter:saturate(1) brightness(.78) contrast(1.06) blur(.9px);
   }
-  /* Environmental implication on the BG plane — a 2px blur keeps every
-     shape abstract enough that the brain reads "venue" without recognising
-     any specific object. Three layers stacked on the BG image:
-       1. Two distant ceiling downlights (upper L/R) — far-off light sources.
-       2. Soft vertical column shadows at the sides — implied architecture
-          framing the central scene.
-       3. Existing centre top bloom — main ambient skylight.
-     All belong to the BG plane so they move with lobbyBgZoom for free. */
+  /* Environmental implication on the BG plane — neon-cyber palette to match
+     the WebGL venue (cyan downlights upper L/R, magenta-centre skylight bloom,
+     soft side columns). Acts as fallback styling when the WebGL venue isn't
+     visible (low-end / reduced motion) and as edge-fill where the canvas
+     doesn't quite cover. 2px blur keeps shapes abstract. */
   #lobby-screen .lobby-bg-img::before{
     content:'';position:absolute;inset:0;pointer-events:none;
     background:
-      radial-gradient(circle 90px at 18% 10%,rgba(255,225,180,.13),transparent 65%),
-      radial-gradient(circle 90px at 82% 10%,rgba(255,225,180,.13),transparent 65%),
+      radial-gradient(circle 90px at 18% 10%,rgba(120,200,255,.14),transparent 65%),
+      radial-gradient(circle 90px at 82% 10%,rgba(120,200,255,.14),transparent 65%),
       linear-gradient(90deg,
         rgba(0,0,0,.30) 0%,
         rgba(0,0,0,.14) 8%,
@@ -267,7 +264,7 @@
         transparent 84%,
         rgba(0,0,0,.14) 92%,
         rgba(0,0,0,.30) 100%),
-      radial-gradient(ellipse 70% 38% at 50% 6%,rgba(255,220,170,.16),transparent 65%);
+      radial-gradient(ellipse 70% 38% at 50% 6%,rgba(255,120,220,.16),transparent 65%);
     filter:blur(2px);
   }
   
@@ -390,8 +387,8 @@
     content:'';position:absolute;left:50%;bottom:-30px;
     width:92%;height:74px;transform:translateX(-50%);
     background:
-      radial-gradient(ellipse 50% 90% at 50% 48%,rgba(0,0,0,.60),transparent 72%),
-      radial-gradient(ellipse 70% 100% at 50% 70%,rgba(255,200,120,.13),transparent 78%);
+      radial-gradient(ellipse 50% 90% at 50% 48%,rgba(0,0,0,.62),transparent 72%),
+      radial-gradient(ellipse 70% 100% at 50% 72%,rgba(204,68,255,.13),transparent 78%);
     filter:blur(24px);pointer-events:none;z-index:0;
   }
   .hero-stage+.rgrid{

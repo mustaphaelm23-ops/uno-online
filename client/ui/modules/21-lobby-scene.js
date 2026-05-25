@@ -56,8 +56,8 @@
     enabled:false, booted:false, booting:false, disabled:false,
     renderer:null, scene:null, camera:null, canvas:null,
     dome:null, domeMat:null, orbs:[], dust:null, fog:null,
-    // venue shell (phase 1) — physical environment containing the abstract atmosphere
-    floor:null, ceiling:null, ceilingStrip:null, columns:[], venueLights:[],
+    // venue shell — physical environment (floor / ceiling / columns / back wall)
+    floor:null, ceiling:null, ceilingStrip:null, columns:[], venueLights:[], backWall:null,
     // pointer parallax target / current (lerped)
     mx:0, my:0, cx:0, cy:0,
     // palette state — current colours are lerped toward target
@@ -210,45 +210,49 @@
     },
 
     _buildVenue(){
-      /* PHASE 1 venue shell — gives the lobby a physical "lounge" presence:
-         glossy floor + dark ceiling with a warm light strip + 4 architectural
-         columns + directional sun light + a single warm ceiling point light.
-         No back wall, no reflections, no rail lights — those are phase-2 polish.
+      /* PHASE 2 venue — neon cyber casino. Palette built around the reference:
+         purple/magenta dominant, cyan accents, distant city skyline implied
+         through the back wall. Replaces phase-1's warm-lounge palette.
 
-         Geometry kept inside the dome (radius 34) so the dome still backs the
-         room through the gaps between venue elements (sky-beyond-the-venue feel).
+         Composition:
+           - Polished dark floor (metalness .72) catching all the neon overhead
+           - Dark ceiling with a magenta emissive light rail
+           - 4 columns flanking the centre, each with a vertical cyan neon strip
+           - Back wall ~z=-28 with a canvas-baked city skyline texture (vertical
+             window lights in purple/cyan/amber) — the "view from the venue"
+           - 3 magenta point lights along the ceiling rail + cool violet sun
+             from above-right (sells column rim light)
 
-         All venue meshes use MeshStandardMaterial so they react to the new
-         lights. Existing dome / orbs / dust are unaffected (their materials
-         ignore scene lights). */
+         Geometry stays inside the dome (radius 34) so the dome's gradient still
+         fills the gaps as a "sky beyond". */
       const T=window.THREE;
 
-      // Floor — large dark glossy plane catching ambient + ceiling light.
+      // Floor — polished dark plane catching all the neon overhead. Higher
+      // metalness than phase 1 to feel like the reference's reflective floor.
       const floorGeo=new T.PlaneGeometry(30, 40);
       const floorMat=new T.MeshStandardMaterial({
-        color:0x080510, roughness:0.42, metalness:0.55, side:T.DoubleSide,
+        color:0x0a0418, roughness:0.32, metalness:0.72, side:T.DoubleSide,
       });
       this.floor=new T.Mesh(floorGeo, floorMat);
       this.floor.rotation.x=-Math.PI/2;
       this.floor.position.set(0, -5, -10);
       this.scene.add(this.floor);
 
-      // Ceiling — dark plane above. Rougher than the floor (not polished).
+      // Ceiling — slight purple tint, matte (not reflective up-side).
       const ceilGeo=new T.PlaneGeometry(30, 40);
       const ceilMat=new T.MeshStandardMaterial({
-        color:0x0a0815, roughness:0.85, metalness:0.10, side:T.DoubleSide,
+        color:0x0a0418, roughness:0.88, metalness:0.05, side:T.DoubleSide,
       });
       this.ceiling=new T.Mesh(ceilGeo, ceilMat);
       this.ceiling.rotation.x=Math.PI/2;
       this.ceiling.position.set(0, 5, -10);
       this.scene.add(this.ceiling);
 
-      // Ceiling light strip — emissive plane running down the centre line.
-      // Uses MeshBasicMaterial so it always glows full-bright regardless of
-      // surrounding lighting (it IS a light source visually).
+      // Ceiling light rail — magenta emissive (matches the reference's central
+      // pink glow). Always full-bright via MeshBasicMaterial.
       const stripGeo=new T.PlaneGeometry(1.0, 38);
       const stripMat=new T.MeshBasicMaterial({
-        color:0xFFE5A8, transparent:true, opacity:0.85,
+        color:0xFF44CC, transparent:true, opacity:0.92,
         side:T.DoubleSide, depthWrite:false,
       });
       this.ceilingStrip=new T.Mesh(stripGeo, stripMat);
@@ -256,35 +260,107 @@
       this.ceilingStrip.position.set(0, 4.96, -10);
       this.scene.add(this.ceilingStrip);
 
-      // 4 architectural columns flanking the centre — dark cylinders that
-      // frame the venue and pick up rim lighting from the directional sun.
+      // 4 architectural columns — dark purple cylinders flanking the centre.
       const colGeo=new T.CylinderGeometry(0.45, 0.45, 11, 12);
       const colMat=new T.MeshStandardMaterial({
-        color:0x140820, roughness:0.55, metalness:0.30,
+        color:0x180a30, roughness:0.45, metalness:0.55,
       });
       const colPositions=[
         {x:-7, z:-7},  {x: 7, z:-7},
         {x:-8, z:-18}, {x: 8, z:-18},
       ];
+      // Vertical cyan neon strip attached to each column — sells "cyber lounge".
+      const neonGeo=new T.PlaneGeometry(0.10, 9.5);
+      const neonMatProto={color:0x00DCFF, transparent:true, opacity:0.95,
+                          side:T.DoubleSide, depthWrite:false};
       for(const p of colPositions){
         const col=new T.Mesh(colGeo, colMat);
         col.position.set(p.x, 0, p.z);
         this.scene.add(col);
         this.columns.push(col);
+        // Neon strip slightly in front of the column (toward camera).
+        const neon=new T.Mesh(neonGeo, new T.MeshBasicMaterial(neonMatProto));
+        const dirZ = p.z > -12 ? +0.5 : +0.5;             // both pairs face the camera
+        neon.position.set(p.x, 0, p.z + dirZ);
+        this.scene.add(neon);
       }
 
-      // Venue lighting — warm directional sun from above-right (sells the
-      // columns' rim light) + a warm point light at the ceiling strip
-      // (sells the strip as a real light source casting on floor / columns).
-      const sun=new T.DirectionalLight(0xfff0d0, 0.55);
+      // Back wall with city skyline — distant view through the venue. Sits
+      // inside the dome at z=-28; the wall texture has thin vertical window-
+      // light streaks in purple/cyan/amber.
+      const wallGeo=new T.PlaneGeometry(42, 14);
+      const wallTex=this._skylineTexture();
+      const wallMat=new T.MeshBasicMaterial({
+        map:wallTex, transparent:true, side:T.DoubleSide,
+        depthWrite:false, opacity:0.95,
+      });
+      this.backWall=new T.Mesh(wallGeo, wallMat);
+      this.backWall.position.set(0, 0.2, -28);
+      this.scene.add(this.backWall);
+
+      // Venue lighting — cool violet sun + 3 magenta rail lights along ceiling.
+      const sun=new T.DirectionalLight(0x6677ff, 0.45);
       sun.position.set(3, 8, 4);
       this.scene.add(sun);
       this.venueLights.push(sun);
 
-      const ceilLight=new T.PointLight(0xFFE5A8, 1.6, 38, 1.8);
-      ceilLight.position.set(0, 4.5, -10);
-      this.scene.add(ceilLight);
-      this.venueLights.push(ceilLight);
+      // 3 rail lights distributed along the ceiling strip — better than one
+      // big light because illumination falls off realistically along the room.
+      const railZs=[-2, -10, -18];
+      for(const z of railZs){
+        const light=new T.PointLight(0xCC44FF, 1.1, 24, 1.8);
+        light.position.set(0, 4.5, z);
+        this.scene.add(light);
+        this.venueLights.push(light);
+      }
+      // A cyan accent light low + back to fill columns from behind (neon glow).
+      const accent=new T.PointLight(0x00B4FF, 0.7, 30, 1.6);
+      accent.position.set(0, -2, -22);
+      this.scene.add(accent);
+      this.venueLights.push(accent);
+    },
+
+    /* Canvas-baked distant city skyline — vertical thin window-light streaks
+       in three accent colours over a dark base. Read at distance as a city
+       seen through a far window. */
+    _skylineTexture(){
+      const T=window.THREE, cv=document.createElement('canvas');
+      cv.width=1024; cv.height=256;
+      const ctx=cv.getContext('2d');
+      ctx.fillStyle='#06031a';
+      ctx.fillRect(0,0,1024,256);
+      // Soft horizon glow at the bottom (sky meeting city)
+      const grad=ctx.createLinearGradient(0,80,0,200);
+      grad.addColorStop(0,'rgba(80,40,140,0)');
+      grad.addColorStop(1,'rgba(140,60,180,.35)');
+      ctx.fillStyle=grad;
+      ctx.fillRect(0,80,1024,160);
+      // Building silhouettes + window lights
+      const winColors=['rgba(200,160,255,.85)','rgba(120,220,255,.75)','rgba(255,180,120,.70)'];
+      for(let i=0;i<70;i++){
+        const x=Math.random()*1024;
+        const w=4+Math.random()*18;
+        const h=50+Math.random()*180;
+        ctx.fillStyle='#0a0420';
+        ctx.fillRect(x, 256-h, w, h);
+        // Window lights — small bright rectangles up the building
+        for(let y=256-h+6; y<256-3; y+=5+Math.random()*4){
+          if(Math.random()>0.35){
+            ctx.fillStyle=winColors[(Math.random()*3)|0];
+            const ww=Math.max(1.4, w-2);
+            ctx.fillRect(x+1, y, ww, 1.6);
+          }
+        }
+      }
+      // Scattered far-distance pin-lights
+      for(let i=0;i<40;i++){
+        const x=Math.random()*1024, y=60+Math.random()*120;
+        ctx.fillStyle=winColors[(Math.random()*3)|0];
+        ctx.fillRect(x, y, 1.6, 1.6);
+      }
+      const tex=new T.CanvasTexture(cv);
+      tex.anisotropy=4;
+      return tex;
     },
     _gradientTex(){
       const T=window.THREE, cv=document.createElement('canvas');
