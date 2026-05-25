@@ -247,13 +247,28 @@
        contrast 1.06). Tuned for a clearly distant background plane. */
     filter:saturate(1) brightness(.78) contrast(1.06) blur(.9px);
   }
-  /* Distant light bloom on the background — suggests a far-off ambient light
-     source (skylight / ceiling), pushing the BG plane further back through
-     atmospheric implication rather than blur alone. Inherits the parent's
-     filter so it stays inside the BG depth band. */
+  /* Environmental implication on the BG plane — a 2px blur keeps every
+     shape abstract enough that the brain reads "venue" without recognising
+     any specific object. Three layers stacked on the BG image:
+       1. Two distant ceiling downlights (upper L/R) — far-off light sources.
+       2. Soft vertical column shadows at the sides — implied architecture
+          framing the central scene.
+       3. Existing centre top bloom — main ambient skylight.
+     All belong to the BG plane so they move with lobbyBgZoom for free. */
   #lobby-screen .lobby-bg-img::before{
     content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse 70% 38% at 50% 6%,rgba(255,220,170,.16),transparent 65%);
+    background:
+      radial-gradient(circle 90px at 18% 10%,rgba(255,225,180,.13),transparent 65%),
+      radial-gradient(circle 90px at 82% 10%,rgba(255,225,180,.13),transparent 65%),
+      linear-gradient(90deg,
+        rgba(0,0,0,.30) 0%,
+        rgba(0,0,0,.14) 8%,
+        transparent 16%,
+        transparent 84%,
+        rgba(0,0,0,.14) 92%,
+        rgba(0,0,0,.30) 100%),
+      radial-gradient(ellipse 70% 38% at 50% 6%,rgba(255,220,170,.16),transparent 65%);
+    filter:blur(2px);
   }
   
   /* Lobby composition layer — 4 stacked gradients that orbit the eye around
@@ -366,13 +381,18 @@
     0%  {opacity:.78;transform:scale(1);}
     100%{opacity:1;transform:scale(1.04);}
   }
-  /* Deep grounding shadow under the hero — sells the "weight" of the card,
-     like a heavy table sitting on the lobby floor. */
+  /* Hero floor grounding — deep shadow + warm light spill suggesting light
+     bouncing from the table down onto an implied polished floor. Two layers
+     in one pseudo: dark cast shadow + warm reflected light. Wider/lower than
+     before so the hero feels physically anchored into the venue floor rather
+     than floating above an abstract background. */
   .hero-stage::after{
-    content:'';position:absolute;left:50%;bottom:-22px;
-    width:78%;height:54px;transform:translateX(-50%);
-    background:radial-gradient(ellipse 50% 100% at 50% 50%,rgba(0,0,0,.55),transparent 72%);
-    filter:blur(22px);pointer-events:none;z-index:0;
+    content:'';position:absolute;left:50%;bottom:-30px;
+    width:92%;height:74px;transform:translateX(-50%);
+    background:
+      radial-gradient(ellipse 50% 90% at 50% 48%,rgba(0,0,0,.60),transparent 72%),
+      radial-gradient(ellipse 70% 100% at 50% 70%,rgba(255,200,120,.13),transparent 78%);
+    filter:blur(24px);pointer-events:none;z-index:0;
   }
   .hero-stage+.rgrid{
     grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
