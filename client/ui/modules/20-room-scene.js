@@ -216,7 +216,9 @@
       refl.position.y=0.005;                                  // just above felt to avoid z-fighting
       scene.add(refl);
 
-      // 6 seat billboards around the felt — populated per-room in _configureScene
+      // 6 seat billboards around the felt — populated per-room in _configureScene.
+      // Base scale 0.65 for secondary rooms; hero mode bumps to 0.82 in _configureScene
+      // so the seats feel more present at the larger hero stage size.
       const seatTex0=this._seatTexture(false,null,'#16A34A');
       for(let i=0;i<6;i++){
         const m=new T.SpriteMaterial({map:seatTex0, transparent:true, opacity:0,
@@ -404,6 +406,7 @@
     _configureScene(rtable){
       const T=window.THREE;
       const rd=this._getRoomData(rtable);
+      const isHero = rtable === this.heroEl;
       this.feltMat.color.set(rd.felt);
       this.feltMat.emissive.set(rd.felt).multiplyScalar(0.12);
       this.glowMat.color.set(rd.felt).lerp(new T.Color(0xFFD23F), 0.55);
@@ -411,9 +414,15 @@
       if(this.reflMat) this.reflMat.color.set(rd.felt).lerp(new T.Color(0xffffff), 0.55);
       // active-room rim flag — pulse in render loop
       this._rimActive = rtable.classList.contains('rt-active');
-      // seats — read from DOM, generate textures, position around the table
+      // particles a touch denser on the hero — luxury atmospheric load
+      if(this.particles && this.particles.material){
+        this.particles.material.opacity = isHero ? 0.86 : 0.7;
+      }
+      // seats — read from DOM, generate textures, position around the table.
+      // Hero gets larger seats (0.82) so social presence reads at the bigger size.
       const parsed=this._parseRoomSeats(rtable);
       const layout=this._seatLayout(Math.max(parsed.length, 1), 1.95);
+      const seatScale = isHero ? 0.82 : 0.65;
       for(let i=0;i<this.seats.length;i++){
         const sp=this.seats[i];
         if(i<parsed.length){
@@ -424,6 +433,7 @@
           sp.material.map=tex;
           sp.material.opacity=p.filled?0.95:0.55;
           sp.material.needsUpdate=true;
+          sp.scale.set(seatScale, seatScale, 1);
           sp.position.set(pos.x, -0.02, pos.z);
           sp.userData.filled=p.filled;
           sp.userData.baseY=-0.02;
@@ -499,6 +509,7 @@
     _renderOnce(){ this._renderFrame(0); },
     _renderFrame(dt){
       const rd=this._getRoomData(this.focusedEl);
+      const isHero = this.focusedEl === this.heroEl;
       // card slow bob + yaw — lights produce moving specular highlights
       const cardY=0.9+Math.sin(dt*1.3+rd.phase)*0.08;
       this.cardMesh.position.y=cardY;
@@ -506,17 +517,27 @@
       this.cardMesh.rotation.x=-0.18+Math.sin(dt*0.8+rd.phase)*0.05;
       // particles drift
       this.particles.rotation.y=dt*0.18+rd.phase*0.4;
-      // reflection breathes inversely with card height — higher card = fainter reflection
+      // reflection breathes inversely with card height — higher card = fainter reflection.
+      // Hero gets a +0.10 baseline boost so the table reads as a glossier centerpiece.
       if(this.reflMat){
-        const breathe=0.28 + (1-(cardY-0.82)/0.16)*0.10;
-        this.reflMat.opacity=Math.max(0.18, Math.min(0.42, breathe));
+        const heroBoost = isHero ? 0.10 : 0;
+        const breathe=0.28 + (1-(cardY-0.82)/0.16)*0.10 + heroBoost;
+        this.reflMat.opacity=Math.max(0.18, Math.min(0.55, breathe));
       }
-      // active-room rim pulse — subtle emissive glow on the metallic ring
+      // Rim emissive — a permanent low gold base on the hero ("expensive, calm")
+      // plus the active-room pulse on top when seats are filled.
       if(this.feltRimMat){
+        const heroBase = isHero ? (0.07 + Math.sin(dt*0.55)*0.025) : 0;
         const pulse=this._rimActive ? (0.18 + Math.sin(dt*2.4)*0.10) : 0;
-        if(pulse>0){
+        const total = heroBase + pulse;
+        if(total>0){
           this.feltRimMat.emissive ||= new window.THREE.Color(0x000000);
-          this.feltRimMat.emissive.set(rd.felt).multiplyScalar(pulse);
+          if(isHero && !this._rimActive){
+            // pure gold rim on idle hero — that confident luxury-casino edge
+            this.feltRimMat.emissive.setHex(0xFFD23F).multiplyScalar(total);
+          } else {
+            this.feltRimMat.emissive.set(rd.felt).multiplyScalar(total);
+          }
         } else if(this.feltRimMat.emissive){
           this.feltRimMat.emissive.setHex(0x000000);
         }
