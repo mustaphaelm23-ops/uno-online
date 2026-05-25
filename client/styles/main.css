@@ -318,10 +318,25 @@
   .lobby-menu-wrap{position:relative;z-index:40;}
   #lobbyMenu.game-menu{z-index:60!important;}
   #gameMenu.game-menu{z-index:60!important;}
-  .lside{background:rgba(19,23,41,.78)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+  /* Side rail — strong glass plate. The lobby venue (cyan / magenta) shows
+     THROUGH the panel rather than the panel sitting opaquely on top. Neon
+     hairline border on the inner edge ties the rail visually to the venue. */
+  .lside{
+    background:linear-gradient(180deg,rgba(18,22,38,.58),rgba(11,14,28,.78))!important;
+    backdrop-filter:blur(22px) saturate(1.45);
+    -webkit-backdrop-filter:blur(22px) saturate(1.45);
+    border-right:1px solid rgba(204,68,255,.14)!important;
+    box-shadow:1px 0 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)!important;
+  }
+  /* Top header — glass with cyan accent hairline along the bottom edge.
+     The venue lighting reads through the header instead of being blocked. */
   .lhdr{
-    background:linear-gradient(180deg,var(--bg2),transparent);
-    border-bottom:1px solid var(--border);padding:14px 22px;
+    background:linear-gradient(180deg,rgba(18,22,42,.70) 0%,rgba(18,22,42,.32) 70%,transparent 100%);
+    backdrop-filter:blur(18px) saturate(1.45);
+    -webkit-backdrop-filter:blur(18px) saturate(1.45);
+    border-bottom:1px solid rgba(120,200,255,.14);
+    box-shadow:0 12px 32px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);
+    padding:14px 22px;
     display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
   }
   .llogo{font-family:'Bangers',cursive;font-size:28px;letter-spacing:3px;background:linear-gradient(135deg,#E8324A,#F59E0B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
@@ -385,10 +400,11 @@
      than floating above an abstract background. */
   .hero-stage::after{
     content:'';position:absolute;left:50%;bottom:-30px;
-    width:92%;height:74px;transform:translateX(-50%);
+    width:96%;height:82px;transform:translateX(-50%);
     background:
-      radial-gradient(ellipse 50% 90% at 50% 48%,rgba(0,0,0,.62),transparent 72%),
-      radial-gradient(ellipse 70% 100% at 50% 72%,rgba(204,68,255,.13),transparent 78%);
+      radial-gradient(ellipse 50% 90% at 50% 46%,rgba(0,0,0,.65),transparent 72%),
+      radial-gradient(ellipse 70% 100% at 50% 70%,rgba(204,68,255,.16),transparent 78%),
+      radial-gradient(ellipse 58% 80% at 50% 84%,rgba(0,200,255,.10),transparent 78%);
     filter:blur(24px);pointer-events:none;z-index:0;
   }
   .hero-stage+.rgrid{
@@ -870,10 +886,14 @@
     border-left:1px solid rgba(255,255,255,.08);
   }
   .rail-panel{
-    background:linear-gradient(170deg,rgba(32,36,62,.72),rgba(16,19,34,.8));
-    border:1px solid rgba(255,255,255,.08);border-radius:16px;
+    background:linear-gradient(170deg,rgba(32,36,62,.50),rgba(16,19,34,.62));
+    backdrop-filter:blur(16px) saturate(1.35);
+    -webkit-backdrop-filter:blur(16px) saturate(1.35);
+    border:1px solid rgba(120,200,255,.10);border-radius:16px;
     display:flex;flex-direction:column;overflow:hidden;
-    box-shadow:0 14px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
+    box-shadow:0 18px 36px rgba(0,0,0,.45),
+               inset 0 1px 0 rgba(255,255,255,.07),
+               inset 0 0 0 1px rgba(204,68,255,.04);
     animation:lobbyEntry .5s cubic-bezier(.16,1,.3,1) backwards;
   }
   .rail-panel:nth-child(2){animation-delay:.08s}
