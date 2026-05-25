@@ -321,6 +321,61 @@
       this.scene.add(accent);
       this.venueLights.push(accent);
 
+      // ── STRUCTURAL DEPTH ──────────────────────────────────────────────
+      // Three additions that give the venue believable architecture: floor
+      // light runners (perspective + walkable feel), a mezzanine band high
+      // at the back (implies a second level above), and a third row of
+      // distant columns (so the column array is 3 tiers receding into fog).
+      // All passive geometry — render loop untouched.
+
+      // Floor light runners — 2 parallel cyan emissive strips on the floor
+      // leading toward the back wall. Parallel lines in 3D = converging lines
+      // in perspective, so the eye reads "depth corridor" automatically.
+      const runnerGeo=new T.PlaneGeometry(0.18, 32);
+      for(const x of [-4.2, 4.2]){
+        const m=new T.MeshBasicMaterial({
+          color:0x00DCFF, transparent:true, opacity:0.78,
+          side:T.DoubleSide, depthWrite:false,
+        });
+        const strip=new T.Mesh(runnerGeo, m);
+        strip.rotation.x=-Math.PI/2;
+        strip.position.set(x, -4.97, -12);              // just above floor surface (-5)
+        this.scene.add(strip);
+      }
+
+      // Mezzanine band — dark architectural beam high at the back with a
+      // subtle cyan emissive light line along its top edge. The eye reads
+      // "there is a second level above" without ever seeing one detailed.
+      const mezGeo=new T.BoxGeometry(28, 0.4, 0.5);
+      const mezMat=new T.MeshStandardMaterial({
+        color:0x100620, roughness:0.5, metalness:0.4,
+      });
+      const mez=new T.Mesh(mezGeo, mezMat);
+      mez.position.set(0, 3.4, -23);
+      this.scene.add(mez);
+      const mezLineGeo=new T.PlaneGeometry(28, 0.06);
+      const mezLineMat=new T.MeshBasicMaterial({
+        color:0x00DCFF, transparent:true, opacity:0.85,
+        side:T.DoubleSide, depthWrite:false,
+      });
+      const mezLine=new T.Mesh(mezLineGeo, mezLineMat);
+      mezLine.position.set(0, 3.625, -22.74);
+      this.scene.add(mezLine);
+
+      // Third row of distant columns — farther out, slightly taller, dimmer.
+      // Sits between the back columns (z=-18) and the back wall (z=-28),
+      // fading into fog. Creates a 3-tier column depth (z=-7 / -18 / -24).
+      const farColGeo=new T.CylinderGeometry(0.40, 0.40, 13, 12);
+      const farColMat=new T.MeshStandardMaterial({
+        color:0x100820, roughness:0.60, metalness:0.40,
+      });
+      for(const p of [{x:-10, z:-24}, {x:10, z:-24}]){
+        const col=new T.Mesh(farColGeo, farColMat);
+        col.position.set(p.x, 0, p.z);
+        this.scene.add(col);
+        this.columns.push(col);
+      }
+
       // Distant twinkling lights near the back wall — additive sprites at
       // varied positions / colours / phases. Reads as far-off activity in
       // the venue (lounge patrons, distant pendants, screens), not effects.

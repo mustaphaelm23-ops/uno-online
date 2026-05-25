@@ -408,13 +408,20 @@
      before so the hero feels physically anchored into the venue floor rather
      than floating above an abstract background. */
   .hero-stage::after{
-    content:'';position:absolute;left:50%;bottom:-30px;
-    width:96%;height:82px;transform:translateX(-50%);
+    content:'';position:absolute;left:50%;bottom:-34px;
+    width:96%;height:90px;transform:translateX(-50%);
     background:
-      radial-gradient(ellipse 50% 90% at 50% 46%,rgba(0,0,0,.65),transparent 72%),
-      radial-gradient(ellipse 70% 100% at 50% 70%,rgba(204,68,255,.16),transparent 78%),
-      radial-gradient(ellipse 58% 80% at 50% 84%,rgba(0,200,255,.10),transparent 78%);
-    filter:blur(24px);pointer-events:none;z-index:0;
+      /* Tight contact shadow at the immediate base — anchors the hero to
+         the floor sharply (the moment of contact). Smaller + darker than
+         the wider grounding shadow below. */
+      radial-gradient(ellipse 42% 50% at 50% 22%,rgba(0,0,0,.72),transparent 60%),
+      /* Wider cast shadow falling away from the hero */
+      radial-gradient(ellipse 50% 90% at 50% 50%,rgba(0,0,0,.62),transparent 72%),
+      /* Magenta floor spill (ceiling rail reflection) */
+      radial-gradient(ellipse 70% 100% at 50% 72%,rgba(204,68,255,.16),transparent 78%),
+      /* Cyan floor spill (accent light reflection) */
+      radial-gradient(ellipse 58% 80% at 50% 86%,rgba(0,200,255,.10),transparent 78%);
+    filter:blur(20px);pointer-events:none;z-index:0;
   }
   .hero-stage+.rgrid{
     grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
