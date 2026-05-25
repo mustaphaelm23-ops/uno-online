@@ -3,6 +3,7 @@
     setLang(I18N.current); // apply saved language + RTL before anything renders
     buildBg();
     Theme.init();          // apply saved/seasonal lobby theme + atmosphere particles
+    if(typeof Atmosphere!=='undefined') Atmosphere.boot();   // body-level world tint (pointer-events:none — cannot block clicks)
     if(S.token&&S.user){initSock();goLobby();}
     else showScreen('auth-screen');
     // Auth enter key
