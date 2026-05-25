@@ -56,6 +56,8 @@
     enabled:false, booted:false, booting:false, disabled:false,
     renderer:null, scene:null, camera:null, canvas:null,
     dome:null, domeMat:null, orbs:[], dust:null, fog:null,
+    // venue shell (phase 1) — physical environment containing the abstract atmosphere
+    floor:null, ceiling:null, ceilingStrip:null, columns:[], venueLights:[],
     // pointer parallax target / current (lerped)
     mx:0, my:0, cx:0, cy:0,
     // palette state — current colours are lerped toward target
@@ -125,8 +127,10 @@
       renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.5));
       this.renderer=renderer;
       const scene=new T.Scene();
-      // ambient only — orbs are visual lights, not actual scene lights
-      scene.add(new T.AmbientLight(0xffffff, 0.6));
+      // Ambient lowered so the new venue shell (MeshStandardMaterial) has
+      // real lighting contrast. Existing dome / orbs / dust use materials
+      // that ignore lights, so they look identical at any ambient value.
+      scene.add(new T.AmbientLight(0xffffff, 0.3));
       // fog gives distant elements a natural falloff into dark
       scene.fog=new T.Fog(0x0a0716, 12, 42);
       this.fog=scene.fog;
@@ -194,9 +198,93 @@
       this._cur=this._cloneColors(this._resolvePalette());
       this._tgt=this._cloneColors(this._cur);
       this._applyColors();
+
+      // Phase-1 venue shell — physical room containing the abstract atmosphere.
+      // Built AFTER the abstract layers so it sits at known z-ranges inside
+      // the same scene. All elements are static; render loop untouched.
+      this._buildVenue();
+
       this._onResize();
 
       cv.addEventListener('webglcontextlost', (e)=>{ e.preventDefault(); this.disabled=true; this.stop(); });
+    },
+
+    _buildVenue(){
+      /* PHASE 1 venue shell — gives the lobby a physical "lounge" presence:
+         glossy floor + dark ceiling with a warm light strip + 4 architectural
+         columns + directional sun light + a single warm ceiling point light.
+         No back wall, no reflections, no rail lights — those are phase-2 polish.
+
+         Geometry kept inside the dome (radius 34) so the dome still backs the
+         room through the gaps between venue elements (sky-beyond-the-venue feel).
+
+         All venue meshes use MeshStandardMaterial so they react to the new
+         lights. Existing dome / orbs / dust are unaffected (their materials
+         ignore scene lights). */
+      const T=window.THREE;
+
+      // Floor — large dark glossy plane catching ambient + ceiling light.
+      const floorGeo=new T.PlaneGeometry(30, 40);
+      const floorMat=new T.MeshStandardMaterial({
+        color:0x080510, roughness:0.42, metalness:0.55, side:T.DoubleSide,
+      });
+      this.floor=new T.Mesh(floorGeo, floorMat);
+      this.floor.rotation.x=-Math.PI/2;
+      this.floor.position.set(0, -5, -10);
+      this.scene.add(this.floor);
+
+      // Ceiling — dark plane above. Rougher than the floor (not polished).
+      const ceilGeo=new T.PlaneGeometry(30, 40);
+      const ceilMat=new T.MeshStandardMaterial({
+        color:0x0a0815, roughness:0.85, metalness:0.10, side:T.DoubleSide,
+      });
+      this.ceiling=new T.Mesh(ceilGeo, ceilMat);
+      this.ceiling.rotation.x=Math.PI/2;
+      this.ceiling.position.set(0, 5, -10);
+      this.scene.add(this.ceiling);
+
+      // Ceiling light strip — emissive plane running down the centre line.
+      // Uses MeshBasicMaterial so it always glows full-bright regardless of
+      // surrounding lighting (it IS a light source visually).
+      const stripGeo=new T.PlaneGeometry(1.0, 38);
+      const stripMat=new T.MeshBasicMaterial({
+        color:0xFFE5A8, transparent:true, opacity:0.85,
+        side:T.DoubleSide, depthWrite:false,
+      });
+      this.ceilingStrip=new T.Mesh(stripGeo, stripMat);
+      this.ceilingStrip.rotation.x=Math.PI/2;
+      this.ceilingStrip.position.set(0, 4.96, -10);
+      this.scene.add(this.ceilingStrip);
+
+      // 4 architectural columns flanking the centre — dark cylinders that
+      // frame the venue and pick up rim lighting from the directional sun.
+      const colGeo=new T.CylinderGeometry(0.45, 0.45, 11, 12);
+      const colMat=new T.MeshStandardMaterial({
+        color:0x140820, roughness:0.55, metalness:0.30,
+      });
+      const colPositions=[
+        {x:-7, z:-7},  {x: 7, z:-7},
+        {x:-8, z:-18}, {x: 8, z:-18},
+      ];
+      for(const p of colPositions){
+        const col=new T.Mesh(colGeo, colMat);
+        col.position.set(p.x, 0, p.z);
+        this.scene.add(col);
+        this.columns.push(col);
+      }
+
+      // Venue lighting — warm directional sun from above-right (sells the
+      // columns' rim light) + a warm point light at the ceiling strip
+      // (sells the strip as a real light source casting on floor / columns).
+      const sun=new T.DirectionalLight(0xfff0d0, 0.55);
+      sun.position.set(3, 8, 4);
+      this.scene.add(sun);
+      this.venueLights.push(sun);
+
+      const ceilLight=new T.PointLight(0xFFE5A8, 1.6, 38, 1.8);
+      ceilLight.position.set(0, 4.5, -10);
+      this.scene.add(ceilLight);
+      this.venueLights.push(ceilLight);
     },
     _gradientTex(){
       const T=window.THREE, cv=document.createElement('canvas');
