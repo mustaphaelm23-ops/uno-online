@@ -208,14 +208,29 @@
     position:absolute;inset:-3%;pointer-events:none;z-index:0;
     background:url('lobby-bg.png') center center / cover no-repeat;
     animation:lobbyBgZoom 18s ease-in-out infinite alternate;
-    filter:saturate(1.1);
+    /* Slight darken + softer saturation pushes the background visually further
+       back, giving the hero foreground stronger depth separation. */
+    filter:saturate(1.04) brightness(.88) contrast(1.04);
   }
   
+  /* Lobby composition layer — 4 stacked gradients that orbit the eye around
+     the hero. Order top-to-bottom in the stack:
+       1. Hero spotlight — warmer brighter pool where the hero table sits
+          (~y 55%), pulls the eye to the centre of the world.
+       2. Ambient wash — gentle overall warm tint, kept lighter than v1 so
+          the spotlight reads as the stronger gesture.
+       3. Edge vignette — darker corners frame the hero and create the
+          "cinematic letterbox" feeling without true bars.
+       4. Top/bottom darkening — depth grounding; deeper at the bottom so
+          the supporting rooms naturally fall into atmospheric haze.
+     pointer-events:none, can never block clicks. */
   #lobby-screen::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
     background:
-      radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.18) 0%,transparent 60%),
-      linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,.05) 35%,rgba(0,0,0,.55) 100%);
+      radial-gradient(ellipse 62% 38% at 50% 55%,rgba(255,205,130,.18) 0%,transparent 78%),
+      radial-gradient(ellipse 70% 50% at 50% 50%,rgba(255,180,80,.10) 0%,transparent 65%),
+      radial-gradient(ellipse 115% 88% at 50% 50%,transparent 48%,rgba(0,0,0,.48) 100%),
+      linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.05) 32%,rgba(0,0,0,.68) 100%);
     animation:lobbyGlowBreath 6s ease-in-out infinite alternate;
   }
   
@@ -290,7 +305,15 @@
     grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
     gap:11px;opacity:.94;
   }
-  .hero-stage+.rgrid .rtable{border-radius:14px;}
+  /* Supporting rooms — visually demoted under the hero. Soft desaturation +
+     dim so they recede into the atmosphere; hover restores full vibrancy so
+     they feel "lit up" when the user examines them. */
+  .hero-stage+.rgrid .rtable{
+    border-radius:14px;
+    filter:saturate(.9) brightness(.93);
+    transition:filter .3s ease,transform .25s cubic-bezier(.2,.9,.3,1.15),box-shadow .25s,border-color .25s;
+  }
+  .hero-stage+.rgrid .rtable:hover{filter:saturate(1.04) brightness(1.04);}
   .hero-stage+.rgrid .rtable-stage{height:148px;}
   .hero-stage+.rgrid .rtable-name{font-size:14px;}
   .rtable.rtable-hero{
