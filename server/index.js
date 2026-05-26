@@ -1896,17 +1896,16 @@ io.on('connection', (socket) => {
     ack?.(result);
   });
 
-  // ── Game: Choose Color ──
-  socket.on('game:choose_color', ({ color } = {}, ack) => {
-    const room = roomsDB.get(socket.currentRoomId);
-    if (!room) return ack?.({ success: false });
-    const result = room.game.chooseColor(userId, color);
-    if (result.success) {
-      io.to(socket.currentRoomId).emit('game:color_chosen', { playerId: userId, color });
-      broadcastPrivateStates(room);
-    }
-    ack?.(result);
-  });
+  // ── Game: Choose Color ── REMOVED in P3.1 audit ──
+  // This handler bypassed turn / ownership validation: any player could emit
+  // game:choose_color and overwrite the top wild's chosenColor at any time
+  // (server only checked "player exists" + "valid color"). Client never used
+  // this event — the legitimate path is playCard(cardId, chosenColor) which
+  // validates correctly at GameManager.js:164-169. Removing this orphan
+  // socket entry point closes the side-channel without affecting gameplay.
+  //
+  // The chooseColor() method on GameManager remains but has no callers; left
+  // in place as harmless dead code (can be cleaned up in a later sweep).
 
   // ── Game: Call UNO ──
   socket.on('game:call_uno', ({} = {}, ack) => {
@@ -1997,17 +1996,14 @@ io.on('connection', (socket) => {
     socket.to(socket.currentRoomId).emit('voice:speaking', { peerId: userId, speaking: !!speaking });
   });
   
-  // ── Game: Challenge WD4 ──
-  socket.on('game:challenge_wd4', ({} = {}, ack) => {
-    const room = roomsDB.get(socket.currentRoomId);
-    if (!room) return ack?.({ success: false });
-    const result = room.game.challengeWildDraw4(userId);
-    if (result.success) {
-      io.to(socket.currentRoomId).emit('game:challenge_resolved', result.result);
-      broadcastPrivateStates(room);
-    }
-    ack?.(result);
-  });
+  // ── Game: Challenge WD4 ── REMOVED in P3.1 audit ──
+  // This handler called room.game.challengeWildDraw4(userId), a method that
+  // doesn't exist on GameManager. Every emit produced a TypeError (caught by
+  // Socket.IO so the server didn't crash, but logged each time). Client never
+  // wired the event either — the WD4 challenge mechanic was scaffolded and
+  // never finished. Removing the dead handler. If we want the challenge
+  // feature later (player can challenge "did you really have no matching
+  // color?"), it's a future feature add, not a bug fix.
 
   // ── Matchmaking ──
   socket.on('matchmaking:join', ({ settings = {} } = {}, ack) => {
