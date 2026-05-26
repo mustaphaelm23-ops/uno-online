@@ -394,6 +394,74 @@
 
   // Render one room as a premium 3D table with seated players.
   const _FELTS=[['#15803D','#08351b'],['#B91C1C','#4a0a0a'],['#1D4ED8','#0a1f52'],['#9333EA','#3b0f63']];
+
+  // Featured card felt palette — per-type colours so the 4 cards have visual
+  // variety (Classic green, Fun red, Ranked dark/amber, Chill blue).
+  const _FEATURED_FELTS = {
+    CLASSIC: ['#15803D', '#08351b'],
+    FUN:     ['#B91C1C', '#4a0a0a'],
+    RANKED:  ['#7c2d12', '#1a0a05'],
+    CHILL:   ['#1D4ED8', '#0a1f52'],
+  };
+
+  // Render one featured-lobby card. `card` is the per-type payload from
+  // /api/rooms/featured: { type, label, players, maxPlayers, entryFee, badge,
+  // instanceId, seats[] }. `isHot` toggles the auto-HOT scale + gold glow.
+  // RANKED cards always render their fixed RANKED badge regardless of isHot.
+  function _featuredCardHTML(card, isHot){
+    const max = card.maxPlayers || 4;
+    const seats = card.seats || [];
+    const f = _FEATURED_FELTS[card.type] || ['#16A34A', '#0a3d1f'];
+    // Seat layout (same elliptical math as _roomTableHTML for visual consistency).
+    let seatHTML = '';
+    for(let i = 0; i < max; i++){
+      const ang = (-90 + 360/max * i) * Math.PI / 180;
+      const x = (50 + Math.cos(ang) * 45).toFixed(1);
+      const y = (42 + Math.sin(ang) * 23).toFixed(1);
+      const df = (Math.sin(ang) + 1) / 2;
+      const sc = (0.78 + df * 0.36).toFixed(3);
+      const sz = 2 + Math.round(df * 10);
+      const p = seats[i];
+      const st = `left:${x}%;top:${y}%;--s:${sc};--sz:${sz}`;
+      if(p){
+        const img = _isImgAvatar(p.avatar);
+        const face = img ? '' : esc(p.avatar || (p.name || '?').charAt(0).toUpperCase());
+        seatHTML += `<div class="rt-seat filled" style="${st}" title="${esc(p.name||'')}">`+
+          `<div class="rt-av" style="${img?`background-image:url('${p.avatar}')`:''};animation-delay:${i*70}ms">${face}</div></div>`;
+      } else {
+        seatHTML += `<div class="rt-seat empty" style="${st}"></div>`;
+      }
+    }
+    // Badges. RANKED is fixed; HOT is dynamic (auto-assigned by server to the
+    // busiest non-RANKED card). Both can coexist on the same card if RANKED
+    // happens to be the busiest type (the server prevents this by excluding
+    // RANKED from HOT contention, but the HTML stays correct either way).
+    const isRanked = card.badge === 'RANKED';
+    let badgeHTML = '';
+    if(isHot) badgeHTML += `<div class="rt-feat-badge hot-badge">🔥 HOT</div>`;
+    if(isRanked) badgeHTML += `<div class="rt-feat-badge ranked-badge">⭐ RANKED</div>`;
+    const active = (card.players > 0) ? ' rt-active' : '';
+    const hotCls = isHot ? ' rt-hot' : '';
+    const stage = `<div class="rtable-stage">
+        <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
+        ${seatHTML}
+        <div class="rt-energy" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      </div>`;
+    return `<div class="rtable rtable-featured${active}${hotCls}" data-room-type="${card.type}" onclick="quickJoin('${card.type}')" style="--felt:${f[0]};--felt2:${f[1]}">
+      ${badgeHTML}
+      <div class="rtable-glow"></div>
+      <div class="rtable-top">
+        <span class="rtable-name">${esc((card.label||card.type).toUpperCase())}</span>
+        <span class="rtable-tag">${card.players}/${max} PLAYERS</span>
+      </div>
+      ${stage}
+      <div class="rtable-foot">
+        <span class="rtable-count"><b>${card.players}</b>/${max}</span>
+        <span class="rtable-entry">🪙 ${(card.entryFee||0).toLocaleString()}</span>
+        <span class="rtable-join">JOIN ▶</span>
+      </div>
+    </div>`;
+  }
   function _roomTableHTML(r, live, featId, isHero){
     const max=r.maxPlayers||4;
     const seats=r.seats||[];

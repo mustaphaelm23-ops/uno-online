@@ -375,6 +375,106 @@
   }
   .btnS:hover{border-color:var(--accent);background:rgba(245,158,11,.05);}
   .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px;}
+
+  /* ═══ FEATURED LOBBY GRID (4 persistent room cards) ═══
+     Replaces the old hero-stage + supporting-grid composition with the
+     mockup's 4-equal-cards-in-a-row layout. The card with .rt-hot gets a
+     subtle scale + glow bump so it visually pops (auto-assigned to the
+     busiest non-RANKED card by the server). RANKED keeps its fixed badge. */
+  .rgrid.rgrid--featured{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:18px;
+    align-items:start;
+  }
+  @media (max-width:960px){
+    .rgrid.rgrid--featured{grid-template-columns:repeat(2, 1fr);gap:14px;}
+  }
+  @media (max-width:520px){
+    .rgrid.rgrid--featured{grid-template-columns:1fr;gap:12px;}
+  }
+
+  /* Featured card — base sizing. Inherits the .rtable atmospheric styles
+     (felt, glow, sweep, energy sparks) so cards stay visually consistent
+     with the rest of the lobby. */
+  .rtable.rtable-featured{
+    border-radius:18px;
+    transition:transform .35s cubic-bezier(.2,.9,.3,1.15),
+               box-shadow .35s,
+               border-color .35s,
+               filter .3s;
+  }
+
+  /* HOT card — the busiest non-RANKED room. Scale + gold rim + breath +
+     stronger felt halo + venue rim glow. Same atmospheric vocabulary as the
+     old hero-stage so the "world answers the table" pulse coupling carries
+     over to whichever card auto-HOTs. */
+  .rtable.rtable-featured.rt-hot{
+    transform:scale(1.06);
+    z-index:5;
+    border-color:rgba(255,210,63,.42);
+    box-shadow:
+      0 32px 78px rgba(0,0,0,.62),
+      0 0 0 1px rgba(255,210,63,.22),
+      0 0 70px color-mix(in srgb,var(--felt,#16A34A) 30%,transparent),
+      0 0 90px rgba(204,68,255,.10),
+      0 0 130px rgba(0,180,255,.07),
+      inset 0 2px 0 rgba(255,235,180,.14),
+      inset 0 -40px 60px rgba(0,0,0,.30);
+    animation:lobbyEntryUp .5s cubic-bezier(.16,1,.3,1) backwards,
+              rtHotBreath 7s ease-in-out infinite;
+  }
+  /* Breathing keyframe — gold rim + felt halo + venue rim swell together,
+     same temporal rhythm as the previous rtHeroBreath so the pulse
+     coupling and rim-light system continue to apply on the HOT card. */
+  @keyframes rtHotBreath{
+    0%,100%{box-shadow:
+      0 32px 78px rgba(0,0,0,.60),
+      0 0 0 1px rgba(255,210,63,.18),
+      0 0 60px color-mix(in srgb,var(--felt,#16A34A) 24%,transparent),
+      0 0 80px rgba(204,68,255,.08),
+      0 0 120px rgba(0,180,255,.06),
+      inset 0 2px 0 rgba(255,235,180,.10),
+      inset 0 -40px 60px rgba(0,0,0,.30);}
+    50%{box-shadow:
+      0 38px 96px rgba(0,0,0,.70),
+      0 0 0 1px rgba(255,210,63,.32),
+      0 0 90px color-mix(in srgb,var(--felt,#16A34A) 38%,transparent),
+      0 0 110px rgba(204,68,255,.14),
+      0 0 160px rgba(0,180,255,.10),
+      inset 0 2px 0 rgba(255,235,180,.14),
+      inset 0 -40px 60px rgba(0,0,0,.30);}
+  }
+
+  /* Featured-card badges (HOT / RANKED). Float at the top, slightly above
+     the card edge, with a soft outer glow tying them into the venue lighting. */
+  .rt-feat-badge{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:6;
+    padding:6px 14px;border-radius:999px;
+    font-family:'Outfit',sans-serif;font-size:11px;font-weight:900;
+    letter-spacing:1.4px;white-space:nowrap;pointer-events:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .rt-feat-badge.hot-badge{
+    background:linear-gradient(135deg,#FFD23F,#F59E0B 60%,#E8324A);
+    color:#1a0e08;
+    box-shadow:0 6px 22px rgba(245,158,11,.55),0 0 28px rgba(232,50,74,.32),inset 0 1px 0 rgba(255,255,255,.45);
+    animation:rtFeatBadgePulse 2.4s ease-in-out infinite;
+  }
+  .rt-feat-badge.ranked-badge{
+    background:linear-gradient(135deg,#A855F7,#6B21A8);
+    color:#fff;
+    box-shadow:0 6px 22px rgba(168,85,247,.50),0 0 26px rgba(168,85,247,.28),inset 0 1px 0 rgba(255,255,255,.30);
+  }
+  /* If both badges show on the same card (RANKED also happens to be HOT,
+     which the server prevents but the layout should still tolerate),
+     stack them vertically. */
+  .rt-feat-badge.hot-badge + .rt-feat-badge.ranked-badge{top:18px;}
+  @keyframes rtFeatBadgePulse{
+    0%,100%{transform:translateX(-50%) scale(1);}
+    50%{transform:translateX(-50%) scale(1.06);}
+  }
+
   /* ── HERO STAGE — one dominant centerpiece above the supporting grid ─────
      The hero is full-width, taller, gold-rimmed and gently breathing. It
      visually dominates the lobby so the eye locks onto "the main table",

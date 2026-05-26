@@ -48,102 +48,102 @@
     _animateCount('heroWins',gw);
     const wrEl=document.getElementById('heroWinRate'); if(wrEl) wrEl.textContent=(gp?Math.round(gw/gp*100):0)+'%';
   }
+  // Quick-join into a featured type. `type` is one of 'CLASSIC' / 'FUN' /
+  // 'RANKED' / 'CHILL' / 'QUICK_MATCH'. The server picks an open instance
+  // of that type (or spawns one) and seats the player; we then hand off to
+  // the existing socket room:join flow (idempotent server-side).
+  async function quickJoin(type){
+    if(!type) return;
+    if(!S.socket?.connected) return toast('Not connected — reconnecting…','e');
+    try{
+      const res = await apiFetch('/api/rooms/quick-join', {
+        method: 'POST',
+        body: JSON.stringify({ type }),
+      });
+      if(!res?.roomId) return toast('Could not join — try again','e');
+      _doJoinNow(res.roomId);
+    }catch(e){
+      if(e?.status === 401) return;                        // auth-expiry handler already bounced to login
+      const msg = e?.status === 402
+        ? `Not enough coins (need ${e.payload?.need || ''} 🪙)`
+        : e?.networkError
+          ? 'Network error — try again'
+          : (e?.message || 'Could not join');
+      toast(msg, 'e');
+    }
+  }
+
   async function loadRooms(){
     try{
-      const d=await api('GET','/rooms'),g=document.getElementById('rgrid');
-      // ── Hero stage container — single dominant centerpiece above the supporting grid.
-      // Created once, then surgically updated so the RoomScene canvas inside doesn't flicker
-      // every 5s when the rooms list refreshes.
-      let heroStage=document.getElementById('heroStage');
-      if(!heroStage){
-        heroStage=document.createElement('div');
-        heroStage.id='heroStage';
-        heroStage.className='hero-stage';
-        g.parentElement.insertBefore(heroStage, g);
+      // Two parallel fetches: /featured for the 4 cards, /rooms for the
+      // live-games section (spectatable matches in progress). Either can
+      // fail independently without breaking the other.
+      const [featured, base] = await Promise.all([
+        api('GET','/rooms/featured').catch(e=>{ console.warn('[loadRooms] /featured failed:', e); return null; }),
+        api('GET','/rooms').catch(e=>{ console.warn('[loadRooms] /rooms failed:', e); return null; }),
+      ]);
+
+      // Clean up any legacy hero-stage div left by an older render path.
+      document.getElementById('heroStage')?.remove();
+
+      const g = document.getElementById('rgrid');
+      if(!featured){
+        document.getElementById('rinfo').textContent = 'Could not load rooms';
+        return;
       }
-      {
-        const on=d.onlineCount||0;
-        document.getElementById('rinfo').innerHTML=
-          `${d.rooms.length} room${d.rooms.length===1?'':'s'} available `+
-          `<span class="online-pill"><span class="online-dot"></span>${on} online</span>`;
+
+      // Online count + summary line.
+      const onlineCount = featured.onlineCount || 0;
+      document.getElementById('rinfo').innerHTML =
+        `${featured.rooms.length} rooms `+
+        `<span class="online-pill"><span class="online-dot"></span>${onlineCount} online</span>`;
+
+      // Render the 4 cards. Signature-cached: only re-render the grid when
+      // the meaningful payload (hot type + per-card instance + occupancy)
+      // actually changed, so the RoomScene canvas inside the HOT card
+      // doesn't get reattached every 5s for nothing.
+      const signature = [
+        featured.hotType || '_',
+        ...featured.rooms.map(c => `${c.type}:${c.instanceId||'_'}:${c.players}`),
+      ].join('|');
+
+      if(g.dataset.featuredSignature !== signature){
+        g.className = 'rgrid rgrid--featured';
+        g.innerHTML = featured.rooms.map(card =>
+          _featuredCardHTML(card, card.type === featured.hotType)
+        ).join('');
+        g.dataset.featuredSignature = signature;
+        // Re-anchor RoomScene to the (possibly new) HOT card so the
+        // pulse-coupling + rim-light + halo + breath system carries over
+        // from the old hero-stage approach. When no HOT exists (every
+        // casual pool empty), default-focus on the CLASSIC card so the
+        // canvas stays alive rather than orphaned.
+        if(typeof RoomScene !== 'undefined' && RoomScene.setHero){
+          const focusType = featured.hotType || 'CLASSIC';
+          const focusEl = g.querySelector(`[data-room-type="${focusType}"]`);
+          if(focusEl) requestAnimationFrame(()=> RoomScene.setHero(focusEl));
+        }
+        EVENT.decorateRooms();
       }
-      // Render live games (spectatable)
-      const live = d.liveGames || [];
+
+      // Live games section — preserved for spectating. Hidden when empty.
+      const live = base?.liveGames || [];
       const liveSec = document.getElementById('liveSection');
       const liveGrid = document.getElementById('livegrid');
       const liveInfo = document.getElementById('liveinfo');
       if(liveSec && liveGrid){
         if(live.length){
-          liveSec.style.display='';
+          liveSec.style.display = '';
           liveInfo.textContent = `${live.length} live game${live.length===1?'':'s'} — watch in progress`;
           liveGrid.innerHTML = live.map(r => _roomTableHTML(r, true, null)).join('');
         } else {
-          liveSec.style.display='none';
+          liveSec.style.display = 'none';
         }
       }
-      const rooms=d.rooms||[];
-      // Pick the hero room: featured > most-active > first.
-      // The hero never goes empty — when there are zero rooms, we show a decorative
-      // "Main Stage" centerpiece with a Create CTA so the eye still has a focal point.
-      const featId=EVENT.pickFeatured(rooms);
-      let heroRoom=null;
-      if(rooms.length){
-        if(featId) heroRoom=rooms.find(r=>r.id===featId)||null;
-        if(!heroRoom){
-          heroRoom=rooms.slice().sort((a,b)=>{
-            const ap=a.players||0, bp=b.players||0;
-            if(bp!==ap) return bp-ap;
-            return ((b.seats||[]).length)-((a.seats||[]).length);
-          })[0];
-        }
-      }
-      const newHeroId = heroRoom ? heroRoom.id : '__mainstage__';
-      const heroChanged = heroStage.dataset.heroId !== newHeroId;
-      if(heroChanged){
-        heroStage.innerHTML = heroRoom
-          ? _roomTableHTML(heroRoom, false, featId, /*isHero*/ true)
-          : _mainStageHTML();
-        heroStage.dataset.heroId = newHeroId;
-      } else if(heroRoom){
-        // Same hero room — patch dynamic values inline so the always-on
-        // canvas inside the hero card doesn't flicker every 5s.
-        const card=heroStage.querySelector('.rtable');
-        if(card){
-          const cb=card.querySelector('.rtable-count b'); if(cb) cb.textContent=heroRoom.players;
-        }
-      }
-      // Supporting rooms — everything except the hero, in a tighter grid below.
-      const restRooms = heroRoom ? rooms.filter(r=>r.id!==heroRoom.id) : [];
-      g.innerHTML = restRooms.map(r=>_roomTableHTML(r,false,featId)).join('');
-      EVENT.decorateRooms();
-      // Pin RoomScene to the (possibly new) hero element — always-on focus.
-      if(heroChanged && typeof RoomScene!=='undefined' && RoomScene.setHero){
-        const heroEl=heroStage.querySelector('.rtable');
-        if(heroEl) requestAnimationFrame(()=>RoomScene.setHero(heroEl));
-      }
-    }catch(e){document.getElementById('rinfo').textContent='Could not load rooms';}
-  }
-  // Decorative Main Stage — shown when there are zero rooms.
-  // Same .rtable shell so RoomScene hover/focus still attaches its canvas.
-  function _mainStageHTML(){
-    return `<div class="rtable rtable-hero rt-active" style="--felt:#15803D;--felt2:#08351b">
-      <div class="rt-hero-label">⭐ MAIN STAGE</div>
-      <div class="rt-hero-frame" aria-hidden="true"></div>
-      <div class="rtable-glow"></div>
-      <div class="rtable-top">
-        <span class="rtable-name">UNO ARENA</span>
-        <span class="rtable-tag" style="color:#FFD23F">● OPEN STAGE</span>
-      </div>
-      <div class="rtable-stage">
-        <div class="rtable-felt"><div class="rtable-center"><div class="rtable-unocard">UNO</div></div></div>
-        <div class="rt-energy" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      </div>
-      <div class="rtable-foot">
-        <span class="rtable-count" style="font-size:13px;font-weight:600;color:rgba(255,255,255,.65)">No rooms yet — be the first to take the stage.</span>
-        <span class="rtable-join" onclick="event.stopPropagation();doCreate()" style="margin-left:auto;cursor:pointer">➕ CREATE ROOM</span>
-        <span class="rtable-join" onclick="event.stopPropagation();doMM()" style="cursor:pointer;background:linear-gradient(135deg,#60A5FA,#3B82F6)">🎯 QUICK MATCH</span>
-      </div>
-    </div>`;
+    }catch(e){
+      console.error('[loadRooms]', e);
+      document.getElementById('rinfo').textContent='Could not load rooms';
+    }
   }
   // ── Bottom navigation — premium floating dock ──
   // Slide the glowing pill behind the active tab (measured, so it works
