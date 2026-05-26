@@ -361,7 +361,13 @@
         </div>`;
       }).join('');
     }catch(e){
-      box.innerHTML=`<div class="rail-empty">Couldn't load friends</div>`;
+      // 401 already bounced the user to auth via _handleAuthExpiry — don't paint over it.
+      if(e?.status===401) return;
+      const msg = e?.networkError
+        ? `Can't reach the server.`
+        : `Couldn't load friends${e?.status?` (${e.status})`:''}.`;
+      box.innerHTML=`<div class="rail-empty">${msg}<br>`+
+        `<a href="#" onclick="event.preventDefault();loadRailFriends();return false;" style="color:#60A5FA;text-decoration:underline">Retry</a></div>`;
     }
   }
   function _worldMsgHTML(m){

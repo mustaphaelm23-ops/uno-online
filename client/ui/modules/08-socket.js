@@ -116,9 +116,23 @@
     });
     sk.on('world:history',(msgs)=>{
       const box=document.getElementById('worldMsgs');
-      if(box){ box.innerHTML=(msgs||[]).map(_worldMsgHTML).join(''); box.scrollTop=box.scrollHeight; }
+      if(!box) return;
+      if(!msgs || !msgs.length){
+        box.innerHTML=`<div class="rail-empty">No messages yet — be the first to say hi 👋</div>`;
+      } else {
+        box.innerHTML=msgs.map(_worldMsgHTML).join('');
+        box.scrollTop=box.scrollHeight;
+      }
     });
-    sk.on('world:msg',(m)=>_appendWorldMsg(m));
+    sk.on('world:msg',(m)=>{
+      // Wipe the empty-state placeholder before appending the first real message.
+      const box=document.getElementById('worldMsgs');
+      if(box && box.querySelector('.rail-empty')) box.innerHTML='';
+      _appendWorldMsg(m);
+    });
+    // Server tells us we were throttled (1.2s between messages). Quiet hint;
+    // ignored silently if toast() isn't available.
+    sk.on('world:throttled',()=>{ try{ toast('Slow down — one message at a time','i'); }catch(e){} });
 
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game

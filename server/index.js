@@ -66,6 +66,87 @@ const UserSchema = new mongoose.Schema({
 
 const UserModel = mongoose.model('User', UserSchema);
 
+// ── World Chat persistence ─────────────────────────────────────────────
+// Rolling window: keep last 200 messages persisted, show last 40 on connect.
+// In-memory `worldChat` mirrors the DB tail so socket connects don't hit DB.
+const WORLD_CHAT_CAP = 200;
+const WORLD_CHAT_HISTORY = 40;
+const WorldMessageSchema = new mongoose.Schema({
+  id:      { type: String, required: true, unique: true, index: true },
+  userId:  String,
+  name:    String,
+  avatar:  String,
+  text:    String,
+  at:      { type: Number, index: true },
+}, { strict: false });
+const WorldMessageModel = mongoose.model('WorldMessage', WorldMessageSchema);
+
+async function loadWorldChat() {
+  try {
+    if (!mongoose.connection.readyState) return;
+    const msgs = await WorldMessageModel.find({}).sort({ at: -1 }).limit(WORLD_CHAT_CAP).lean();
+    msgs.reverse();                            // oldest first, so push order matches chat order
+    worldChat.length = 0;
+    msgs.forEach(m => worldChat.push({
+      id: m.id, userId: m.userId, name: m.name, avatar: m.avatar, text: m.text, at: m.at,
+    }));
+    console.log(`[World] Loaded ${msgs.length} chat messages from MongoDB`);
+  } catch (e) {
+    console.log('[World] Failed to load chat from MongoDB:', e.message);
+  }
+}
+
+async function saveWorldMessage(entry) {
+  try {
+    if (!mongoose.connection.readyState) return;
+    await WorldMessageModel.create(entry);
+  } catch (e) {
+    // Don't crash the chat path on a single failed save — message is already broadcast.
+    console.log('[World] saveWorldMessage failed:', e.message);
+  }
+}
+
+async function pruneWorldMessages() {
+  // Keep DB collection bounded at WORLD_CHAT_CAP. Probabilistic: only runs on
+  // ~5% of sends so the chat path stays cheap.
+  try {
+    if (!mongoose.connection.readyState) return;
+    const count = await WorldMessageModel.estimatedDocumentCount();
+    if (count <= WORLD_CHAT_CAP + 20) return;     // small buffer to avoid per-msg pruning
+    const cutoff = await WorldMessageModel
+      .find({}).sort({ at: -1 }).skip(WORLD_CHAT_CAP).limit(1).lean();
+    if (cutoff[0]) {
+      await WorldMessageModel.deleteMany({ at: { $lt: cutoff[0].at } });
+    }
+  } catch (e) {
+    console.log('[World] pruneWorldMessages failed:', e.message);
+  }
+}
+
+// Single entry point for ALL world-chat message validation. Future filters
+// (link blocker, profanity, per-user rate-limit window, spam patterns) plug
+// in here without touching the socket handler. Always returns { ok, text?,
+// reason? } — `reason` is a stable string code so the client can later
+// surface specific feedback ("rate_limit", "links_blocked", etc.).
+function moderateWorldMessage(rawText, user, socket) {
+  const text = String(rawText || '').trim().slice(0, 200);
+  if (!text) return { ok: false, reason: 'empty' };
+
+  // Anti-spam throttle: 1.2s per socket between messages (preserved from prior logic).
+  const now = Date.now();
+  if (socket._lastWorldMsg && now - socket._lastWorldMsg < 1200) {
+    return { ok: false, reason: 'rate_limit' };
+  }
+
+  // ── Future moderation plugins (add here, no other changes needed) ──
+  // if (/(https?:\/\/|www\.)/i.test(text)) return { ok:false, reason:'links_blocked' };
+  // if (containsProfanity(text)) return { ok:false, reason:'profanity' };
+  // if (perUserRateExceeded(user.id)) return { ok:false, reason:'rate_limit_window' };
+  // ──────────────────────────────────────────────────────────────────
+
+  return { ok: true, text };
+}
+
 async function loadUsers() {
   try {
     const uri = process.env.MONGODB_URI;
@@ -1865,24 +1946,33 @@ io.on('connection', (socket) => {
   });
 
   // ── World Chat — global lobby chat ──
-  socket.emit('world:history', worldChat.slice(-40));
-  socket.on('world:send', ({ text } = {}) => {
+  // History: send the most recent WORLD_CHAT_HISTORY (40) on connect.
+  socket.emit('world:history', worldChat.slice(-WORLD_CHAT_HISTORY));
+  socket.on('world:send', async ({ text } = {}) => {
     const user = usersDB.get(userId);
     if (!user) return;
-    let msg = String(text || '').trim().slice(0, 200);
-    if (!msg) return;
-    // Simple anti-spam: 1.2s between messages per user
-    const now = Date.now();
-    if (socket._lastWorldMsg && now - socket._lastWorldMsg < 1200) return;
-    socket._lastWorldMsg = now;
+    // All validation flows through moderateWorldMessage so future filters
+    // (link blocker, profanity, per-user windows) plug in at one site.
+    const result = moderateWorldMessage(text, user, socket);
+    if (!result.ok) {
+      // Tell the sender we throttled them so the UI can show a hint; ignored
+      // silently by clients that don't bind this event yet.
+      if (result.reason === 'rate_limit') socket.emit('world:throttled', { ms: 1200 });
+      return;
+    }
+    socket._lastWorldMsg = Date.now();
     const entry = {
-      id: 'w' + now + Math.random().toString(36).slice(2, 6),
+      id: 'w' + Date.now() + Math.random().toString(36).slice(2, 6),
       userId: user.id, name: user.username, avatar: user.avatar || null,
-      text: msg, at: now,
+      text: result.text, at: Date.now(),
     };
     worldChat.push(entry);
-    if (worldChat.length > 60) worldChat.shift();
+    if (worldChat.length > WORLD_CHAT_CAP) worldChat.shift();
     io.emit('world:msg', entry);
+    // Persist + bounded prune. Prune is probabilistic (~5%) so we don't pay
+    // the count/delete cost on every message.
+    saveWorldMessage(entry);
+    if (Math.random() < 0.05) pruneWorldMessages();
   });
 
   // ── Disconnect ──
@@ -2630,7 +2720,8 @@ function purgeImageAvatars() {
   if (purged) { saveUsers(); console.log(`[Avatar] Cleared ${purged} custom image avatar(s)`); }
 }
 
-loadUsers().then(() => {
+loadUsers().then(async () => {
+  await loadWorldChat();                              // rolling 200-msg history populated before server.listen
   purgeImageAvatars();
   server.listen(CONFIG.PORT, '0.0.0.0', () => {
   console.log(`
