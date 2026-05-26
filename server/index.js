@@ -123,6 +123,29 @@ async function pruneWorldMessages() {
   }
 }
 
+// Single entry point for ALL game-reaction validation. Mirrors the world-chat
+// moderation pattern so future filters (emoji allowlist, abuse patterns,
+// per-user windowed throttle) plug in here without touching the socket
+// handler. Hard server-side floor — the client also enforces a 5s UX
+// cooldown but that can be bypassed by a tampered client; this can't.
+function moderateGameReaction(rawEmoji, user, socket) {
+  const emoji = String(rawEmoji || '').slice(0, 4);
+  if (!emoji) return { ok: false, reason: 'empty' };
+
+  // 1s per-socket throttle. Locked in as the hard cheat-resistant floor.
+  const now = Date.now();
+  if (socket._lastReaction && now - socket._lastReaction < 1000) {
+    return { ok: false, reason: 'rate_limit' };
+  }
+
+  // ── Future moderation plugins (add here, no other changes needed) ──
+  // if (!EMOJI_ALLOWLIST.has(emoji)) return { ok:false, reason:'not_allowed' };
+  // if (perUserAbusePattern(user.id, emoji)) return { ok:false, reason:'abuse' };
+  // ──────────────────────────────────────────────────────────────────
+
+  return { ok: true, emoji };
+}
+
 // Single entry point for ALL world-chat message validation. Future filters
 // (link blocker, profanity, per-user rate-limit window, spam patterns) plug
 // in here without touching the socket handler. Always returns { ok, text?,
@@ -1953,10 +1976,27 @@ io.on('connection', (socket) => {
   });
 
   // ── Game: Emoji Reaction ──
+  // All validation flows through moderateGameReaction (length cap +
+  // 1s server throttle, locked in as the hard cheat-resistant floor).
+  // The client already enforces a 5s UX cooldown for honest play — the
+  // server floor catches tampered clients that bypass the local timer.
+  // Future moderation plugs in at one site without touching this handler.
   socket.on('game:reaction', ({ emoji } = {}) => {
-    if(!emoji) return;
-    const safe = String(emoji).slice(0,4);
-    socket.to(socket.currentRoomId).emit('game:reaction', { playerId: userId, emoji: safe });
+    const user = usersDB.get(userId);
+    if (!user) return;
+    const result = moderateGameReaction(emoji, user, socket);
+    if (!result.ok) {
+      // Tell sender we throttled them so the client can surface a hint.
+      // Honest clients (5s UX cooldown) will never hit this in practice.
+      if (result.reason === 'rate_limit') socket.emit('game:reaction_throttled', { ms: 1000 });
+      return;
+    }
+    socket._lastReaction = Date.now();
+    // Broadcast to others in the room. Sender already animates locally
+    // via showReactionFly(isMine=true) when sendReaction() emits, so we
+    // intentionally use socket.to (excludes sender) — keeps the 50ms
+    // network roundtrip from causing a duplicate animation on the sender.
+    socket.to(socket.currentRoomId).emit('game:reaction', { playerId: userId, emoji: result.emoji });
   });
 
   // ── Voice chat: WebRTC signaling (offer/answer/ICE relay) ──

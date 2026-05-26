@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const VERSION = 'uno-shell-v70';
+const VERSION = 'uno-shell-v71';
 const SHELL = [
   '/',
   '/index.html',
