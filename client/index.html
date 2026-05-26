@@ -119,80 +119,126 @@
           </div>
           <div class="bp-banner-chev">›</div>
         </button>
+        <!-- Main rail — mockup's 9-item layout. Subtitles give context per the reference. -->
         <div class="lside-section">
-          <div class="lside-title" data-i18n="play">Play</div>
-          <button class="lbtn lbtn-cta" onclick="doCreate()">
-            <span class="lbtn-icon" style="--c:#E8324A;--c2:#C1192F">➕</span>
-            <span class="lbtn-label" data-i18n="createRoom">Create Room</span>
+          <button class="lbtn lbtn-main" onclick="doPlay()">
+            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🏠</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="play">Play</span>
+              <span class="lbtn-sub" data-i18n="playSub">Start your match</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="showJoinByCode()">
+          <button class="lbtn lbtn-main" onclick="showJoinByCode()">
             <span class="lbtn-icon" style="--c:#A78BFA;--c2:#7C3AED">🔑</span>
-            <span class="lbtn-label" data-i18n="joinCode">Join by Code</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="joinCode">Join by Code</span>
+              <span class="lbtn-sub" data-i18n="joinCodeSub">Enter room code</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="doMM()">
-            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#1D4ED8">🎯</span>
-            <span class="lbtn-label" data-i18n="quickMatch">Quick Match</span>
+          <button class="lbtn lbtn-main lbtn-cta" onclick="doCreate()">
+            <span class="lbtn-icon" style="--c:#E8324A;--c2:#C1192F">➕</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="createRoom">Create Room</span>
+              <span class="lbtn-sub" data-i18n="createRoomSub">Custom private room</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="showGameCenter()">
-            <span class="lbtn-icon" style="--c:#22D3EE;--c2:#0E7490">🎮</span>
-            <span class="lbtn-label" data-i18n="gameCenter">Game Center</span>
+          <button class="lbtn lbtn-main" onclick="doQuickMatch()">
+            <span class="lbtn-icon" style="--c:#FB7185;--c2:#9F1239">🔥</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="quickMatch">Quick Match</span>
+              <span class="lbtn-sub" data-i18n="quickMatchSub">Find a random match</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="doDaily()">
+          <button class="lbtn lbtn-main" onclick="doPractice()">
+            <span class="lbtn-icon" style="--c:#06B6D4;--c2:#0E7490">🤖</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="practice">Practice</span>
+              <span class="lbtn-sub" data-i18n="practiceSub">Play vs bots</span>
+            </span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-main" onclick="doDaily()">
             <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🎁</span>
-            <span class="lbtn-label" data-i18n="dailyReward">Daily Reward</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="dailyReward">Daily Reward</span>
+              <span class="lbtn-sub" data-i18n="dailyRewardSub">Collect your bonus</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="showRankedLb()">
+          <button class="lbtn lbtn-main" onclick="showCollection()">
+            <span class="lbtn-icon" style="--c:#F59E0B;--c2:#B45309">👑</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="collection">Collection</span>
+              <span class="lbtn-sub" data-i18n="collectionSub">Cards, decks &amp; more</span>
+            </span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-main" onclick="showMissions()">
+            <span class="lbtn-icon" style="--c:#22D3EE;--c2:#0E7490">🎯</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="missions">Missions</span>
+              <span class="lbtn-sub" data-i18n="missionsSub">Complete missions</span>
+            </span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-main" onclick="showLeaderboard()">
             <span class="lbtn-icon" style="--c:#FFD700;--c2:#D97706">🏆</span>
-            <span class="lbtn-label" data-i18n="ranked">Ranked</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="leaderboard">Leaderboard</span>
+              <span class="lbtn-sub" data-i18n="leaderboardSub">Top players</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn" onclick="showTournaments()">
-            <span class="lbtn-icon" style="--c:#A855F7;--c2:#4C1D95">⚔️</span>
-            <span class="lbtn-label" data-i18n="tournament">Tournament</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="doInsta()">
-            <span class="lbtn-icon" style="--c:#F472B6;--c2:#C13584">📸</span>
-            <span class="lbtn-label" data-i18n="followInsta">Follow + 1000🪙</span>
+          <button class="lbtn lbtn-main" onclick="doShop()">
+            <span class="lbtn-icon" style="--c:#F472B6;--c2:#9D174D">🛍️</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="shop">Shop</span>
+              <span class="lbtn-sub" data-i18n="shopSub">Buy coins &amp; items</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
         </div>
-        <div class="lside-section">
+        <!-- Competitions secondary group — visually demoted, SOON items kept visible (free marketing). -->
+        <div class="lside-section lside-section--secondary">
           <div class="lside-title" data-i18n="competitions">Competitions</div>
-          <button class="lbtn" onclick="showLeague()">
+          <button class="lbtn lbtn-sec" onclick="showLeague()">
             <span class="lbtn-icon" style="--c:#22C55E;--c2:#14532D">🏆</span>
             <span class="lbtn-label" data-i18n="league">League</span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn lbtn-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
+          <button class="lbtn lbtn-sec" onclick="showTournaments()">
+            <span class="lbtn-icon" style="--c:#A855F7;--c2:#4C1D95">⚔️</span>
+            <span class="lbtn-label" data-i18n="tournament">Tournament</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-sec" onclick="doScheduleFromGC()">
+            <span class="lbtn-icon" style="--c:#16A34A;--c2:#14532D">📅</span>
+            <span class="lbtn-label" data-i18n="schedule">Schedule</span>
+            <span class="lbtn-chev">›</span>
+          </button>
+          <button class="lbtn lbtn-sec lbtn-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
             <span class="lbtn-icon" style="--c:#3B82F6;--c2:#0F1F4A">⚽</span>
             <span class="lbtn-label" data-i18n="championsLeague">Champions League</span>
             <span class="lbtn-badge" data-i18n="soon">SOON</span>
           </button>
-          <button class="lbtn lbtn-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
+          <button class="lbtn lbtn-sec lbtn-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
             <span class="lbtn-icon" style="--c:#EF4444;--c2:#7F1D1D">🌍</span>
             <span class="lbtn-label" data-i18n="continentalCups">Continental Cups</span>
             <span class="lbtn-badge" data-i18n="soon">SOON</span>
           </button>
         </div>
-        <div class="lside-section">
-          <div class="lside-title" data-i18n="account">Account</div>
-          <button class="lbtn" onclick="showProfile()">
-            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#5B21B6">👤</span>
-            <span class="lbtn-label" data-i18n="myProfile">My Profile</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn" onclick="showLeaderboard()">
-            <span class="lbtn-icon" style="--c:#F59E0B;--c2:#92400E">🏆</span>
-            <span class="lbtn-label" data-i18n="leaderboard">Leaderboard</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-        </div>
+        <!-- Follow promo — visible pill with subtle glow per direction. Earns its spot via real reward. -->
+        <button class="lbtn-follow" onclick="doInsta()">
+          <span class="lbtn-icon" style="--c:#F472B6;--c2:#C13584">📸</span>
+          <span class="lbtn-text">
+            <span class="lbtn-label" data-i18n="followInsta">Follow + 1000🪙</span>
+            <span class="lbtn-sub" data-i18n="followInstaSub">@uno · One-time bonus</span>
+          </span>
+        </button>
         <div class="lside-coins" onclick="showCoinsModal()" title="Click for budget details">
           <div class="lside-coins-shimmer"></div>
           <div class="lside-coins-lbl">💰 <span data-i18n="coins">Coins</span></div>
@@ -202,8 +248,8 @@
       <div class="lmain">
         <!-- Seasonal Event banner — injected by the EVENT module when an event is live -->
         <div id="eventBannerSlot"></div>
-        <!-- Player hero banner -->
-        <div class="lobby-hero" id="lobbyHero">
+        <!-- Player hero banner — click anywhere on this opens the profile modal (matches mockup's top-right user click). -->
+        <div class="lobby-hero" id="lobbyHero" onclick="showProfile()" style="cursor:pointer" role="button" aria-label="Open profile">
           <div class="hero-shine"></div>
           <div class="hero-glow"></div>
           <div class="hero-left">
@@ -267,29 +313,7 @@
         </div>
       </div>
     </div>
-    <div class="lnav" id="lnav">
-      <span class="lnav-pill" id="lnavPill" aria-hidden="true"></span>
-      <button class="lnav-tab on" data-tab="home" onclick="navTab('home',this)">
-        <span class="lnav-ic">🏠</span><span class="lnav-lbl">Home</span>
-        <span class="lnav-glow"></span>
-      </button>
-      <button class="lnav-tab" data-tab="missions" onclick="navTab('missions',this)">
-        <span class="lnav-ic">🎯</span><span class="lnav-lbl">Missions</span>
-        <span class="lnav-glow"></span>
-      </button>
-      <button class="lnav-tab" data-tab="collection" onclick="navTab('collection',this)">
-        <span class="lnav-ic">🃏</span><span class="lnav-lbl">Collection</span>
-        <span class="lnav-glow"></span>
-      </button>
-      <button class="lnav-tab" data-tab="leaderboard" onclick="navTab('leaderboard',this)">
-        <span class="lnav-ic">🏆</span><span class="lnav-lbl">Ranking</span>
-        <span class="lnav-glow"></span>
-      </button>
-      <button class="lnav-tab" data-tab="profile" onclick="navTab('profile',this)">
-        <span class="lnav-ic">👤</span><span class="lnav-lbl">Profile</span>
-        <span class="lnav-glow"></span>
-      </button>
-    </div>
+    <!-- Bottom nav removed in P2.3 — every item consolidated into the left rail (mockup-faithful). -->
   </div>
 
   <!-- ═══ ROOM WAITING ═══ -->

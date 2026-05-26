@@ -1349,6 +1349,75 @@
     transition:all .22s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden;
     animation:lobbyEntry .5s cubic-bezier(.16,1,.3,1) backwards;
   }
+  /* Main-rail items — taller, with subtitle under the label. Matches the
+     mockup's card-style menu rows. Icon stays the same; .lbtn-text wraps
+     the label + subtitle as a vertical stack. */
+  .lbtn.lbtn-main{
+    padding:10px 12px 10px 9px;
+    border-radius:13px;
+    margin-bottom:7px;
+    background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .lbtn.lbtn-main:hover{
+    background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));
+    border-color:color-mix(in srgb,var(--c,#fff) 50%,transparent);
+  }
+  .lbtn-text{
+    flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;
+  }
+  .lbtn-main .lbtn-label{
+    font-size:13px;font-weight:800;letter-spacing:.3px;line-height:1.1;
+  }
+  .lbtn-sub{
+    font-size:10.5px;font-weight:500;letter-spacing:.15px;line-height:1.1;
+    color:rgba(255,255,255,.50);
+  }
+  .lbtn.lbtn-main:hover .lbtn-sub{color:rgba(255,255,255,.70);}
+  /* Secondary section (Competitions) — visually demoted: smaller padding,
+     dimmer label, no subtitle. Still readable, just clearly subordinate. */
+  .lside-section--secondary{margin-top:14px;}
+  .lside-section--secondary .lside-title{opacity:.78;}
+  .lbtn.lbtn-sec{
+    padding:6px 10px 6px 6px;
+    background:rgba(255,255,255,.018);
+    border-color:rgba(255,255,255,.05);
+    opacity:.88;
+  }
+  .lbtn.lbtn-sec .lbtn-icon{width:30px;height:30px;font-size:14px;border-radius:8px;}
+  .lbtn.lbtn-sec .lbtn-label{font-size:12px;font-weight:700;}
+  /* Follow promo — small footer pill with a subtle gold-pink glow.
+     Reward-bearing, so it earns visibility, but visually demoted vs main rail. */
+  .lbtn-follow{
+    display:flex;align-items:center;gap:10px;width:100%;
+    padding:8px 12px 8px 8px;border-radius:12px;margin:10px 0 6px;
+    background:linear-gradient(135deg,rgba(244,114,182,.14),rgba(193,53,132,.06));
+    border:1px solid rgba(244,114,182,.28);
+    font-family:'Outfit',sans-serif;color:#fff;cursor:pointer;text-align:left;
+    box-shadow:0 4px 14px rgba(244,114,182,.18),inset 0 1px 0 rgba(255,255,255,.06);
+    animation:lobbyEntry .5s cubic-bezier(.16,1,.3,1) backwards,
+              followPromoGlow 3.4s ease-in-out infinite;
+    transition:all .22s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lbtn-follow:hover{
+    background:linear-gradient(135deg,rgba(244,114,182,.22),rgba(193,53,132,.10));
+    border-color:rgba(244,114,182,.5);
+    transform:translateX(3px);
+    box-shadow:0 8px 22px rgba(244,114,182,.32);
+  }
+  .lbtn-follow .lbtn-icon{width:32px;height:32px;font-size:15px;border-radius:9px;}
+  .lbtn-follow .lbtn-label{font-size:12px;font-weight:800;letter-spacing:.3px;color:#FCE7F3;}
+  .lbtn-follow .lbtn-sub{font-size:10px;color:rgba(252,231,243,.55);}
+  @keyframes followPromoGlow{
+    0%,100%{box-shadow:0 4px 14px rgba(244,114,182,.18),inset 0 1px 0 rgba(255,255,255,.06);}
+    50%{box-shadow:0 6px 22px rgba(244,114,182,.32),0 0 30px rgba(244,114,182,.14),inset 0 1px 0 rgba(255,255,255,.08);}
+  }
+  /* Bottom nav (.lnav) was removed from the DOM in P2.3; keeping the
+     selectors stripped to display:none provides a defensive fallback in
+     case any cached layout or A/B test re-introduces it. */
+  .lnav{display:none !important;}
+  /* The .lside / .lmain padding-bottom that compensated for the floating
+     dock is also no longer needed — but harmless if it stays. */
   .lbtn::before{
     content:'';position:absolute;top:0;left:0;width:50%;height:100%;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);

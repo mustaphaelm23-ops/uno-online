@@ -107,6 +107,84 @@
     });
   }
 
+  // ── Left-rail helpers (P2.3) ─────────────────────────────────────────
+  // PLAY — focuses the 4-card lobby grid. No-op if already there.
+  function doPlay(){
+    const grid = document.getElementById('rgrid');
+    if(grid) grid.scrollIntoView({ behavior:'smooth', block:'start' });
+    try{ SFX.play('click'); }catch(e){}
+  }
+
+  // QUICK MATCH — cinematic radar transition (~800ms minimum showtime)
+  // wraps the HTTP quick-join + socket handoff. The player FEELS the
+  // game finding them a match, not a teleport. Reuses the existing
+  // matchmaking overlay (the radar UI) which was previously bound to
+  // the queue-based system.
+  async function doQuickMatch(){
+    console.log('[doQuickMatch] starting cinematic');
+    try{ SFX.play('click'); }catch(e){}
+    // Open the cinematic radar overlay first.
+    if(typeof _openMatchmaking==='function') _openMatchmaking();
+    const minShowtime = 800;
+    const t0 = Date.now();
+    try{
+      const res = await apiFetch('/api/rooms/quick-join', {
+        method: 'POST',
+        body: JSON.stringify({ type:'QUICK_MATCH' }),
+      });
+      if(!res?.roomId){
+        if(typeof _closeMatchmaking==='function') _closeMatchmaking();
+        return toast('Could not find a match — try again','e');
+      }
+      console.log('[doQuickMatch] seated in', res.roomId, 'roomType:', res.roomType);
+      // Hold the cinematic for at least minShowtime so it doesn't feel like a teleport.
+      const elapsed = Date.now() - t0;
+      if(elapsed < minShowtime) await new Promise(r=>setTimeout(r, minShowtime-elapsed));
+      await _waitForSocket(3000);
+      if(typeof _closeMatchmaking==='function') _closeMatchmaking();
+      if(!S.socket?.connected) return toast('Socket reconnecting — try again','e');
+      _doJoinNow(res.roomId);
+    }catch(e){
+      if(typeof _closeMatchmaking==='function') _closeMatchmaking();
+      console.error('[doQuickMatch] failed:', e);
+      if(e?.status===401) return;
+      const msg = e?.status===402 ? `Not enough coins (need ${e.payload?.need||''} 🪙)`
+                : e?.networkError ? 'Network error — try again'
+                : (e?.message || 'Could not find a match');
+      toast(msg, 'e');
+    }
+  }
+
+  // PRACTICE — opens the Game Center directly to the Training view so
+  // new players can learn vs bots without risking coins. The training
+  // panel + bot-difficulty picker are inside showGameCenter; we just
+  // jump straight to that nested view instead of the hub.
+  function doPractice(){
+    try{ SFX.play('click'); }catch(e){}
+    if(typeof showGameCenter==='function') showGameCenter();
+    // _gcNav('training') is defined inside 13-battlepass.js — defer a tick so
+    // showGameCenter has time to mount the DOM before we navigate inside it.
+    setTimeout(()=>{ if(typeof _gcNav==='function') _gcNav('training'); }, 30);
+  }
+
+  // SHOP — placeholder until P4 economy lands the real shop modal.
+  // Surfacing as comingSoon honestly rather than misleading into the
+  // existing coins-budget modal.
+  function doShop(){
+    if(typeof comingSoon==='function'){
+      comingSoon('Shop','Buy coins, card backs & cosmetics — launching with the economy update.');
+    } else {
+      toast('Shop coming soon','i');
+    }
+  }
+
+  // SCHEDULE (Competitions group) — same pattern as Practice, jumps directly
+  // into the Game Center's schedule view.
+  function doScheduleFromGC(){
+    if(typeof showGameCenter==='function') showGameCenter();
+    setTimeout(()=>{ if(typeof _gcNav==='function') _gcNav('schedule'); }, 30);
+  }
+
   async function loadRooms(){
     try{
       // Two parallel fetches: /featured for the 4 cards, /rooms for the
