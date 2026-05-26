@@ -69,3 +69,78 @@
     else{btn.classList.add('disabled');if(S.g.myHand.length!==1)S.calledUNO=false;}
   }
 
+  /* ═══ TURN TIMER RING ═══
+     Drives the SVG ring around the discard pile. Server pushes turnEndsAt
+     (epoch ms) + turnTimeout (total ms) on every state update via S.g.
+     sync() is called from applyFullState whenever new state lands; it
+     starts / stops / re-anchors the rAF loop. The loop computes a smooth
+     stroke-dashoffset (pathLength=100, so dashoffset = remaining% × 100)
+     and toggles .urgent when remaining < 5s so the ring shifts red + pulses. */
+  const TurnTimer = {
+    raf: null,
+    ringEl: null,
+    fillEl: null,
+    wrapEl: null,
+    URGENT_MS: 5000,
+    _last: { offset: -1, urgent: null, active: null },
+
+    sync(){
+      // Resolve DOM lazily — the game screen may not be mounted yet.
+      if(!this.ringEl) this.ringEl = document.getElementById('turnRing');
+      if(!this.fillEl) this.fillEl = this.ringEl?.querySelector('.turn-ring-fill');
+      if(!this.wrapEl) this.wrapEl = document.getElementById('topcardWrap');
+      if(!this.ringEl || !this.fillEl) return;
+
+      const g = S.g || {};
+      const hasDeadline = g.phase !== 'lobby'                              // game in motion
+                       && g.turnEndsAt != null && g.turnTimeout > 0
+                       && g.currentTurn;
+      this._setActive(!!hasDeadline);
+      if(!hasDeadline){
+        this._stop();
+        this._setOffset(100);                                              // empty ring
+        this._setUrgent(false);
+        return;
+      }
+      this._start();
+    },
+
+    _setActive(on){
+      if(this._last.active === on) return;
+      this._last.active = on;
+      if(this.wrapEl) this.wrapEl.classList.toggle('turn-ring-on', on);
+    },
+    _setUrgent(on){
+      if(this._last.urgent === on) return;
+      this._last.urgent = on;
+      if(this.wrapEl) this.wrapEl.classList.toggle('turn-ring-urgent', on);
+    },
+    // pathLength is 100 on the circle, so offset = remaining% * 100 fills CCW.
+    // Going from full (100) → empty (0) as time elapses.
+    _setOffset(o){
+      if(Math.abs(o - this._last.offset) < 0.4) return;                    // skip redundant writes
+      this._last.offset = o;
+      this.fillEl.setAttribute('stroke-dashoffset', String(o));
+    },
+
+    _start(){
+      if(this.raf) return;
+      const tick = ()=>{
+        this.raf = null;
+        const g = S.g || {};
+        if(g.turnEndsAt == null || !g.turnTimeout){ this._stop(); return; }
+        const now = Date.now();
+        const remaining = Math.max(0, g.turnEndsAt - now);
+        const pct = Math.min(1, Math.max(0, remaining / g.turnTimeout));
+        this._setOffset((1 - pct) * 100);                                  // dashoffset grows as time drains
+        this._setUrgent(remaining > 0 && remaining < this.URGENT_MS);
+        if(remaining <= 0){ this._stop(); return; }                        // server will push the next deadline
+        this.raf = requestAnimationFrame(tick);
+      };
+      this.raf = requestAnimationFrame(tick);
+    },
+    _stop(){
+      if(this.raf){ cancelAnimationFrame(this.raf); this.raf = null; }
+    },
+  };
+

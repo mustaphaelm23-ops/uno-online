@@ -347,7 +347,18 @@
           </div>
         </div>
         <div style="text-align:center">
-          <div class="ucard nohov" id="topcard"><div class="card-num">?</div></div>
+          <div class="topcard-wrap" id="topcardWrap">
+            <!-- Turn-timer ring orbits the discard pile. Server pushes
+                 turnEndsAt + turnTimeout in every state update; the client
+                 rAFs the fill smoothly between updates and shifts to the
+                 urgent state (red + pulse) in the final ~5s. -->
+            <svg class="turn-ring" id="turnRing" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="turn-ring-track" cx="60" cy="60" r="54"></circle>
+              <circle class="turn-ring-fill"  cx="60" cy="60" r="54"
+                      pathLength="100" stroke-dashoffset="100"></circle>
+            </svg>
+            <div class="ucard nohov" id="topcard"><div class="card-num">?</div></div>
+          </div>
           <div class="turndisp" id="tdisp" style="margin-top:10px">Waiting...</div>
         </div>
       </div>

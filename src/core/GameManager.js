@@ -350,6 +350,10 @@ class GameManager extends EventEmitter {
   }
 
   _startTurnTimer() {
+    // Surface the deadline so the client can render a sync'd countdown ring.
+    // The server stays authoritative on the timeout itself (this setTimeout);
+    // the timestamp is purely informational for the UI.
+    this._turnEndsAt = Date.now() + this.settings.turnTimeout;
     this._turnTimer = setTimeout(() => {
       if (this._phase !== PHASE.PLAYING) return;
       console.log(`[Timeout] ${this.current?.username} timed out — bot taking over`);
@@ -513,6 +517,7 @@ class GameManager extends EventEmitter {
     if (this._turnTimer) { clearTimeout(this._turnTimer); this._turnTimer = null; }
     if (this._drawTimer) { clearTimeout(this._drawTimer); this._drawTimer = null; }
     if (this._botTimer)  { clearTimeout(this._botTimer);  this._botTimer  = null; }
+    this._turnEndsAt = null;
   }
 
   _broadcastState(afterDraw = false) {
@@ -616,6 +621,11 @@ class GameManager extends EventEmitter {
       turnPhase:    this._turnPhase,
       drawnCardId:  this._drawnCard?.id || null,
       stackDraw:    this._stackDraw,
+      // Turn deadline (epoch ms) + the configured timeout total. Clients can
+      // compute (turnEndsAt - Date.now()) / turnTimeout for the ring fill.
+      // Server stays authoritative on the actual timeout; this is purely UI.
+      turnEndsAt:   this._turnEndsAt || null,
+      turnTimeout:  this.settings.turnTimeout,
     };
   }
 

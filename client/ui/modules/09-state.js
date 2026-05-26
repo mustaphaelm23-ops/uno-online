@@ -16,6 +16,8 @@
     if(state.turnPhase!==undefined)g.turnPhase=state.turnPhase;
     if(state.drawnCardId!==undefined)g.drawnCardId=state.drawnCardId;
     if(state.stackDraw!==undefined)g.stackDraw=state.stackDraw||0;
+    if(state.turnEndsAt!==undefined)g.turnEndsAt=state.turnEndsAt;
+    if(state.turnTimeout!==undefined)g.turnTimeout=state.turnTimeout;
     if(g.topCard)renderTop(g.topCard);
     renderOpps(g.players);renderHand();
     document.getElementById('dcnt').textContent=g.drawPileSize;
@@ -24,6 +26,7 @@
     if(g.turnPhase==='drew_card'&&isMe(g.currentTurn))document.getElementById('cancelArea').style.display='block';
     else document.getElementById('cancelArea').style.display='none';
     updateTurnUI();
+    if(typeof TurnTimer!=='undefined') TurnTimer.sync();
   }
 
   // Spectator: render full game state with every player's hand visible

@@ -1890,6 +1890,51 @@
   .carea{display:flex;align-items:center;justify-content:center;gap:28px;}
 
   /* UNO Cards */
+  /* ═══ TURN-TIMER RING ═══ Wraps the discard pile (#topcard). The SVG
+     ring is invisible idle; lights up cyan when there's a live turn
+     deadline (driven by TurnTimer.sync from state updates). Final ~5s
+     shifts the ring red and adds a 0.7s pulse to signal urgency. */
+  .topcard-wrap{
+    position:relative;
+    display:inline-flex;align-items:center;justify-content:center;
+    width:160px;height:160px;vertical-align:middle;
+  }
+  .turn-ring{
+    position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;
+    transform:rotate(-90deg);                                    /* path starts at 12 o'clock */
+    opacity:0;transition:opacity .4s ease, filter .4s ease;
+    filter:drop-shadow(0 0 8px rgba(0,180,255,.20));
+  }
+  .topcard-wrap.turn-ring-on .turn-ring{opacity:1;}
+  .turn-ring-track{
+    fill:none;stroke:rgba(255,255,255,.08);stroke-width:3;
+  }
+  .turn-ring-fill{
+    fill:none;stroke:#00DCFF;stroke-width:3.5;stroke-linecap:round;
+    stroke-dasharray:100;                                        /* pathLength=100 so dasharray uses % units */
+    transition:stroke .35s ease, stroke-width .35s ease;
+  }
+  /* Urgency state — last ~5 seconds. Color shift to warning red + pulse. */
+  .topcard-wrap.turn-ring-urgent .turn-ring{
+    filter:drop-shadow(0 0 14px rgba(239,68,68,.45));
+  }
+  .topcard-wrap.turn-ring-urgent .turn-ring-fill{
+    stroke:#EF4444;stroke-width:4;
+    animation:turnRingUrgent .7s ease-in-out infinite;
+  }
+  @keyframes turnRingUrgent{
+    0%,100%{opacity:1;}
+    50%{opacity:.5;}
+  }
+  /* Compact ring on phones — matches the smaller .ucard breakpoint. */
+  @media (max-width:520px){
+    .topcard-wrap{width:120px;height:120px;}
+  }
+  @media (max-width:380px){
+    .topcard-wrap{width:108px;height:108px;}
+  }
+
   .ucard{
     width:var(--card-w);height:var(--card-h);border-radius:var(--card-r);
     display:flex;align-items:center;justify-content:center;flex-direction:column;
