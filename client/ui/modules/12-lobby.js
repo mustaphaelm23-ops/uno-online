@@ -49,20 +49,39 @@
     const wrEl=document.getElementById('heroWinRate'); if(wrEl) wrEl.textContent=(gp?Math.round(gw/gp*100):0)+'%';
   }
   // Quick-join into a featured type. `type` is one of 'CLASSIC' / 'FUN' /
-  // 'RANKED' / 'CHILL' / 'QUICK_MATCH'. The server picks an open instance
-  // of that type (or spawns one) and seats the player; we then hand off to
-  // the existing socket room:join flow (idempotent server-side).
+  // 'RANKED' / 'CHILL' / 'QUICK_MATCH'.
+  //
+  // Two-stage flow:
+  //   1) HTTP POST seats the player server-side (works regardless of socket
+  //      state). This is the authoritative "you're in the room" moment.
+  //   2) Socket emit room:join wires the live socket to that room so the
+  //      server can push game state. If the socket is mid-reconnect when
+  //      stage 1 completes, we briefly wait for it before emitting.
+  // Decoupling stages is critical on flaky transports (ngrok-free, mobile
+  // networks): a transient socket drop should never block the POST.
   async function quickJoin(type){
     if(!type) return;
-    if(!S.socket?.connected) return toast('Not connected — reconnecting…','e');
+    console.log('[quickJoin]', type);
     try{
+      // Stage 1: seat the player server-side.
       const res = await apiFetch('/api/rooms/quick-join', {
         method: 'POST',
         body: JSON.stringify({ type }),
       });
-      if(!res?.roomId) return toast('Could not join — try again','e');
+      if(!res?.roomId){
+        return toast('Could not join — try again','e');
+      }
+      console.log('[quickJoin] seated in', res.roomId, '(roomType:', res.roomType + (res.created?', spawned':', existing')+')');
+
+      // Stage 2: hand off to the socket flow. If socket is reconnecting,
+      // wait up to ~3s for it to come back before failing.
+      await _waitForSocket(3000);
+      if(!S.socket?.connected){
+        return toast('Socket reconnecting — try again in a moment','e');
+      }
       _doJoinNow(res.roomId);
     }catch(e){
+      console.error('[quickJoin] failed:', e);
       if(e?.status === 401) return;                        // auth-expiry handler already bounced to login
       const msg = e?.status === 402
         ? `Not enough coins (need ${e.payload?.need || ''} 🪙)`
@@ -71,6 +90,21 @@
           : (e?.message || 'Could not join');
       toast(msg, 'e');
     }
+  }
+
+  // Resolves when S.socket reports connected, or after `timeoutMs` regardless.
+  // Cheap poll (every 80ms) — never throws.
+  function _waitForSocket(timeoutMs){
+    return new Promise(resolve=>{
+      if(S.socket?.connected) return resolve(true);
+      const start = Date.now();
+      const tick = ()=>{
+        if(S.socket?.connected) return resolve(true);
+        if(Date.now() - start >= timeoutMs) return resolve(false);
+        setTimeout(tick, 80);
+      };
+      tick();
+    });
   }
 
   async function loadRooms(){
