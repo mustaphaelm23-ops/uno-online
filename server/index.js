@@ -206,6 +206,19 @@ async function saveUsers() {
 const roomsDB = new Map();
 const matchmakingQueue = [];
 const socketToUser = new Map();
+// ── Featured-room types ──────────────────────────────────────────────
+// Single source of truth for the 4 mockup rooms (Classic / Fun / Ranked /
+// Chill). RANKED gets a fixed badge that never moves; HOT is computed at
+// request time as the most-populated NON-RANKED type. PRIVATE = ad-hoc
+// rooms from the Create Room / Join by Code flow (no badge, not featured).
+const ROOM_TYPES = {
+  CLASSIC: { label: 'Classic Room', maxPlayers: 4, entryFee: 100, ranked: false, badge: null     },
+  FUN:     { label: 'Fun Room',     maxPlayers: 4, entryFee: 200, ranked: false, badge: null     },
+  RANKED:  { label: 'Ranked Room',  maxPlayers: 4, entryFee: 300, ranked: true,  badge: 'RANKED' },
+  CHILL:   { label: 'Chill Room',   maxPlayers: 4, entryFee: 100, ranked: false, badge: null     },
+};
+const FEATURED_TYPE_ORDER = ['CLASSIC', 'FUN', 'RANKED', 'CHILL'];
+const QUICK_MATCH_POOL    = ['CLASSIC', 'FUN', 'CHILL'];     // RANKED excluded — casual tap shouldn't risk rating
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 const worldChat = [];          // last ~60 global lobby messages
 
@@ -261,11 +274,12 @@ function generateRoomCode() {
   return code;
 }
 
-function createRoomRecord(hostId, settings = {}) {
+function createRoomRecord(hostId, settings = {}, roomType = 'PRIVATE') {
   return {
     id:         uuidv4(),
     code:       generateRoomCode(),
     hostId,
+    roomType,                                              // 'CLASSIC'|'FUN'|'RANKED'|'CHILL'|'PRIVATE'
     settings: {
       maxPlayers:   settings.maxPlayers    || 4,
       minPlayers:   settings.minPlayers    || 2,
@@ -286,6 +300,65 @@ function createRoomRecord(hostId, settings = {}) {
     createdAt:  Date.now(),
     startedAt:  null,
   };
+}
+
+// Returns open rooms of a given featured type, sorted most-populated first.
+function _openRoomsOfType(type) {
+  return [...roomsDB.values()]
+    .filter(r => r.roomType === type
+              && r.status === 'lobby'
+              && r.playerIds.length < r.settings.maxPlayers)
+    .sort((a, b) => b.playerIds.length - a.playerIds.length);
+}
+
+// Quick Match: server-picked type, never RANKED. Prefer most-populated
+// across the non-ranked pool (funnels players into rooms about to fill);
+// fall back to random only when ALL pool types are empty / equal at 0.
+function pickQuickMatchType() {
+  let bestType = null, bestPop = -1;
+  for (const t of QUICK_MATCH_POOL) {
+    const top = _openRoomsOfType(t)[0];
+    const pop = top ? top.playerIds.length : 0;
+    if (pop > bestPop) { bestPop = pop; bestType = t; }
+  }
+  if (bestPop <= 0) {
+    return QUICK_MATCH_POOL[Math.floor(Math.random() * QUICK_MATCH_POOL.length)];
+  }
+  return bestType;
+}
+
+// Find the most-populated open room of `type`, or spawn a fresh instance
+// using the type's config. Adds `user` to the room as a player (host iff
+// the room was created in this call). Returns { room, created }.
+function findOrCreateRoomOfType(type, user) {
+  const cfg = ROOM_TYPES[type];
+  if (!cfg) throw new Error('Unknown room type: ' + type);
+
+  let room    = _openRoomsOfType(type)[0] || null;
+  let created = false;
+
+  if (!room) {
+    room = createRoomRecord(user.id, {
+      maxPlayers: cfg.maxPlayers,
+      bet:        cfg.entryFee,
+    }, type);
+    room.game = new GameManager(room.id, room.settings);
+    attachGameListeners(room);
+    roomsDB.set(room.id, room);
+    created = true;
+    console.log(`[Room] Spawned ${type} (${room.id}) for ${user.username}`);
+  }
+
+  if (!room.playerIds.includes(user.id)) {
+    const player = new Player(user.id, user.username, user.coins);
+    player.avatar = user.avatar;
+    player.isHost = created;                                // host only when we just spawned it
+    const result = room.game.addPlayer(player);
+    if (!result.success) throw new Error('addPlayer failed: ' + result.reason);
+    room.playerIds.push(user.id);
+  }
+
+  return { room, created };
 }
 
 // Records a prize/reward in the user's trophy log (latest 40 kept).
@@ -518,6 +591,86 @@ app.get('/api/rooms', authMiddleware, (req, res) => {
     }));
   const onlineCount = new Set([...socketToUser.values()]).size;
   res.json({ rooms: publicRooms, liveGames, onlineCount });
+});
+
+// ── Featured rooms (4-card lobby) ─────────────────────────────────────
+// One card per featured type, in fixed order. Each card represents the
+// MOST-POPULATED open instance of that type (or empty if none exist).
+// Server computes `hotType` = the most-populated non-RANKED card so the
+// client can highlight the busiest casual room. RANKED keeps its fixed
+// badge always; HOT goes only to Classic / Fun / Chill.
+app.get('/api/rooms/featured', authMiddleware, (req, res) => {
+  const cards = [];
+  let hotType = null;
+  let hotPlayers = 0;
+
+  for (const type of FEATURED_TYPE_ORDER) {
+    const cfg = ROOM_TYPES[type];
+    const top = _openRoomsOfType(type)[0] || null;
+    const players = top ? top.playerIds.length : 0;
+    cards.push({
+      type,
+      label:      cfg.label,
+      maxPlayers: cfg.maxPlayers,
+      entryFee:   cfg.entryFee,
+      badge:      cfg.badge,                                 // RANKED fixed, others null
+      ranked:     cfg.ranked,
+      players,
+      instanceId: top ? top.id : null,
+      seats:      top ? (top.game?.players || []).map(p => ({
+        name: p.username, avatar: p.avatar || null,
+      })) : [],
+    });
+    if (type !== 'RANKED' && players > hotPlayers) {
+      hotPlayers = players;
+      hotType    = type;
+    }
+  }
+  // No HOT badge when every casual room is empty (avoid a false-positive HOT).
+  if (hotPlayers <= 0) hotType = null;
+
+  const onlineCount = new Set([...socketToUser.values()]).size;
+  res.json({ rooms: cards, onlineCount, hotType });
+});
+
+// ── Quick-join into a featured type ───────────────────────────────────
+// Body: { type: 'CLASSIC'|'FUN'|'RANKED'|'CHILL'|'QUICK_MATCH' }
+//   * Named type   -> joins most-populated open instance of that type, or
+//                     spawns a fresh one if none exist.
+//   * QUICK_MATCH  -> server picks the busiest non-RANKED type (random
+//                     fallback only if every casual pool is empty).
+//
+// Returns { roomId, code, created, roomType }. The existing socket
+// 'room:join' flow handles the actual seating from the client side.
+//
+// NOTE (P4 economy): entry-fee debit deliberately deferred to match-start,
+// not to join-time. See comment block where the debit will live.
+app.post('/api/rooms/quick-join', authMiddleware, (req, res) => {
+  let { type } = req.body || {};
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  if (type === 'QUICK_MATCH') type = pickQuickMatchType();
+  if (!ROOM_TYPES[type]) return res.status(400).json({ error: 'Unknown room type' });
+
+  // ── P4 HOOK: entry-fee debit will live here on match start, not join.
+  // const cfg = ROOM_TYPES[type];
+  // if ((user.coins || 0) < cfg.entryFee) {
+  //   return res.status(402).json({ error: 'Not enough coins', need: cfg.entryFee });
+  // }
+
+  try {
+    const { room, created } = findOrCreateRoomOfType(type, user);
+    res.json({
+      roomId:   room.id,
+      code:     room.code,
+      created,
+      roomType: type,
+    });
+  } catch (e) {
+    console.error('[quick-join]', e);
+    res.status(500).json({ error: e.message || 'Quick join failed' });
+  }
 });
 
 app.post('/api/rooms', authMiddleware, (req, res) => {
