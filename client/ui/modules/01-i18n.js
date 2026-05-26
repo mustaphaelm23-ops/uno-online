@@ -92,6 +92,14 @@
         fillAll:'Fill all fields', pwResetOk:'Password reset — you can now log in',
         welcomeBack:'Welcome back', statRating:'Rating', statWins:'Wins', statWinRate:'Win Rate',
         chooseAvatar:'Choose Your Avatar', chooseAvatarSub:'Pick a character — tap to apply it instantly', avatarUpdated:'Avatar updated!',
+        // P2.3 left-rail labels + subtitles. Title-case labels for visual consistency;
+        // subtitles give context per the mockup. Other languages inherit English via
+        // the fallback chain in t() until proper translations land.
+        practice:'Practice', collection:'Collection', missions:'Missions', shop:'Shop', schedule:'Schedule',
+        playSub:'Start your match', joinCodeSub:'Enter room code', createRoomSub:'Custom private room',
+        quickMatchSub:'Find a random match', practiceSub:'Play vs bots', dailyRewardSub:'Collect your bonus',
+        collectionSub:'Cards, decks & more', missionsSub:'Complete missions', leaderboardSub:'Top players',
+        shopSub:'Buy coins & items', followInstaSub:'@uno · One-time bonus',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
