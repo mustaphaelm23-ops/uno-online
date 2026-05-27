@@ -114,16 +114,33 @@
     if(data.eloChange) showEloPopup(data.eloChange, iWon);
     const bet=data.bet||0;
     const forfeit=data.forfeit||false;
-    if(iWon&&data.coinsEarned){S.user.coins=(S.user.coins||0)+data.coinsEarned;localStorage.setItem('uno_user',JSON.stringify(S.user));}
-    else if(!iWon){S.user.coins=Math.max(0,(S.user.coins||0)-bet);localStorage.setItem('uno_user',JSON.stringify(S.user));}
+    // P4 — coin updates now arrive via the dedicated match:debited /
+    // match:payout socket events (server is authoritative). showWin no
+    // longer mirrors S.user.coins locally; reading data.payout / data.pot
+    // / data.houseCut here is for DISPLAY only.
     const wt=document.getElementById('wtitle');
     wt.textContent=iWon?'🏆 YOU WIN!':'💀 GAME OVER';
     wt.className=`wtitle ${iWon?'w':'l'}`;
     document.getElementById('wdet').textContent=iWon?(forfeit?`${data.quitter} left the game!`:`Score: ${data.score}`):`${data.username} won!`;
-    const finalCoins=iWon?(data.coinsEarned||0):-bet;
+    // Display the actual payout for the winner; losers paid their entry at
+    // match-start so their game-end "delta" is 0 (the loss already happened).
+    const payout = (typeof data.payout === 'number') ? data.payout : 0;
+    const finalCoins = iWon ? payout : 0;
     const coinsEl=document.getElementById('wcoins');
-    coinsEl.textContent=(finalCoins>=0?'+':'')+'0 🪙';
-    document.getElementById('wbet').textContent=bet?`Bet was 🪙${bet} per player`:'';
+    const sign = finalCoins > 0 ? '+' : '';
+    coinsEl.textContent = `${sign}${finalCoins.toLocaleString()} 🪙`;
+    // Pot summary line replaces the old "Bet was X per player" hint so the
+    // player can see the math: total pot, house cut, what they got.
+    const wbetEl = document.getElementById('wbet');
+    if(wbetEl){
+      if(data.pot){
+        wbetEl.textContent = iWon
+          ? `Pot 🪙${data.pot.toLocaleString()} − 🪙${(data.houseCut||0).toLocaleString()} house = 🪙${payout.toLocaleString()}`
+          : `Pot was 🪙${data.pot.toLocaleString()} (entry 🪙${bet} per player)`;
+      } else {
+        wbetEl.textContent = bet ? `Bet was 🪙${bet} per player` : '';
+      }
+    }
     // Man of the Match
     const mvpBox=document.getElementById('mvpBadge');
     if(data.mvp && mvpBox){

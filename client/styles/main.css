@@ -2192,6 +2192,14 @@
     padding:6px 14px;font-size:11px;font-weight:700;
     backdrop-filter:blur(10px);
   }
+  /* P4 — pot pill (the money you're playing for). Gold rim + soft glow
+     so it visually pops against the cool neutral HUD pills. */
+  .hpill.hpill-pot{
+    background:linear-gradient(135deg,rgba(245,158,11,.20),rgba(217,119,6,.10));
+    border-color:rgba(255,210,63,.45);
+    color:#FFD23F;
+    box-shadow:0 4px 12px rgba(245,158,11,.20),inset 0 1px 0 rgba(255,235,180,.18);
+  }
   .actbar{position:absolute;bottom:50%;right:14px;transform:translateY(50%);display:flex;flex-direction:column-reverse;gap:10px;align-items:flex-end;z-index:10;}
   .btnUNO{display:none!important;}
   .uno-alert{

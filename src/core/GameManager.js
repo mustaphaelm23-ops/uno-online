@@ -50,6 +50,10 @@ class GameManager extends EventEmitter {
     this._drawnBy   = null;
     this._turnPhase = TURN_PHASE.WAITING;
     this._stackDraw = 0;
+    // P4 — current match pot. Set by the server's game:start handler after
+    // it debits each human's entry fee. Read here only for state broadcasts;
+    // mutation lives server-side so the room object stays the source of truth.
+    this.pot = 0;
   }
 
   // ── Players ──
@@ -621,6 +625,7 @@ class GameManager extends EventEmitter {
       turnPhase:    this._turnPhase,
       drawnCardId:  this._drawnCard?.id || null,
       stackDraw:    this._stackDraw,
+      pot:          this.pot || 0,                       // P4 — current match pot
       // Turn deadline (epoch ms) + the configured timeout total. Clients can
       // compute (turnEndsAt - Date.now()) / turnTimeout for the ring fill.
       // Server stays authoritative on the actual timeout; this is purely UI.

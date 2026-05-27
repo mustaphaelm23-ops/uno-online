@@ -18,6 +18,11 @@
     if(state.stackDraw!==undefined)g.stackDraw=state.stackDraw||0;
     if(state.turnEndsAt!==undefined)g.turnEndsAt=state.turnEndsAt;
     if(state.turnTimeout!==undefined)g.turnTimeout=state.turnTimeout;
+    if(state.pot!==undefined){
+      g.pot=state.pot||0;
+      const pn=document.getElementById('hpotn'); if(pn) pn.textContent=g.pot.toLocaleString();
+      const pp=document.getElementById('hpot');  if(pp) pp.style.display=g.pot>0?'':'none';
+    }
     if(g.topCard)renderTop(g.topCard);
     renderOpps(g.players);renderHand();
     document.getElementById('dcnt').textContent=g.drawPileSize;
@@ -39,6 +44,11 @@
     g.drawPileSize = state.drawPileSize;
     g.turnPhase = state.turnPhase;
     g.stackDraw = state.stackDraw || 0;
+    g.pot = state.pot || 0;
+    {
+      const pn=document.getElementById('hpotn'); if(pn) pn.textContent=g.pot.toLocaleString();
+      const pp=document.getElementById('hpot');  if(pp) pp.style.display=g.pot>0?'':'none';
+    }
     g.myHand = []; g.myPlayable = []; g.drawnCardId = null;
     g.spectatorHands = (state.hands || []).reduce((acc, h) => { acc[h.playerId] = h.cards; return acc; }, {});
     if (g.topCard) renderTop(g.topCard);

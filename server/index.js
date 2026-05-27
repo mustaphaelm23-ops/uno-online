@@ -290,6 +290,11 @@ const IAP_PACKAGE_ORDER = ['starter', 'value', 'premium', 'mega', 'ultimate'];
 // 1 diamond → 100 coins (GDD §6.1). Non-refundable; the UI must show a
 // confirmation dialog before each conversion (handled client-side in P4-D.4).
 const DIAMOND_TO_COIN_RATE = 100;
+
+// ── Pot economy (P4, GDD §2.2 / §6.3) ─────────────────────────────────
+// Server keeps HOUSE_CUT of the pot off the top on every match payout.
+// Single source of truth — adjust here only. 0.10 = 10% (GDD §2.2 Classic).
+const HOUSE_CUT = 0.10;
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 const worldChat = [];          // last ~60 global lobby messages
 
@@ -1985,8 +1990,49 @@ io.on('connection', (socket) => {
     const room   = roomsDB.get(roomId);
     if (!room) return ack?.({ success: false, reason: 'Room not found' });
 
+    // ── P4: entry-fee debit at match start ─────────────────────────────
+    // Pre-flight: gather every HUMAN player (those in usersDB; bots aren't
+    // there) and verify each has enough coins for the entry fee BEFORE we
+    // touch any balance. If any can't pay, the start fails atomically —
+    // nobody loses coins. Bots play free per the "bots don't pay" rule.
+    const entryFee = room.settings.bet || 0;
+    const humansToDebit = [];
+    if (entryFee > 0) {
+      for (const pid of room.playerIds) {
+        const u = usersDB.get(pid);
+        if (u) humansToDebit.push(u);                    // bots not in usersDB → skipped
+      }
+      const broke = humansToDebit.filter(u => (u.coins || 0) < entryFee);
+      if (broke.length > 0) {
+        return ack?.({
+          success: false,
+          reason: `Not enough coins: ${broke.map(u => u.username).join(', ')} need ${entryFee} 🪙`
+        });
+      }
+    }
+
     const result = room.game.startGame(userId);
     if (!result.success) return ack?.({ success: false, reason: result.reason });
+
+    // Start succeeded — debit each human and seed the pot. Single saveUsers
+    // call at the end keeps the disk write batched.
+    if (entryFee > 0) {
+      humansToDebit.forEach(u => { u.coins = (u.coins || 0) - entryFee; });
+      room.pot = entryFee * humansToDebit.length;
+      room.game.pot = room.pot;                          // GameManager broadcasts this in _publicState
+      saveUsers();
+      // Push the new balance to each affected human so their header pill
+      // stays in sync. Without this, S.user.coins on the client would be
+      // stale until the next /api/user fetch.
+      humansToDebit.forEach(u => {
+        const sock = findSocketByUserId(u.id);
+        if (sock) sock.emit('match:debited', { entryFee, coins: u.coins });
+      });
+      console.log(`[Pot] Match started in ${roomId}: pot=${room.pot} (${humansToDebit.length}× ${entryFee})`);
+    } else {
+      room.pot = 0;
+      room.game.pot = 0;
+    }
 
     room.status    = 'playing';
     room.startedAt = Date.now();
@@ -2428,14 +2474,15 @@ function attachGameListeners(room) {
       loserUsers.forEach(u => { u.elo = Math.max(0, (u.elo||1000) - eloLoss); });
     }
 
+    // Per-player stats / match history / BP XP. Entry fees were ALREADY
+    // debited at match start (P4 socket.on('game:start')), so we deliberately
+    // do NOT touch user.coins for losers here — they paid up front.
     data.players.forEach(playerData => {
       const user = usersDB.get(playerData.id);
-      if (!user) return;
+      if (!user) return;                                 // bots not in usersDB
       user.stats.gamesPlayed++;
-      // Match history (latest 20 per user) — feeds the League Hub
       if (!Array.isArray(user.matchHistory)) user.matchHistory = [];
       const won = winnerData && winnerData.id === playerData.id;
-      // Battle Pass XP — every match feeds progression
       ensureBP(user);
       user.bp.xp += won ? 220 : 90;
       const opponents = data.players.filter(p => p.id !== playerData.id).map(p => p.username);
@@ -2447,47 +2494,76 @@ function attachGameListeners(room) {
         bet,
       });
       if (user.matchHistory.length > 20) user.matchHistory.length = 20;
-      if (winnerData && winnerData.id === playerData.id) {
-        // Winner gets all the bet money from losers
-        const totalWin = bet * (data.players.length - 1);
-        user.coins += totalWin;
-        user.stats.gamesWon++;
-        if (totalWin > 0) {
-          logReward(user, '🪙', `Match win vs ${opponents.join(', ') || 'opponent'}`, totalWin);
-        }
-      } else {
-        // Loser pays the bet
-        user.coins = Math.max(0, user.coins - bet);
-        // Broke system: give coins if player is at 0
-        if (user.coins <= 0) {
-          if (!user.brokeCount) user.brokeCount = 0;
-          if (!user.lastBrokeAt) user.lastBrokeAt = 0;
-          const gifts = CONFIG.BROKE_GIFTS;
-          if (user.brokeCount < gifts.length) {
-            user.coins = gifts[user.brokeCount];
-            console.log(`[Coins] Broke gift #${user.brokeCount+1}: +${gifts[user.brokeCount]} for ${user.username}`);
-            user.brokeCount++;
+      if (won) user.stats.gamesWon++;
+      // Broke gift only fires for losers who are now at 0 — entry fee
+      // already came off their balance at start, so this catches the case
+      // where the fee took them to zero. Same gift logic as before.
+      if (!won && user.coins <= 0) {
+        if (!user.brokeCount) user.brokeCount = 0;
+        if (!user.lastBrokeAt) user.lastBrokeAt = 0;
+        const gifts = CONFIG.BROKE_GIFTS;
+        if (user.brokeCount < gifts.length) {
+          user.coins = gifts[user.brokeCount];
+          console.log(`[Coins] Broke gift #${user.brokeCount+1}: +${gifts[user.brokeCount]} for ${user.username}`);
+          user.brokeCount++;
+          user.lastBrokeAt = Date.now();
+        } else if (user.instaFollowed) {
+          if (!user.brokeCount2) user.brokeCount2 = 0;
+          const gifts2 = [500, 200, 100];
+          if (user.brokeCount2 < gifts2.length) {
+            user.coins = gifts2[user.brokeCount2];
+            user.brokeCount2++;
+          } else if (Date.now() - user.lastBrokeAt >= CONFIG.BROKE_COOLDOWN) {
+            user.coins = CONFIG.DAILY_LOGIN_COINS;
+            user.brokeCount2 = 1;
             user.lastBrokeAt = Date.now();
-          } else if (user.instaFollowed) {
-            // After insta: restart gift cycle
-            if (!user.brokeCount2) user.brokeCount2 = 0;
-            const gifts2 = [500, 200, 100];
-            if (user.brokeCount2 < gifts2.length) {
-              user.coins = gifts2[user.brokeCount2];
-              user.brokeCount2++;
-            } else if (Date.now() - user.lastBrokeAt >= CONFIG.BROKE_COOLDOWN) {
-              user.coins = CONFIG.DAILY_LOGIN_COINS;
-              user.brokeCount2 = 1;
-              user.lastBrokeAt = Date.now();
-            }
           }
-          // else: 0 coins, must follow insta or wait
         }
       }
     });
+
+    // ── P4: Pot distribution ─────────────────────────────────────────
+    // Pot was collected at match start (entry fee × humans). Server keeps
+    // HOUSE_CUT of it; the rest goes to the winner. If the winner is a bot
+    // (not in usersDB) the payout splits equally among remaining humans —
+    // bots play free, bots don't profit. Per-recipient 'match:payout' events
+    // push the new balance to each affected socket so the client doesn't
+    // need to compute or mirror anything locally.
+    const pot = room.pot || 0;
+    let houseCut = 0, payout = 0;
+    if (pot > 0) {
+      houseCut = Math.floor(pot * HOUSE_CUT);
+      payout   = pot - houseCut;
+      const winnerUser = winnerData ? usersDB.get(winnerData.id) : null;
+      if (winnerUser) {
+        winnerUser.coins += payout;
+        logReward(winnerUser, '🪙', `Match win — pot ${pot} (−${houseCut} fee)`, payout);
+        const sock = findSocketByUserId(winnerUser.id);
+        if (sock) sock.emit('match:payout', { coins: winnerUser.coins, gained: payout, reason: 'win', pot, houseCut });
+      } else if (loserUsers.length > 0) {
+        // Bot won — split the payout evenly among remaining humans.
+        const share = Math.floor(payout / loserUsers.length);
+        if (share > 0) {
+          loserUsers.forEach(u => {
+            u.coins += share;
+            logReward(u, '🪙', `Bot win — pot split (${loserUsers.length} ways)`, share);
+            const sock = findSocketByUserId(u.id);
+            if (sock) sock.emit('match:payout', { coins: u.coins, gained: share, reason: 'bot_split', pot, houseCut });
+          });
+        }
+        // Integer-division remainder stays with the house (rare, ≤ #humans).
+      }
+      // else: no humans at all in this match → pot kept by house.
+      room.pot = 0;
+      if (room.game) room.game.pot = 0;
+    }
+    data.pot      = pot;
+    data.houseCut = houseCut;
+    data.payout   = payout;
+
     saveUsers();
     io.to(roomId).emit('game:over', data);
-    console.log(`[Game] Over in room ${roomId} (bet: ${bet})`);
+    console.log(`[Game] Over in room ${roomId} (pot:${pot} payout:${payout} house:${houseCut})`);
     setTimeout(() => { roomsDB.delete(roomId); console.log(`[Room] Cleaned: ${roomId}`); }, 30000);
   });
 

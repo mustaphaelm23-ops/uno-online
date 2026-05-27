@@ -134,6 +134,43 @@
     // ignored silently if toast() isn't available.
     sk.on('world:throttled',()=>{ try{ toast('Slow down — one message at a time','i'); }catch(e){} });
 
+    // ── P4 economy events ────────────────────────────────────────────
+    // match:debited fires per-socket right after game:start succeeds and
+    // the server has taken the entry fee out of S.user.coins. We mirror
+    // the new balance locally + animate every coin pill that's visible
+    // (header, sidebar, hero-banner). Toast tells the player why their
+    // balance dropped — explicit beats silent.
+    sk.on('match:debited',({entryFee,coins})=>{
+      if(typeof coins==='number'){
+        S.user.coins=coins;
+        try{ localStorage.setItem('uno_user',JSON.stringify(S.user)); }catch(e){}
+        if(typeof _animateCount==='function'){
+          _animateCount('hcoins',coins);
+          _animateCount('scoins',coins);
+          _animateCount('heroCoins',coins);
+        }
+      }
+      toast(`−${entryFee} 🪙 entry fee`,'i');
+    });
+
+    // match:payout fires per-socket at game-end for the winner (or for each
+    // remaining human if a bot won — they get an equal share). Single source
+    // of truth for the post-match balance; showWin reads data.payout from
+    // the game:over broadcast for the DISPLAY but no longer mirrors coins
+    // locally (server is authoritative).
+    sk.on('match:payout',({coins,gained,reason})=>{
+      if(typeof coins==='number'){
+        S.user.coins=coins;
+        try{ localStorage.setItem('uno_user',JSON.stringify(S.user)); }catch(e){}
+        if(typeof _animateCount==='function'){
+          _animateCount('hcoins',coins);
+          _animateCount('scoins',coins);
+          _animateCount('heroCoins',coins);
+        }
+      }
+      // No toast — the win modal that's about to render shows the gain.
+    });
+
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game
       // P3.4 — kick off the fly-to-discard overlay FIRST so we capture
