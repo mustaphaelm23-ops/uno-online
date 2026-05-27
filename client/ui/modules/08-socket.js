@@ -136,6 +136,13 @@
 
     sk.on('game:card_played',(data)=>{
       if(!S.roomId)return; // Ignore stale events after leaving the game
+      // P3.4 — kick off the fly-to-discard overlay FIRST so we capture
+      // rects from the current DOM (sender's seat + current topcard) before
+      // any re-render mutates them. The overlay lives at z-index 9000 so it
+      // visibly covers the (already-updated) topcard until it lands.
+      if(typeof animateCardPlay === 'function' && data?.card && data?.playerId){
+        animateCardPlay(data.card, data.playerId);
+      }
       if(data.topCard)renderTop(data.topCard);
       if(data.players){
         if(S.isSpectator) renderSpectatorOpps(data.players);

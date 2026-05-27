@@ -69,6 +69,64 @@
     else{btn.classList.add('disabled');if(S.g.myHand.length!==1)S.calledUNO=false;}
   }
 
+  /* ═══ CARD-PLAY FLY ANIMATION ═══
+     P3.4. When game:card_played fires, an overlay copy of the played card
+     flies from the sender's seat (or .myhand for self) to the discard pile,
+     spins, then dissolves into the (already-updated) topcard. Pure visual
+     overlay: does NOT touch the play emit, server validation, or state
+     update path — those run normally. The animation is purely additive.
+
+     Collision-safe with parallel gameplay fixes:
+       - Reads ONLY .myhand / .opanel[data-pid] / #topcard bounding rects.
+       - Does NOT read data-card-id (intentionally — keeps the selector
+         surface minimal so card-attr renames don't break it).
+       - Bails silently if any rect is missing.
+     Respects prefers-reduced-motion (skips entirely). */
+  function animateCardPlay(card, playerId){
+    if(!card || !playerId) return;
+    // Don't animate during your own move? No — animate everyone for consistency.
+    // Skip if reduced-motion is set.
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    // Skip if GSAP isn't available (graceful degradation).
+    if(!window.gsap) return;
+
+    const fromRect = (playerId === S.user?.id)
+      ? document.querySelector('.myhand')?.getBoundingClientRect()
+      : document.querySelector(`.opanel[data-pid="${playerId}"]`)?.getBoundingClientRect();
+    const toRect = document.getElementById('topcard')?.getBoundingClientRect();
+    if(!fromRect || !fromRect.width || !toRect || !toRect.width) return;
+
+    // Build the overlay card with the same visual vocabulary as the rest of
+    // the game (.ucard + color class + buildCardHTML inner).
+    const overlay = document.createElement('div');
+    overlay.className = `ucard ucard-flying ${card.color || ''}`;
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = (typeof buildCardHTML === 'function')
+      ? buildCardHTML(card.color, card.value)
+      : '';
+    overlay.style.position = 'fixed';
+    overlay.style.left = (fromRect.left + fromRect.width/2) + 'px';
+    overlay.style.top  = (fromRect.top  + fromRect.height/2) + 'px';
+    overlay.style.zIndex = '9000';
+    overlay.style.pointerEvents = 'none';
+    document.body.appendChild(overlay);
+
+    // xPercent/yPercent self-center the overlay on its left/top anchor point.
+    // GSAP composes these with the animated x/y delta below.
+    window.gsap.set(overlay, { xPercent: -50, yPercent: -50, scale: 0.85, rotation: 0 });
+    const dx = (toRect.left + toRect.width/2) - (fromRect.left + fromRect.width/2);
+    const dy = (toRect.top  + toRect.height/2) - (fromRect.top  + fromRect.height/2);
+    window.gsap.to(overlay, {
+      x: dx,
+      y: dy,
+      scale: 1.0,
+      rotation: 540,                                   // 1.5 spins for satisfying whip
+      duration: 0.45,
+      ease: 'power2.in',                               // accelerates toward landing
+      onComplete: ()=> overlay.remove(),
+    });
+  }
+
   /* ═══ TURN TIMER RING ═══
      Drives the SVG ring around the discard pile. Server pushes turnEndsAt
      (epoch ms) + turnTimeout (total ms) on every state update via S.g.

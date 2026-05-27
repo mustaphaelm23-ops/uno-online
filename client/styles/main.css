@@ -1945,6 +1945,19 @@
     box-shadow:0 8px 20px rgba(0,0,0,.4);
   }
   .ucard:hover:not(.nohov){transform:translateY(-10px) scale(1.06);box-shadow:0 16px 40px rgba(0,0,0,.5);}
+  /* P3.4 — flying overlay card (created in JS, animated by GSAP, removed onComplete).
+     Disables hover/transitions so GSAP fully owns the motion. Adds a soft
+     premium glow during flight so the card visibly catches venue light. */
+  .ucard.ucard-flying{
+    transition:none !important;
+    cursor:default !important;
+    box-shadow:
+      0 14px 36px rgba(0,0,0,.55),
+      0 0 22px rgba(255,255,255,.18),
+      0 0 38px rgba(204,68,255,.22);
+    will-change:transform;
+  }
+  .ucard.ucard-flying:hover{transform:none;box-shadow:0 14px 36px rgba(0,0,0,.55),0 0 22px rgba(255,255,255,.18);}
   .red{background:linear-gradient(145deg,#E8324A,#9B1B2E);box-shadow:0 8px 20px rgba(232,50,74,.3);}
   .blue{background:linear-gradient(145deg,#2563EB,#1E3A8A);box-shadow:0 8px 20px rgba(37,99,235,.3);}
   .green{background:linear-gradient(145deg,#16A34A,#14532D);box-shadow:0 8px 20px rgba(22,163,74,.3);}
