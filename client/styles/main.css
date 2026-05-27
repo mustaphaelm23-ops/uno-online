@@ -1899,6 +1899,33 @@
     display:inline-flex;align-items:center;justify-content:center;
     width:160px;height:160px;vertical-align:middle;
   }
+  /* P3.5 — Discard pile DEPTH. Two pseudo cards stacked under the top card
+     at slight offsets / rotations so the discard reads as a real pile
+     rather than one floating card. Pure decoration: pointer-events:none,
+     z-indexed below #topcard but above the SVG ring. Scales with --card-w
+     / --card-h so it tracks the responsive card size automatically. */
+  .topcard-wrap::before,
+  .topcard-wrap::after{
+    content:'';
+    position:absolute;left:50%;top:50%;
+    width:var(--card-w);height:var(--card-h);
+    border-radius:var(--card-r);
+    background:linear-gradient(145deg,rgba(50,42,62,.92),rgba(20,16,32,.96));
+    border:2px solid rgba(255,255,255,.07);
+    box-shadow:0 4px 14px rgba(0,0,0,.45);
+    pointer-events:none;z-index:1;
+  }
+  .topcard-wrap::before{
+    transform:translate(-50%,-50%) translate(7px,-4px) rotate(5deg);
+    opacity:.55;
+  }
+  .topcard-wrap::after{
+    transform:translate(-50%,-50%) translate(-6px,4px) rotate(-4deg);
+    opacity:.38;
+  }
+  /* Layer the real topcard above the pseudo under-cards. */
+  .topcard-wrap > #topcard{position:relative;z-index:2;}
+  .topcard-wrap > .turn-ring{z-index:0;}
   .turn-ring{
     position:absolute;inset:0;width:100%;height:100%;
     pointer-events:none;
@@ -2040,11 +2067,19 @@
     animation:cardBounce 1.5s ease-in-out infinite,glow 2.5s ease-in-out infinite;
   }
   
+  /* P3.5 — Hand-card hover polish. Adds a slight Z-tilt (rotateZ -2deg)
+     so the lifted card reads as "picked up between fingers" rather than
+     a pure vertical pop. Stronger gold + warm rim glow + #FFD23F border
+     turns the playable card into a clear "tap me" focus on hover. */
   .hcard.play:hover{
-    transform:perspective(600px) rotateX(-5deg) translateY(-28px) scale(1.15)!important;
+    transform:perspective(600px) rotateX(-5deg) rotateZ(-2deg) translateY(-32px) scale(1.18)!important;
     z-index:99!important;
-    box-shadow:0 24px 48px rgba(0,0,0,.5),0 0 24px var(--glow-yellow);
-    border-color:var(--accent);
+    box-shadow:
+      0 30px 56px rgba(0,0,0,.55),
+      0 0 32px rgba(245,158,11,.55),
+      0 0 18px rgba(255,210,63,.40),
+      inset 0 1px 0 rgba(255,255,255,.18);
+    border-color:#FFD23F;
   }
   .hcard.playing{animation:cardPlay .6s var(--transition-smooth) forwards;pointer-events:none;}
   .hcard.drawn{animation:cardDraw .5s var(--transition-smooth);}
