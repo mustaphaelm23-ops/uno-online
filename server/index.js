@@ -324,6 +324,14 @@ function createUserRecord({ username, passwordHash, email = null, isGuest = fals
     email:        email ? String(email).trim().toLowerCase() : null,
     isGuest:      !!isGuest,
     coins:        CONFIG.DEFAULT_COINS,
+    // Premium currency starting amount (GDD §6.1). Mongoose schema default
+    // (100) won't apply on this path — users created here go straight into
+    // usersDB.set() without passing through new UserModel(...).save(). So
+    // we set the starting value explicitly, same way coins is set above.
+    // Also stamps grant_diamonds_v1 = true so the boot-time grant doesn't
+    // double up on accounts registered after this commit.
+    diamonds:           100,
+    grant_diamonds_v1:  true,
     avatar:       null,
     stats: { gamesPlayed: 0, gamesWon: 0, totalPoints: 0 },
     elo:          1000,
@@ -781,6 +789,91 @@ app.get('/api/rooms/:roomId', authMiddleware, (req, res) => {
   res.json({
     id: room.id, status: room.status, settings: room.settings,
     players: room.game.players.map(p => p.toPublicJSON()),
+  });
+});
+
+// ─────────────────────────────────────────
+// REST: Shop (Diamonds + IAP packages, P4-D.2)
+// ─────────────────────────────────────────
+// Three endpoints backing the shop UI:
+//   GET  /api/shop/packages        -> the 5 IAP packages from IAP_PACKAGES.
+//   POST /api/shop/purchase        -> SIMULATED purchase. Grants the package
+//                                      contents instantly + returns updated user.
+//                                      The `simulated:true` flag on the response
+//                                      is the marker for swapping to a real
+//                                      payment provider later (Stripe / PayPal /
+//                                      Google Play / App Store) without changing
+//                                      the response shape on the client.
+//   POST /api/shop/convert-diamonds-> Diamonds -> coins at DIAMOND_TO_COIN_RATE.
+//                                      Non-refundable (GDD §6.1). The client
+//                                      MUST show a confirm dialog before calling
+//                                      this (handled in P4-D.4).
+
+app.get('/api/shop/packages', authMiddleware, (req, res) => {
+  const packages = IAP_PACKAGE_ORDER.map(id => {
+    const p = IAP_PACKAGES[id];
+    return {
+      id: p.id, label: p.label,
+      coins: p.coins, diamonds: p.diamonds,
+      usd_cents: p.usd_cents, bonus_pct: p.bonus_pct,
+    };
+  });
+  // demo_mode:true is the client's signal to show the "DEMO MODE — no real
+  // money charged" banner on the shop. Flip this to false at the same time
+  // we flip the purchase handler from simulated to real-provider.
+  res.json({ packages, demo_mode: true, diamond_to_coin_rate: DIAMOND_TO_COIN_RATE });
+});
+
+app.post('/api/shop/purchase', authMiddleware, async (req, res) => {
+  const { packageId } = req.body || {};
+  const pkg = packageId ? IAP_PACKAGES[packageId] : null;
+  if (!pkg) return res.status(400).json({ error: 'Unknown package' });
+
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  // SIMULATED purchase — grants instantly. Real-provider integration will
+  // replace this body with: verify provider receipt -> grant -> log txn id.
+  // The response shape stays identical so the client doesn't need to know.
+  user.coins    = (user.coins    || 0) + pkg.coins;
+  user.diamonds = (user.diamonds || 0) + pkg.diamonds;
+
+  console.log(`[IAP] ${user.username} purchased '${pkg.id}' (simulated): +${pkg.coins} coins, +${pkg.diamonds} diamonds`);
+  await saveUsers();
+
+  res.json({
+    success: true,
+    simulated: true,                                // flip to false when real provider lands
+    package: { id: pkg.id, coins: pkg.coins, diamonds: pkg.diamonds, usd_cents: pkg.usd_cents },
+    user: sanitizeUser(user),
+  });
+});
+
+app.post('/api/shop/convert-diamonds', authMiddleware, async (req, res) => {
+  const raw = req.body?.amount;
+  const diamonds = Number.parseInt(raw, 10);
+  if (!Number.isFinite(diamonds) || diamonds <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const have = user.diamonds || 0;
+  if (have < diamonds) {
+    return res.status(402).json({ error: 'Not enough diamonds', have, need: diamonds });
+  }
+
+  const coinsGranted = diamonds * DIAMOND_TO_COIN_RATE;
+  user.diamonds = have - diamonds;
+  user.coins    = (user.coins || 0) + coinsGranted;
+
+  console.log(`[IAP] ${user.username} converted ${diamonds} diamonds -> ${coinsGranted} coins`);
+  await saveUsers();
+
+  res.json({
+    success: true,
+    converted: { diamonds, coins: coinsGranted },
+    user: sanitizeUser(user),
   });
 });
 
