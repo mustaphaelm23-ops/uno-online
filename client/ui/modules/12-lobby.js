@@ -18,6 +18,7 @@
       document.getElementById('huser').textContent=S.user.username;
       _animateCount('hcoins',S.user.coins||0);
       _animateCount('scoins',S.user.coins||0);
+      _animateCount('hdiamonds',S.user.diamonds||0);          // P4-D.3 — premium currency display
     }
     renderLobbyHero();
     playLobbyIntro();
