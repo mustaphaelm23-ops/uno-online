@@ -47,6 +47,11 @@ const UserSchema = new mongoose.Schema({
   username: String,
   passwordHash: String,
   coins: { type: Number, default: 1000 },
+  // Premium currency (GDD §6.1). New accounts start with 100. Existing
+  // accounts get a one-time +100 grant on next server boot via
+  // grantDiamondsV1() — gated by the grant_diamonds_v1 flag below.
+  diamonds: { type: Number, default: 100 },
+  grant_diamonds_v1: Boolean,
   avatar: String,
   stats: {
     gamesPlayed: { type: Number, default: 0 },
@@ -197,6 +202,31 @@ async function saveUsers() {
     console.log('[DB] Save failed:', e.message);
   }
 }
+// One-time +100 diamond grant for every existing user (GDD §6.1 onboarding).
+// Idempotent: gated by user.grant_diamonds_v1 so it runs exactly once per user
+// regardless of how many times the server restarts. New accounts get diamonds
+// via the UserSchema default (100), so this only catches accounts that existed
+// before the diamonds field was added.
+//
+// IMPORTANT — this MUST run after loadUsers() resolves (so usersDB is populated),
+// not as a top-level IIFE like the legacy grantCoins/grantMustaphaMillion functions
+// below which run with an empty usersDB and effectively no-op. Wired into the
+// loadUsers().then() chain near server.listen().
+async function grantDiamondsV1(){
+  let granted = 0;
+  for (const user of usersDB.values()) {
+    if (!user.grant_diamonds_v1) {
+      user.diamonds = (user.diamonds || 0) + 100;
+      user.grant_diamonds_v1 = true;
+      granted++;
+    }
+  }
+  if (granted) {
+    console.log(`[Grant] +100 diamonds to ${granted} existing user(s)`);
+    await saveUsers();
+  }
+}
+
 // One-time coin grants
 (function grantCoins(){
   const grants = { 'mustapha': 50000, 'mustapha98': 100000, 'mustapha98_v2': 100000 };
@@ -242,6 +272,24 @@ const ROOM_TYPES = {
 };
 const FEATURED_TYPE_ORDER = ['CLASSIC', 'FUN', 'RANKED', 'CHILL'];
 const QUICK_MATCH_POOL    = ['CLASSIC', 'FUN', 'CHILL'];     // RANKED excluded — casual tap shouldn't risk rating
+
+// ── In-App Purchase packages (GDD §6.2) ───────────────────────────────
+// Single source of truth for what each USD package grants. The shop
+// endpoints + client read from this; if pricing/contents change, edit
+// here only. Bonus = the % "bonus" displayed in the UI (purely cosmetic;
+// the coins/diamonds values already include it baked in per GDD spec).
+// usd is in USD cents (49.99 -> 4999) to avoid float drift.
+const IAP_PACKAGES = {
+  starter:  { id:'starter',  label:'Starter',  coins:10000,  diamonds:100,  usd_cents:99,    bonus_pct:0  },
+  value:    { id:'value',    label:'Value',    coins:55000,  diamonds:550,  usd_cents:499,   bonus_pct:10 },
+  premium:  { id:'premium',  label:'Premium',  coins:120000, diamonds:1200, usd_cents:999,   bonus_pct:20 },
+  mega:     { id:'mega',     label:'Mega',     coins:350000, diamonds:3500, usd_cents:2499,  bonus_pct:40 },
+  ultimate: { id:'ultimate', label:'Ultimate', coins:800000, diamonds:8000, usd_cents:4999,  bonus_pct:60 },
+};
+const IAP_PACKAGE_ORDER = ['starter', 'value', 'premium', 'mega', 'ultimate'];
+// 1 diamond → 100 coins (GDD §6.1). Non-refundable; the UI must show a
+// confirmation dialog before each conversion (handled client-side in P4-D.4).
+const DIAMOND_TO_COIN_RATE = 100;
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 const worldChat = [];          // last ~60 global lobby messages
 
@@ -2911,6 +2959,7 @@ function purgeImageAvatars() {
 
 loadUsers().then(async () => {
   await loadWorldChat();                              // rolling 200-msg history populated before server.listen
+  await grantDiamondsV1();                            // one-time +100 diamonds for existing users (P4-D.1)
   purgeImageAvatars();
   server.listen(CONFIG.PORT, '0.0.0.0', () => {
   console.log(`
