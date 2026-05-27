@@ -99,7 +99,7 @@
             <text x="12" y="16" text-anchor="middle" fill="#78350F" font-size="11" font-weight="900" font-family="Arial">$</text>
           </svg>
           <span id="hcoins">0</span>
-          <button class="hdr-pill-plus" onclick="doShop()" title="Buy coins" aria-label="Buy coins">+</button>
+          <button class="hdr-pill-plus" onclick="doShop('coins')" title="Buy coins" aria-label="Buy coins">+</button>
         </div>
         <!-- Diamonds pill (P4-D.3). Premium currency, cyan/blue per GDD §9.2. -->
         <div class="hdr-pill hdr-pill-diamond" title="Diamonds">
@@ -109,7 +109,7 @@
             <path d="M12 3 L9 9 L12 21 L15 9 Z" fill="#60A5FA" stroke="#1E3A8A" stroke-width="1" stroke-linejoin="round"/>
           </svg>
           <span id="hdiamonds">0</span>
-          <button class="hdr-pill-plus" onclick="doShop()" title="Buy diamonds" aria-label="Buy diamonds">+</button>
+          <button class="hdr-pill-plus" onclick="doShop('diamonds')" title="Buy diamonds" aria-label="Buy diamonds">+</button>
         </div>
         <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
         <div class="lobby-menu-wrap" style="position:relative">
@@ -759,6 +759,7 @@
   <script src="ui/modules/20-room-scene.js"></script>
   <script src="ui/modules/21-lobby-scene.js"></script>
   <script src="ui/modules/22-parallax.js"></script>
+  <script src="ui/modules/23-shop.js"></script>
   <script src="ui/modules/24-atmosphere.js"></script>
   <script src="ui/app.js"></script>
   </body>

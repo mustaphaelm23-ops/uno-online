@@ -4102,3 +4102,223 @@
     .ev-claim.ready,.ev-mission,.ev-fw,.rt-frame,.rt-feat-badge,.rt-ev-spark,
     .ev-room-wipe-logo,.era-p{animation:none!important;}
   }
+
+  /* ═══════════════ SHOP MODAL (P4-D.4) ═══════════════
+     Full-screen overlay with a centred panel. 3 tabs (Coins / Diamonds /
+     Convert). Demo banner sits at the top to honestly flag that purchases
+     don't charge real money yet. The convert flow has an in-place confirm
+     dialog that gates the irreversible action — no separate overlay, just
+     a tab-content swap so the user stays in the same modal frame. */
+  #shopModal{
+    position:fixed;inset:0;z-index:1100;
+    background:rgba(4,6,18,.78);
+    backdrop-filter:blur(14px) saturate(1.2);
+    -webkit-backdrop-filter:blur(14px) saturate(1.2);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;opacity:0;transition:opacity .22s ease;
+  }
+  #shopModal.show{opacity:1;}
+  #shopModal.out{opacity:0;pointer-events:none;}
+  .shop-panel{
+    position:relative;
+    width:min(720px, 100%);max-height:90vh;overflow-y:auto;
+    background:linear-gradient(170deg,rgba(28,18,42,.96),rgba(13,10,22,.98));
+    border:1px solid rgba(204,68,255,.25);
+    border-radius:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 60px rgba(0,180,255,.12),inset 0 1px 0 rgba(255,255,255,.06);
+    padding:22px 22px 26px;
+  }
+  .shop-close{
+    position:absolute;top:14px;right:14px;width:34px;height:34px;
+    border-radius:50%;border:none;cursor:pointer;
+    background:rgba(255,255,255,.08);color:#fff;
+    font-size:20px;font-weight:700;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .18s,transform .18s;
+  }
+  .shop-close:hover{background:rgba(255,255,255,.16);transform:rotate(90deg);}
+  .shop-head{padding:4px 0 14px;}
+  .shop-title{
+    font-family:'Bangers',cursive;font-size:32px;letter-spacing:2px;color:#fff;
+    text-shadow:0 2px 10px rgba(204,68,255,.4);
+  }
+  .shop-sub{font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.5px;}
+  .shop-demo{
+    margin:0 0 14px;padding:8px 12px;border-radius:10px;
+    background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.06));
+    border:1px solid rgba(245,158,11,.35);
+    color:#FBBF24;font-size:11px;font-weight:700;letter-spacing:.4px;
+    text-align:center;
+  }
+  .shop-tabs{
+    display:flex;gap:6px;margin:0 0 16px;
+    background:rgba(0,0,0,.25);border-radius:12px;padding:5px;
+  }
+  .shop-tab{
+    flex:1;padding:9px 12px;border:none;cursor:pointer;
+    background:transparent;color:rgba(255,255,255,.55);
+    font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;letter-spacing:.5px;
+    border-radius:9px;transition:all .18s;
+  }
+  .shop-tab:hover{color:rgba(255,255,255,.85);}
+  .shop-tab.on{
+    background:linear-gradient(135deg,rgba(204,68,255,.35),rgba(96,165,250,.25));
+    color:#fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  .shop-body{min-height:300px;}
+  .shop-loading,.shop-err{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    min-height:300px;color:rgba(255,255,255,.65);font-size:13px;
+  }
+  .shop-err a{color:#60A5FA;text-decoration:underline;}
+  .shop-spin{
+    width:24px;height:24px;border:2px solid rgba(255,255,255,.15);
+    border-top-color:#A855F7;border-radius:50%;
+    animation:shopSpin .8s linear infinite;
+  }
+  @keyframes shopSpin{to{transform:rotate(360deg);}}
+  .shop-headline{
+    font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:rgba(255,255,255,.55);margin:0 0 14px;text-align:center;
+  }
+  .shop-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;
+  }
+  .shop-card{
+    position:relative;padding:16px 14px 14px;border-radius:14px;
+    background:linear-gradient(170deg,rgba(40,32,58,.85),rgba(20,16,32,.92));
+    border:1px solid rgba(255,255,255,.08);
+    text-align:center;
+    transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s,border-color .22s;
+  }
+  .shop-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(255,210,63,.40);
+    box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 28px rgba(245,158,11,.18);
+  }
+  /* Per-tier visual hierarchy — bigger tiers get warmer rims so the value
+     ladder reads at a glance without reading the price. */
+  .shop-card-value:hover     {border-color:rgba(96,165,250,.5);}
+  .shop-card-premium:hover   {border-color:rgba(168,85,247,.55);}
+  .shop-card-mega:hover      {border-color:rgba(232,50,74,.55);box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 32px rgba(232,50,74,.20);}
+  .shop-card-ultimate:hover  {border-color:rgba(255,210,63,.65);box-shadow:0 16px 44px rgba(0,0,0,.55),0 0 40px rgba(255,210,63,.28);}
+  .shop-card-bonus{
+    position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    padding:3px 10px;border-radius:999px;
+    background:linear-gradient(135deg,#FFD23F,#F59E0B);
+    color:#451a03;font-size:9px;font-weight:900;letter-spacing:1px;
+    box-shadow:0 4px 12px rgba(245,158,11,.4);
+  }
+  .shop-card-label{
+    font-family:'Bangers',cursive;font-size:18px;letter-spacing:1.5px;
+    color:#fff;margin-bottom:8px;
+  }
+  .shop-card-primary{
+    font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;
+    color:#FFD23F;margin-bottom:4px;
+  }
+  .shop-card-secondary{
+    font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:12px;
+  }
+  .shop-card-buy{
+    width:100%;padding:9px 12px;border:none;border-radius:10px;
+    background:linear-gradient(135deg,#22C55E,#15803D);
+    color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:900;letter-spacing:.5px;
+    cursor:pointer;transition:transform .15s,box-shadow .18s;
+    box-shadow:0 4px 12px rgba(34,197,94,.35),inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .shop-card-buy:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(34,197,94,.50),inset 0 1px 0 rgba(255,255,255,.22);}
+  .shop-card-buy:active{transform:translateY(0) scale(.97);}
+
+  /* Convert tab */
+  .shop-convert{text-align:center;padding:8px 0;}
+  .shop-convert-rate{
+    font-size:11px;font-weight:700;color:rgba(255,255,255,.50);
+    margin-bottom:18px;letter-spacing:.4px;
+  }
+  .shop-convert-have{
+    font-size:14px;color:rgba(255,255,255,.75);margin-bottom:14px;
+  }
+  .shop-convert-have b{color:#60A5FA;font-weight:900;font-size:18px;}
+  .shop-convert-presets{
+    display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;
+  }
+  .shop-preset{
+    min-width:54px;padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.04);color:#fff;
+    font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;
+    transition:all .15s;
+  }
+  .shop-preset:hover:not(:disabled){border-color:rgba(96,165,250,.5);background:rgba(96,165,250,.08);}
+  .shop-preset.on{
+    background:linear-gradient(135deg,rgba(96,165,250,.30),rgba(29,78,216,.20));
+    border-color:rgba(96,165,250,.65);color:#fff;
+    box-shadow:0 4px 12px rgba(96,165,250,.30);
+  }
+  .shop-preset:disabled{opacity:.35;cursor:not-allowed;}
+  .shop-convert-line{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    padding:18px 14px;border-radius:14px;
+    background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.05);
+    margin-bottom:18px;
+    font-size:18px;font-weight:800;
+  }
+  .shop-convert-amt{color:#60A5FA;}
+  .shop-convert-arrow{color:rgba(255,255,255,.4);font-size:22px;}
+  .shop-convert-out{color:#FFD23F;}
+  .shop-convert-go{
+    padding:14px 32px;border:none;border-radius:12px;cursor:pointer;
+    background:linear-gradient(135deg,#A855F7,#6B21A8);
+    color:#fff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;letter-spacing:.8px;
+    box-shadow:0 6px 18px rgba(168,85,247,.40),inset 0 1px 0 rgba(255,255,255,.18);
+    transition:transform .15s,box-shadow .18s;
+  }
+  .shop-convert-go:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 22px rgba(168,85,247,.55);}
+  .shop-convert-go:disabled{opacity:.45;cursor:not-allowed;background:rgba(255,255,255,.06);box-shadow:none;}
+
+  /* Convert confirm dialog — in-place swap, not a separate overlay. */
+  .shop-convert-confirm{
+    text-align:center;padding:24px 16px;
+    background:rgba(0,0,0,.32);border-radius:14px;
+    border:1px solid rgba(232,50,74,.30);
+    animation:shopConfirmIn .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes shopConfirmIn{
+    from{transform:scale(.95);opacity:0;}
+    to{transform:scale(1);opacity:1;}
+  }
+  .shop-confirm-q{
+    font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:#fff;
+    margin-bottom:8px;
+  }
+  .shop-confirm-warn{
+    font-size:12px;color:#FBBF24;font-weight:700;letter-spacing:.4px;
+    margin-bottom:20px;
+  }
+  .shop-confirm-actions{
+    display:flex;justify-content:center;gap:10px;flex-wrap:wrap;
+  }
+  .shop-confirm-cancel{
+    padding:11px 22px;border:1px solid rgba(255,255,255,.18);border-radius:10px;
+    background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);
+    font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;cursor:pointer;
+    transition:all .15s;
+  }
+  .shop-confirm-cancel:hover{background:rgba(255,255,255,.10);}
+  .shop-confirm-go{
+    padding:11px 22px;border:none;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#E8324A,#9B1B2E);
+    color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:900;letter-spacing:.4px;
+    box-shadow:0 5px 14px rgba(232,50,74,.45);transition:all .15s;
+  }
+  .shop-confirm-go:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(232,50,74,.55);}
+
+  /* Phone — single column packages */
+  @media (max-width:520px){
+    .shop-panel{padding:18px 16px 22px;}
+    .shop-title{font-size:26px;}
+    .shop-grid{grid-template-columns:1fr;}
+    .shop-convert-line{font-size:16px;}
+  }
+

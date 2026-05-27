@@ -168,12 +168,14 @@
     setTimeout(()=>{ if(typeof _gcNav==='function') _gcNav('training'); }, 30);
   }
 
-  // SHOP — placeholder until P4 economy lands the real shop modal.
-  // Surfacing as comingSoon honestly rather than misleading into the
-  // existing coins-budget modal.
-  function doShop(){
-    if(typeof comingSoon==='function'){
-      comingSoon('Shop','Buy coins, card backs & cosmetics — launching with the economy update.');
+  // SHOP — opens the real shop modal (P4-D.4). Header "+" buttons + the
+  // left-rail SHOP item + future entry points all funnel through this
+  // single dispatcher so the open path stays one-call.
+  function doShop(initialTab){
+    if(typeof showShop === 'function'){
+      showShop(initialTab);
+    } else if(typeof comingSoon === 'function'){
+      comingSoon('Shop','Shop module failed to load — refresh.');
     } else {
       toast('Shop coming soon','i');
     }
