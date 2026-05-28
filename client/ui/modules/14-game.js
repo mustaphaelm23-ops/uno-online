@@ -108,6 +108,75 @@
     });
   }
 
+  /* P5.1 — Victory podium 1->4. Renders the 4 slots from data.stats
+     ordered: winner first, then everyone else by ascending finalHand
+     (fewer cards left = better position). Highlights 1st with gold
+     ring + larger avatar; the local player gets a subtle "ME" pill so
+     they can spot themselves at a glance. */
+  function _renderWinPodium(data){
+    const box = document.getElementById('winPodium');
+    if(!box) return;
+    const stats = Array.isArray(data.stats) ? data.stats.slice() : [];
+    const winnerId = data.winnerId;
+    stats.sort((a,b) => {
+      if(a.id === winnerId) return -1;
+      if(b.id === winnerId) return 1;
+      return (a.finalHand || 0) - (b.finalHand || 0);
+    });
+    const medals = ['🥇','🥈','🥉','4️⃣'];
+    const slots = stats.slice(0, 4).map((p, i) => {
+      const isWinner = p.id === winnerId;
+      const isMe     = p.id === S.user?.id;
+      const img = _isImgAvatar(p.avatar);
+      const face = img ? '' : esc(p.avatar || (p.username || '?').charAt(0).toUpperCase());
+      const meta = isWinner ? 'WINNER' : `${p.finalHand || 0} cards left`;
+      return `<div class="podium-slot ${isWinner?'podium-1st':''} ${isMe?'podium-me':''}" data-pos="${i+1}">
+        <div class="podium-rank">${medals[i]||(i+1)}</div>
+        <div class="podium-avatar" style="${img?`background-image:url('${p.avatar}')`:''}">${face}</div>
+        <div class="podium-name">${esc(p.username || '—')}${isMe?' <span class="podium-me-pill">YOU</span>':''}</div>
+        <div class="podium-meta">${meta}</div>
+      </div>`;
+    }).join('');
+    box.innerHTML = slots;
+  }
+
+  /* P5.1 — Rewards row. Coins = the actual payout (winner-only; losers
+     paid their entry up front and don't get coins back). XP = the BP XP
+     the server actually grants (220 for win, 90 for loss — matches the
+     value in attachGameListeners). */
+  function _renderWinRewards(data, iWon, payout){
+    const box = document.getElementById('winRewards');
+    if(!box) return;
+    const coinsGain = iWon ? payout : 0;
+    const xpGain    = iWon ? 220 : 90;
+    box.innerHTML = `
+      <div class="reward-cell">
+        <div class="reward-ic">🪙</div>
+        <div class="reward-val">${coinsGain > 0 ? '+' : ''}${coinsGain.toLocaleString()}</div>
+        <div class="reward-lbl">Coins</div>
+      </div>
+      <div class="reward-cell">
+        <div class="reward-ic">⭐</div>
+        <div class="reward-val">+${xpGain}</div>
+        <div class="reward-lbl">XP</div>
+      </div>`;
+  }
+
+  /* P5.1 — Play Again: closes the win modal, then routes the player back
+     into the same room TYPE they just played (Classic/Fun/Ranked/Chill).
+     Falls back to QUICK_MATCH if the type is unknown (legacy room, private,
+     or league match). Reuses the existing quickJoin pipeline from 12-lobby.js
+     so the cinematic radar transition kicks in for free. */
+  function winPlayAgain(){
+    const type = S.lastMatchType || 'QUICK_MATCH';
+    document.getElementById('winov')?.classList.remove('show');
+    if(typeof quickJoin === 'function'){
+      quickJoin(type);
+    } else if(typeof backLobby === 'function'){
+      backLobby();
+    }
+  }
+
   /* ═══ WIN ═══ */
   function showWin(data){
     const iWon=data.winnerId===S.user?.id;
@@ -118,8 +187,11 @@
     // match:payout socket events (server is authoritative). showWin no
     // longer mirrors S.user.coins locally; reading data.payout / data.pot
     // / data.houseCut here is for DISPLAY only.
+    // P5.1 — remember the room type the match was played in so the
+    // "Play Again" button can route back into the same pool.
+    if(data.roomType) S.lastMatchType = data.roomType;
     const wt=document.getElementById('wtitle');
-    wt.textContent=iWon?'🏆 YOU WIN!':'💀 GAME OVER';
+    wt.textContent=iWon?'🏆 VICTORY!':'💀 GAME OVER';
     wt.className=`wtitle ${iWon?'w':'l'}`;
     document.getElementById('wdet').textContent=iWon?(forfeit?`${data.quitter} left the game!`:`Score: ${data.score}`):`${data.username} won!`;
     // Display the actual payout for the winner; losers paid their entry at
@@ -129,6 +201,9 @@
     const coinsEl=document.getElementById('wcoins');
     const sign = finalCoins > 0 ? '+' : '';
     coinsEl.textContent = `${sign}${finalCoins.toLocaleString()} 🪙`;
+    // P5.1 — render the 4-slot podium + rewards row.
+    _renderWinPodium(data);
+    _renderWinRewards(data, iWon, payout);
     // Pot summary line replaces the old "Bet was X per player" hint so the
     // player can see the math: total pot, house cut, what they got.
     const wbetEl = document.getElementById('wbet');

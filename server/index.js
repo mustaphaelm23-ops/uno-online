@@ -2560,6 +2560,11 @@ function attachGameListeners(room) {
     data.pot      = pot;
     data.houseCut = houseCut;
     data.payout   = payout;
+    // P5 — let the client know which featured type this was so the
+    // 'Play Again' button on the victory podium can route back into
+    // the same Classic / Fun / Ranked / Chill pool. Falls back to
+    // QUICK_MATCH client-side if missing (e.g. legacy / private rooms).
+    data.roomType = room.roomType || null;
 
     saveUsers();
     io.to(roomId).emit('game:over', data);

@@ -423,14 +423,18 @@
     <button class="cbtn" style="background:linear-gradient(135deg,#FBBF24,#D97706);color:#F59E0B" onclick="pickColor('yellow')" title="Yellow"></button>
   </div>
 
-  <!-- ═══ WIN ═══ -->
+  <!-- ═══ WIN / VICTORY PODIUM (P5.1) ═══ -->
   <div class="winov" id="winov">
     <div class="win-rays" aria-hidden="true"></div>
     <div class="win-spot" aria-hidden="true"></div>
     <div class="win-content" id="winContent">
-      <div class="wtitle" id="wtitle">YOU WIN!</div>
+      <div class="wtitle" id="wtitle">VICTORY!</div>
       <div class="win-det" id="wdet"></div>
-      <div class="win-coins" id="wcoins">+0 🪙</div>
+      <!-- 4-slot podium 1->4 — populated by _renderWinPodium(data) -->
+      <div class="win-podium" id="winPodium" aria-label="Match results"></div>
+      <!-- Rewards row — coins (only the winner gets the pot) + XP (everyone) -->
+      <div class="win-rewards" id="winRewards"></div>
+      <!-- Pot math line — kept for transparency -->
       <div class="win-bet" id="wbet"></div>
       <div id="mvpBadge" class="mvp-badge" style="display:none">
         <div class="mvp-avatar" id="mvpAvatar">⭐</div>
@@ -448,7 +452,14 @@
           <div class="crowd-fav-meta" id="crowdFavMeta">—</div>
         </div>
       </div>
-      <button class="btnP win-back" style="width:auto;padding:14px 36px" onclick="backLobby()" data-i18n="backToLobby">Back to Lobby</button>
+      <!-- Hidden mirror of the coin gain — kept for legacy renderers; the
+           podium + rewards row are the canonical display now. -->
+      <div class="win-coins" id="wcoins" style="display:none">+0 🪙</div>
+      <!-- Action row: Play Again (re-routes into the same room type) + Back to Lobby -->
+      <div class="win-actions">
+        <button class="btnS win-play-again" onclick="winPlayAgain()">▶ Play Again</button>
+        <button class="btnP win-back" onclick="backLobby()" data-i18n="backToLobby">Back to Lobby</button>
+      </div>
     </div>
   </div>
 
