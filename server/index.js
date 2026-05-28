@@ -304,6 +304,63 @@ const HOUSE_CUT = 0.10;
 const RANKED_ABANDON_ELO_PENALTY = 50;
 const RANKED_ABANDON_BAN_MS      = 30 * 60 * 1000;       // 30 minutes
 
+// ── Account Level (GDD §7.2) ──────────────────────────────────────────
+// Persistent account progression separate from the seasonal Battle Pass.
+// Linear 1000-XP-per-level curve up to level 500. XP earned every match
+// (won: 220, lost: 90 — same numbers as BP XP, granted alongside it).
+// Each level-up grants 50 × level coins; every 10th level grants 10 diamonds.
+const ACCOUNT_MAX_LEVEL = 500;
+const ACCOUNT_XP_PER_LEVEL = 1000;
+
+function getAccountLevel(xp){
+  const x = Math.max(0, Math.floor(xp || 0));
+  return Math.min(ACCOUNT_MAX_LEVEL, Math.floor(x / ACCOUNT_XP_PER_LEVEL) + 1);
+}
+function accountLevelProgress(xp){
+  const x = Math.max(0, Math.floor(xp || 0));
+  const level = getAccountLevel(xp);
+  if (level >= ACCOUNT_MAX_LEVEL) return { level, into: 0, span: 1, pct: 100 };
+  const into = x - (level - 1) * ACCOUNT_XP_PER_LEVEL;
+  return { level, into, span: ACCOUNT_XP_PER_LEVEL, pct: Math.round(into / ACCOUNT_XP_PER_LEVEL * 100) };
+}
+function accountLevelReward(level){
+  // Coins scale linearly with the new level so level 500 still feels like
+  // a milestone. Every 10th level also drops 10 diamonds.
+  const coins    = 50 * level;
+  const diamonds = (level % 10 === 0) ? 10 : 0;
+  return { coins, diamonds };
+}
+// Grants XP, detects level-ups (handles multi-level jumps from large XP
+// gains), pushes rewards onto the user and emits 'account:levelup' so the
+// client can show a toast / popup. Returns { gained, oldLevel, newLevel,
+// totalRewards } so callers can log meaningfully.
+function applyAccountXP(user, gain, reason){
+  if (!user || !(gain > 0)) return { gained:0, oldLevel: getAccountLevel(user?.accountXP||0), newLevel: getAccountLevel(user?.accountXP||0), rewards:{coins:0,diamonds:0} };
+  const oldXP    = user.accountXP || 0;
+  const oldLevel = getAccountLevel(oldXP);
+  user.accountXP = oldXP + gain;
+  const newLevel = getAccountLevel(user.accountXP);
+  let coins = 0, diamonds = 0;
+  if (newLevel > oldLevel) {
+    for (let lv = oldLevel + 1; lv <= newLevel; lv++) {
+      const r = accountLevelReward(lv);
+      coins    += r.coins;
+      diamonds += r.diamonds;
+    }
+    user.coins    = (user.coins    || 0) + coins;
+    user.diamonds = (user.diamonds || 0) + diamonds;
+    const sock = findSocketByUserId(user.id);
+    if (sock) sock.emit('account:levelup', {
+      oldLevel, newLevel,
+      rewards: { coins, diamonds },
+      accountXP: user.accountXP,
+      reason: reason || 'match',
+    });
+    console.log(`[Account] ${user.username} ${oldLevel} -> ${newLevel} (+${coins} coins${diamonds?', +'+diamonds+' diamonds':''})`);
+  }
+  return { gained: gain, oldLevel, newLevel, rewards: { coins, diamonds } };
+}
+
 // ── Special Offers (GDD §3.3.I / §6.2.C) ──────────────────────────────
 // One global offer at a time; the active id is whatever this server's
 // current rotation is. Rolling 24h timer from server start — restart
@@ -2624,7 +2681,12 @@ function attachGameListeners(room) {
       if (!Array.isArray(user.matchHistory)) user.matchHistory = [];
       const won = winnerData && winnerData.id === playerData.id;
       ensureBP(user);
-      user.bp.xp += won ? 220 : 90;
+      const matchXP = won ? 220 : 90;
+      user.bp.xp += matchXP;
+      // GDD §7.2 — persistent account XP runs in parallel with seasonal BP XP.
+      // Same numbers; level-ups grant coins (+50×level) and diamonds every 10th
+      // level via account:levelup events the client toasts.
+      applyAccountXP(user, matchXP, 'match');
       const opponents = data.players.filter(p => p.id !== playerData.id).map(p => p.username);
       user.matchHistory.unshift({
         at: Date.now(),
@@ -3026,6 +3088,12 @@ function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
   const league = getLeague(safe.elo||1000);
   safe.league = league;
+  // GDD §7.2 — surface accountXP / level / progress so every client display
+  // (lobby pill, profile, podium) can read them from the user object directly.
+  const lvl = accountLevelProgress(safe.accountXP || 0);
+  safe.accountXP    = safe.accountXP || 0;
+  safe.accountLevel = lvl.level;
+  safe.accountLevelProgress = { into: lvl.into, span: lvl.span, pct: lvl.pct };
   return safe;
 }
 

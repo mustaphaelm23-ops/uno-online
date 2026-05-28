@@ -45,6 +45,14 @@
     // GDD §7.1 — prefer the full label "Silver II" when the server supplies it;
     // fall back to bare tier name for older payloads.
     const lgEl=document.getElementById('heroLeague'); if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.label||lg.name||'Bronze'}`;
+    // GDD §7.2 — account level pill next to username + title progress %.
+    const lvlEl=document.getElementById('heroLevel');
+    if(lvlEl){
+      const level=u.accountLevel||1;
+      const prog=u.accountLevelProgress||{pct:0,into:0,span:1000};
+      lvlEl.textContent=`Lv ${level}`;
+      lvlEl.title=`Level ${level} — ${prog.into||0}/${prog.span||1000} XP (${prog.pct||0}%)`;
+    }
     const gp=u.stats?.gamesPlayed||0, gw=u.stats?.gamesWon||0;
     _animateCount('heroCoins',u.coins||0);
     _animateCount('heroElo',u.elo??1000);

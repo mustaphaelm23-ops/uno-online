@@ -1761,6 +1761,29 @@
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     text-shadow:0 3px 14px rgba(0,0,0,.5);
   }
+  /* GDD §7.2 — Account level row + pill. Name + level sit side by side
+     so the player's level reads instantly next to their handle. */
+  .hero-name-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .hero-level-pill{
+    display:inline-flex;align-items:center;
+    padding:3px 11px;border-radius:999px;
+    background:linear-gradient(135deg,rgba(168,85,247,.30),rgba(96,165,250,.20));
+    border:1px solid rgba(168,85,247,.45);
+    color:#E9D5FF;
+    font-family:'Outfit',sans-serif;font-size:11px;font-weight:900;letter-spacing:1.2px;
+    text-shadow:0 1px 2px rgba(0,0,0,.45);
+    box-shadow:0 4px 10px rgba(168,85,247,.20),inset 0 1px 0 rgba(255,255,255,.10);
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;
+  }
+  .hero-level-pill.level-up{
+    animation:heroLevelUp 1.6s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes heroLevelUp{
+    0%  {transform:scale(1);          box-shadow:0 4px 10px rgba(168,85,247,.20),inset 0 1px 0 rgba(255,255,255,.10);}
+    20% {transform:scale(1.30);       box-shadow:0 10px 26px rgba(168,85,247,.55),0 0 36px rgba(96,165,250,.45),inset 0 1px 0 rgba(255,255,255,.30);}
+    60% {transform:scale(1.10);}
+    100%{transform:scale(1);}
+  }
   .hero-league{
     display:inline-flex;align-items:center;gap:5px;margin-top:5px;
     font-size:11px;font-weight:800;letter-spacing:.5px;

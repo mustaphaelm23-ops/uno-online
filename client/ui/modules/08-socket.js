@@ -171,6 +171,27 @@
     sk.on('player:reconnected',({username,abandoned})=>{
       toast(`✓ ${username} reconnected${abandoned?' (forfeit still applies)':''}`,'s');
     });
+    // GDD §7.2 — account level-up. Server has already granted the rewards
+    // (coins + occasional diamonds); we just sync the new XP/level + toast.
+    sk.on('account:levelup',(data)=>{
+      if(!data || !S.user) return;
+      if(typeof data.accountXP === 'number') S.user.accountXP = data.accountXP;
+      if(typeof data.newLevel  === 'number') S.user.accountLevel = data.newLevel;
+      try{ localStorage.setItem('uno_user',JSON.stringify(S.user)); }catch(e){}
+      // Update the lobby hero pill if visible.
+      const el=document.getElementById('heroLevel');
+      if(el){
+        el.textContent=`Lv ${data.newLevel}`;
+        el.classList.remove('level-up'); void el.offsetWidth; el.classList.add('level-up');
+      }
+      const r=data.rewards||{};
+      const parts=[];
+      if(r.coins)    parts.push(`+${r.coins.toLocaleString()} 🪙`);
+      if(r.diamonds) parts.push(`+${r.diamonds.toLocaleString()} 💎`);
+      const tail = parts.length ? ` (${parts.join(', ')})` : '';
+      toast(`🌟 Level up! Lv ${data.oldLevel} → Lv ${data.newLevel}${tail}`,'s');
+    });
+
     // P4-NEW.1b — ranked abandon penalty hit on me. Persist the lockout to
     // S.user so the lobby UI can dim the RANKED card or show a tooltip.
     sk.on('ranked:penalty',({elo,bannedUntil,reason})=>{
