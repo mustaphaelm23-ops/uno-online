@@ -332,15 +332,32 @@ const worldChat = [];          // last ~60 global lobby messages
 // ─────────────────────────────────────────
 
 // ── ELO & Leagues ──
+// ── Rank ladder (GDD §7.1) ────────────────────────────────────────────
+// 7 named tiers; each tier (except Grandmaster) splits into I / II / III
+// across its 1000-ELO span (333 per division, III lowest, I highest).
+// Grandmaster is open-ended above 6000 with no sub-rank.
 const LEAGUES = [
-  { name:'Bronze',  min:0,    max:999,  badge:'🥉', color:'#CD7F32' },
-  { name:'Silver',  min:1000, max:1499, badge:'🥈', color:'#C0C0C0' },
-  { name:'Gold',    min:1500, max:1999, badge:'🥇', color:'#FFD700' },
-  { name:'Diamond', min:2000, max:9999, badge:'💎', color:'#B9F2FF' },
+  { name:'Bronze',      min:0,    max:999,   badge:'🥉', color:'#CD7F32' },
+  { name:'Silver',      min:1000, max:1999,  badge:'🥈', color:'#C0C0C0' },
+  { name:'Gold',        min:2000, max:2999,  badge:'🥇', color:'#FFD700' },
+  { name:'Platinum',    min:3000, max:3999,  badge:'💠', color:'#E5E4E2' },
+  { name:'Diamond',     min:4000, max:4999,  badge:'💎', color:'#B9F2FF' },
+  { name:'Master',      min:5000, max:5999,  badge:'👑', color:'#9F70FD' },
+  { name:'Grandmaster', min:6000, max:99999, badge:'🏆', color:'#FF6B6B' },
 ];
 
 function getLeague(elo) {
-  return LEAGUES.slice().reverse().find(l => elo >= l.min) || LEAGUES[0];
+  const e = Math.max(0, Math.floor(elo || 0));
+  const tier = LEAGUES.slice().reverse().find(l => e >= l.min) || LEAGUES[0];
+  if (tier.name === 'Grandmaster') {
+    return { ...tier, division: null, label: tier.name };
+  }
+  // 333 ELO per division within a 1000-ELO tier. III = 0..332, II = 333..665,
+  // I = 666..999 (highest sub-rank). Roman numerals are the convention used
+  // across ranked card games / FPS ladders.
+  const offset = e - tier.min;
+  const division = offset >= 666 ? 'I' : offset >= 333 ? 'II' : 'III';
+  return { ...tier, division, label: `${tier.name} ${division}` };
 }
 
 function calcELO(winnerElo, loserElo) {

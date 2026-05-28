@@ -20,12 +20,17 @@
     }
   }
   function leagueIcon(name){
-    return ({Bronze:'🥉',Silver:'🥈',Gold:'🥇',Diamond:'💎'})[name] || '🥉';
+    // GDD §7.1 — 7 tiers. Falls back to bronze for unknown names.
+    return ({
+      Bronze:'🥉', Silver:'🥈', Gold:'🥇',
+      Platinum:'💠', Diamond:'💎', Master:'👑', Grandmaster:'🏆',
+    })[name] || '🥉';
   }
   function renderLeagueHero(d){
     const me = d.me, league = me.league || {};
-    document.getElementById('leagueHeroBadge').textContent = leagueIcon(league.name);
-    document.getElementById('leagueHeroName').textContent = league.name || 'Bronze';
+    document.getElementById('leagueHeroBadge').textContent = league.badge || leagueIcon(league.name);
+    // Show the full "Silver II" label if the server supplies it; bare name otherwise.
+    document.getElementById('leagueHeroName').textContent = league.label || league.name || 'Bronze';
     document.getElementById('leagueHeroRank').textContent =
       `Rank #${me.rank} of ${d.totalPlayers} • ${me.gamesWon}/${me.gamesPlayed} wins`;
     document.getElementById('leagueHeroElo').textContent = `⚡ ${me.elo} ELO`;

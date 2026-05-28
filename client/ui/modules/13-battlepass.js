@@ -1939,8 +1939,9 @@
     if(!u) return;
     document.getElementById('profileName').textContent=u.username||'Player';
     const lg=u.league||{};
+    // GDD §7.1 — show the named-with-division label on the profile.
     const lgEl=document.getElementById('profileLeague');
-    if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.name||'Bronze'} League`;
+    if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.label||lg.name||'Bronze'} League`;
     document.getElementById('profileId').textContent='ID '+(u.id||'').slice(0,8).toUpperCase();
     _renderAvatarInto(document.getElementById('profileAvatar'), u);
     document.getElementById('profileJoined').textContent='Joined '+(u.createdAt?new Date(u.createdAt).toLocaleDateString(I18N.current||'en'):'—');

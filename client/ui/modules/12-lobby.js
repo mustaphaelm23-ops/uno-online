@@ -42,7 +42,9 @@
     _renderAvatarInto(document.getElementById('heroAvatar'), u);
     const nm=document.getElementById('heroName'); if(nm) nm.textContent=u.username||'Player';
     const lg=u.league||{};
-    const lgEl=document.getElementById('heroLeague'); if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.name||'Bronze'}`;
+    // GDD §7.1 — prefer the full label "Silver II" when the server supplies it;
+    // fall back to bare tier name for older payloads.
+    const lgEl=document.getElementById('heroLeague'); if(lgEl) lgEl.textContent=`${lg.badge||'🎖️'} ${lg.label||lg.name||'Bronze'}`;
     const gp=u.stats?.gamesPlayed||0, gw=u.stats?.gamesWon||0;
     _animateCount('heroCoins',u.coins||0);
     _animateCount('heroElo',u.elo??1000);
