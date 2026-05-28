@@ -90,6 +90,35 @@
   function canIDraw(){return myTurn()&&S.g.turnPhase==='must_play';}
   function canIPlay(){return myTurn()&&(S.g.turnPhase==='must_play'||S.g.turnPhase==='drew_card');}
 
+  // P4-NEW — single canonical sync path for the user's currency state.
+  // Use whenever a server response returns an updated user object that
+  // may have changed coins AND/OR diamonds. Persists to S.user +
+  // localStorage and animates every pill that shows either currency
+  // (#hcoins / #scoins / #heroCoins / #hdiamonds). The shop and match
+  // events already have their own dedicated update paths; this helper
+  // is for HTTP endpoints (event claim, BP claim, daily reward, mission
+  // claim, competitions, insta-reward) — if/when they start granting
+  // diamonds, switch the call site to _syncUserCurrencies(d.user) and
+  // both currencies stay in sync without per-site wiring.
+  function _syncUserCurrencies(user){
+    if(!user || !S.user) return;
+    if(typeof user.coins === 'number'){
+      S.user.coins = user.coins;
+      if(typeof _animateCount === 'function'){
+        _animateCount('hcoins', user.coins);
+        _animateCount('scoins', user.coins);
+        _animateCount('heroCoins', user.coins);
+      }
+    }
+    if(typeof user.diamonds === 'number'){
+      S.user.diamonds = user.diamonds;
+      if(typeof _animateCount === 'function'){
+        _animateCount('hdiamonds', user.diamonds);
+      }
+    }
+    try{ localStorage.setItem('uno_user', JSON.stringify(S.user)); }catch(e){}
+  }
+
   function buildCardHTML(color,value){
     const v=fmtV(value);
     if(color==='wild')return`<div class="wild-oval"></div><div class="card-tl">${v}</div><div class="wild-txt">${value==='wild_draw_four'?'+4':'★'}</div><div class="card-br">${v}</div>`;
