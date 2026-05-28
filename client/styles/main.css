@@ -1938,6 +1938,34 @@
     background:linear-gradient(145deg,rgba(245,158,11,.08),rgba(19,23,41,.95));
   }
   .opanel.myturn .oname{color:var(--accent);text-shadow:0 0 12px rgba(245,158,11,.5);}
+  /* P4-NEW.1a polish — opponent disconnect / abandon visual states.
+     .dc        = in the 30s reconnect grace window (recoverable)
+     .abandoned = grace expired, bot is playing for the rest of the match
+     Both fade the panel + greyscale the avatar so the table reads the
+     state at a glance without checking the toast log. */
+  .opanel.dc,
+  .opanel.abandoned{
+    opacity:.55;
+    filter:saturate(.5);
+  }
+  .opanel.dc .opp-avatar,
+  .opanel.abandoned .opp-avatar{
+    filter:grayscale(1) brightness(.85);
+  }
+  .opanel.abandoned{
+    opacity:.45;
+    border-color:rgba(232,50,74,.30);
+  }
+  .opanel-status{
+    font-size:9.5px;font-weight:700;letter-spacing:.4px;
+    margin-top:3px;line-height:1.1;
+  }
+  .opanel-status.dc{color:#FBBF24;animation:opStatusBlink 1.6s ease-in-out infinite;}
+  .opanel-status.abandoned{color:#F87171;}
+  @keyframes opStatusBlink{
+    0%,100%{opacity:1;}
+    50%{opacity:.55;}
+  }
   .oname{font-size:12px;font-weight:800;margin-bottom:6px;}
   .oname-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
   .oname-row .oname{margin-bottom:0;line-height:1.1;}

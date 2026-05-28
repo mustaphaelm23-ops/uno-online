@@ -3,7 +3,9 @@
     S.g.players=players;
     const row=document.getElementById('orow'),others=players.filter(p=>!isMe(p.id));
     const showMute = VoiceChat.isOn && players.length >= 3;
-    const newKey=others.map(p=>`${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.isConnected?1:0}:${p.id===S.g.currentTurn?1:0}:${p.avatar?'a':'n'}:${showMute?(VoiceChat.mutedPeers?.has(p.id)?'m':'u'):'-'}`).join('|');
+    // Render key includes `abandoned` so a player flipping to abandoned mid-
+    // match re-renders the panel without waiting for some other state delta.
+    const newKey=others.map(p=>`${p.id}:${p.handSize}:${p.saidUno?1:0}:${p.isConnected?1:0}:${p.abandoned?1:0}:${p.id===S.g.currentTurn?1:0}:${p.avatar?'a':'n'}:${showMute?(VoiceChat.mutedPeers?.has(p.id)?'m':'u'):'-'}`).join('|');
     if(row._lastKey===newKey) return;
     row._lastKey=newKey;
     row.innerHTML=others.map(p=>{
@@ -27,11 +29,22 @@
       const muteBtn = showMute
         ? `<button class="mute-toggle ${isMuted?'muted':''}" onclick="VoiceChat.toggleMutePeer('${p.id}')" title="${isMuted?'Unmute':'Mute'} ${esc(p.username)}'s mic">${isMuted?'🔇':'🔊'}</button>`
         : '';
-      return`<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
+      // Panel state classes (P4-NEW.1a polish):
+      //   .abandoned -> grace expired, bot is playing the seat (sticky for the match)
+      //   .dc        -> disconnected but still in 30s grace window
+      // Sub-line below the hand shows the matching status text. Avatar is
+      // greyscale + dimmed via the class on the panel.
+      const panelMod = p.abandoned ? ' abandoned' : (!p.isConnected ? ' dc' : '');
+      const status = p.abandoned
+        ? '<div class="opanel-status abandoned">💀 Abandoned — bot playing</div>'
+        : (!p.isConnected
+            ? '<div class="opanel-status dc">⏳ Reconnecting…</div>'
+            : '');
+      return`<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}${panelMod}" data-pid="${p.id}">
           ${muteBtn}
           <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)}${p.saidUno?'<span class="ouno">UNO!</span>':''}</div></div>
           <div style="display:flex;align-items:center;height:70px;min-width:${Math.min(max*20+44,190)}px">${cards}${p.handSize>10?`<div style="font-size:11px;color:var(--muted);margin-left:6px;font-weight:700">+${p.handSize-10}</div>`:''}</div>
-          ${!p.isConnected?'<div style="font-size:9px;color:var(--red);margin-top:2px">⚠ Offline</div>':''}
+          ${status}
         </div>`;
     }).join('');
   }

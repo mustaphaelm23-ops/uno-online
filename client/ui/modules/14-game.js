@@ -191,9 +191,26 @@
     // "Play Again" button can route back into the same pool.
     if(data.roomType) S.lastMatchType = data.roomType;
     const wt=document.getElementById('wtitle');
-    wt.textContent=iWon?'🏆 VICTORY!':'💀 GAME OVER';
-    wt.className=`wtitle ${iWon?'w':'l'}`;
-    document.getElementById('wdet').textContent=iWon?(forfeit?`${data.quitter} left the game!`:`Score: ${data.score}`):`${data.username} won!`;
+    // P4-NEW.1a polish — when the technical "winner" was abandoned (DC'd
+    // past grace), they forfeit the pot. Everyone else who didn't abandon
+    // gets a share. The on-screen copy needs to reflect that, not the
+    // misleading "Winner won!" framing.
+    const winnerAbandoned = !!data.winnerAbandoned;
+    if(winnerAbandoned){
+      wt.textContent = '⚖️ POT SPLIT';
+      wt.className   = 'wtitle l';
+    } else {
+      wt.textContent = iWon ? '🏆 VICTORY!' : '💀 GAME OVER';
+      wt.className   = `wtitle ${iWon?'w':'l'}`;
+    }
+    const wdetEl = document.getElementById('wdet');
+    if(winnerAbandoned){
+      wdetEl.textContent = `${data.username || 'Winner'} abandoned — pot split with remaining players`;
+    } else if(iWon){
+      wdetEl.textContent = forfeit ? `${data.quitter} left the game!` : `Score: ${data.score}`;
+    } else {
+      wdetEl.textContent = `${data.username} won!`;
+    }
     // Display the actual payout for the winner; losers paid their entry at
     // match-start so their game-end "delta" is 0 (the loss already happened).
     const payout = (typeof data.payout === 'number') ? data.payout : 0;
