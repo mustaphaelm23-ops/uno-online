@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const VERSION = 'uno-shell-v87';
+const VERSION = 'uno-shell-v88';
 const SHELL = [
   '/',
   '/index.html',
@@ -36,6 +36,7 @@ const SHELL = [
   '/ui/modules/23-shop.js',
   '/ui/modules/24-atmosphere.js',
   '/ui/modules/26-offers.js',
+  '/ui/modules/27-music.js',
   '/manifest.json',
   '/icon.svg',
   '/lobby-bg.png',
