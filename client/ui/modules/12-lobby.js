@@ -84,11 +84,18 @@
     }catch(e){
       console.error('[quickJoin] failed:', e);
       if(e?.status === 401) return;                        // auth-expiry handler already bounced to login
-      const msg = e?.status === 402
-        ? `Not enough coins (need ${e.payload?.need || ''} 🪙)`
-        : e?.networkError
-          ? 'Network error — try again'
-          : (e?.message || 'Could not join');
+      let msg;
+      if(e?.status === 402){
+        msg = `Not enough coins (need ${e.payload?.need || ''} 🪙)`;
+      } else if(e?.status === 403 && e?.payload?.bannedUntil){
+        // P4-NEW.1b — ranked queue ban after abandon. Show minutes remaining.
+        const mins = Math.max(1, Math.ceil((e.payload.remainingMs || 0) / 60000));
+        msg = `Ranked locked — try again in ${mins}m (abandon penalty)`;
+      } else if(e?.networkError){
+        msg = 'Network error — try again';
+      } else {
+        msg = e?.message || 'Could not join';
+      }
       toast(msg, 'e');
     }
   }

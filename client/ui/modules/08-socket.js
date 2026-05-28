@@ -171,6 +171,16 @@
     sk.on('player:reconnected',({username,abandoned})=>{
       toast(`✓ ${username} reconnected${abandoned?' (forfeit still applies)':''}`,'s');
     });
+    // P4-NEW.1b — ranked abandon penalty hit on me. Persist the lockout to
+    // S.user so the lobby UI can dim the RANKED card or show a tooltip.
+    sk.on('ranked:penalty',({elo,bannedUntil,reason})=>{
+      if(typeof bannedUntil==='number' && S.user){
+        S.user.rankedBanUntil = bannedUntil;
+        try{ localStorage.setItem('uno_user',JSON.stringify(S.user)); }catch(e){}
+      }
+      const mins = Math.max(1, Math.ceil(((bannedUntil||0) - Date.now())/60000));
+      toast(`⚠ Ranked penalty: ${elo} ELO + ${mins}min queue ban`,'e');
+    });
 
     sk.on('match:payout',({coins,gained,reason})=>{
       if(typeof coins==='number'){

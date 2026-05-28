@@ -295,6 +295,14 @@ const DIAMOND_TO_COIN_RATE = 100;
 // Server keeps HOUSE_CUT of the pot off the top on every match payout.
 // Single source of truth — adjust here only. 0.10 = 10% (GDD §2.2 Classic).
 const HOUSE_CUT = 0.10;
+
+// ── Ranked abandon penalty (P4-NEW.1b, GDD §5.5) ──────────────────────
+// Applied ONLY when a human abandons a RANKED match (room.roomType === 'RANKED').
+// The base ELO loss from the normal game:over branch still applies; this is
+// an ADDITIONAL hit, plus a queue ban so a serial abandoner can't immediately
+// re-queue and ruin the next match.
+const RANKED_ABANDON_ELO_PENALTY = 50;
+const RANKED_ABANDON_BAN_MS      = 30 * 60 * 1000;       // 30 minutes
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 const worldChat = [];          // last ~60 global lobby messages
 
@@ -736,6 +744,19 @@ app.post('/api/rooms/quick-join', authMiddleware, (req, res) => {
 
   if (type === 'QUICK_MATCH') type = pickQuickMatchType();
   if (!ROOM_TYPES[type]) return res.status(400).json({ error: 'Unknown room type' });
+
+  // ── P4-NEW.1b: Ranked abandon queue ban ──
+  // Reject RANKED joins while the user's lockout window is still active.
+  // Other types (Classic / Fun / Chill / pickQuickMatchType output) are
+  // unaffected — the ban only applies to ranked queueing.
+  if (type === 'RANKED' && user.rankedBanUntil && user.rankedBanUntil > Date.now()) {
+    const remainingMs = user.rankedBanUntil - Date.now();
+    return res.status(403).json({
+      error: 'Ranked locked — abandon penalty',
+      bannedUntil: user.rankedBanUntil,
+      remainingMs,
+    });
+  }
 
   // ── P4 HOOK: entry-fee debit will live here on match start, not join.
   // const cfg = ROOM_TYPES[type];
@@ -2603,6 +2624,30 @@ function attachGameListeners(room) {
     data.houseCut = houseCut;
     data.payout   = payout;
     data.winnerAbandoned = winnerAbandoned;              // client can show "opponent abandoned" copy
+
+    // ── P4-NEW.1b: Ranked abandon penalty ────────────────────────────
+    // Only applies in RANKED matches. Iterates the game's players (which
+    // still has every seat including bots) and finds abandoned humans;
+    // each gets -50 ELO + a 30-min queue ban. Per-user 'ranked:penalty'
+    // event so the client can surface the lockout countdown.
+    if (room.roomType === 'RANKED') {
+      const banUntil = Date.now() + RANKED_ABANDON_BAN_MS;
+      data.players.forEach(playerData => {
+        const gp = room.game?.players?.find(p => p.id === playerData.id);
+        if (!gp?.abandoned) return;
+        const u = usersDB.get(playerData.id);
+        if (!u) return;                                  // bots not in usersDB → skipped
+        u.elo = Math.max(0, (u.elo || 1000) - RANKED_ABANDON_ELO_PENALTY);
+        u.rankedBanUntil = banUntil;
+        console.log(`[Ranked] ${u.username} abandoned in ${roomId} — -${RANKED_ABANDON_ELO_PENALTY} ELO + 30min ban`);
+        const sock = findSocketByUserId(u.id);
+        if (sock) sock.emit('ranked:penalty', {
+          elo: -RANKED_ABANDON_ELO_PENALTY,
+          bannedUntil: banUntil,
+          reason: 'abandon',
+        });
+      });
+    }
     // P5 — let the client know which featured type this was so the
     // 'Play Again' button on the victory podium can route back into
     // the same Classic / Fun / Ranked / Chill pool. Falls back to
