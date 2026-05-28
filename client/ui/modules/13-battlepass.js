@@ -104,9 +104,22 @@
     try{
       const d=await apiFetch('/api/battlepass/claim',{method:'POST',body:JSON.stringify({tier,track})});
       BP.data.claimed=d.claimed;
+      // GDD §6.2 — claim can now grant coins (with premium 2x) or diamonds.
+      // Sync both currencies + animate both pills (server returns both balances).
       if(typeof d.coins==='number'){
-        S.user.coins=d.coins; localStorage.setItem('uno_user',JSON.stringify(S.user));
+        S.user.coins=d.coins;
         _animateCount('hcoins',d.coins);
+        _animateCount('scoins',d.coins);
+        _animateCount('heroCoins',d.coins);
+      }
+      if(typeof d.diamonds==='number'){
+        S.user.diamonds=d.diamonds;
+        _animateCount('hdiamonds',d.diamonds);
+      }
+      try{ localStorage.setItem('uno_user',JSON.stringify(S.user)); }catch(e){}
+      // Premium 2x perk hint — quiet info toast so the player notices the bonus.
+      if(d.granted?.multiplied){
+        toast(`👑 Premium bonus: free reward 2×`,'s');
       }
       _renderBattlePass();
       _claimCinematic(d.reward||{}, track);

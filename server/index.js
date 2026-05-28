@@ -1629,13 +1629,26 @@ function buildBPTiers() {
     const lvl = i + 1;
     const freeAmt = 150 + i * 50;
     const premAmt = 500 + i * 220;
+    // GDD §6.2 — premium track gets DIAMOND bonuses every 5 tiers (T5/T10/T15/T20).
+    // The big finish tiers (T20 = legendary) get extra. Free track stays coins-only
+    // (premium 2x multiplier on free claims is applied in /api/battlepass/claim).
+    let premReward;
+    if (lvl % 5 === 0) {
+      const dia = lvl === 20 ? 200 : 50 + (lvl / 5 - 1) * 25;     // T5=50, T10=75, T15=100, T20=200
+      premReward = {
+        type:'diamonds', amount:dia, rarity: lvl === 20 ? 'legendary' : 'epic',
+        icon:'💎', label:`${dia}`,
+      };
+    } else {
+      premReward = {
+        type:'coins', amount:premAmt, rarity:rar[i]||'rare',
+        icon: rar[i]==='legendary'?'💎':rar[i]==='epic'?'🔥':'🪙',
+        label: `${premAmt}`,
+      };
+    }
     tiers.push({
       free: { type:'coins', amount:freeAmt, rarity:'common', icon:'🪙', label:`${freeAmt}` },
-      prem: {
-        type:'coins', amount:premAmt, rarity:rar[i]||'rare',
-        icon: lvl%5===0 ? '👑' : (rar[i]==='legendary'?'💎':rar[i]==='epic'?'🔥':'🪙'),
-        label: `${premAmt}`,
-      },
+      prem: premReward,
     });
   }
   return tiers;
@@ -1686,12 +1699,36 @@ app.post('/api/battlepass/claim', authMiddleware, (req, res) => {
   if (bp.claimed.includes(key)) return res.status(400).json({ error: 'Already claimed' });
   const reward = BP_SEASON.tiers[tier - 1][track];
   bp.claimed.push(key);
+
+  // GDD §6.2 — actual granted amount can differ from the tier's listed amount:
+  //   * Free track + premium owned -> 2x multiplier (premium perk)
+  //   * Diamonds reward (premium-only) -> goes to user.diamonds, not coins
+  let grantedCoins    = 0;
+  let grantedDiamonds = 0;
   if (reward.type === 'coins') {
-    user.coins += reward.amount;
-    logReward(user, track==='prem'?'👑':'🎟️', `Battle Pass T${tier} — ${BP_SEASON.name}`, reward.amount);
+    grantedCoins = reward.amount;
+    if (track === 'free' && bp.premium) grantedCoins *= 2;       // premium 2x perk
+    user.coins += grantedCoins;
+    logReward(user, track==='prem'?'👑':'🎟️',
+      `Battle Pass T${tier} — ${BP_SEASON.name}${(track==='free' && bp.premium)?' (premium 2x)':''}`,
+      grantedCoins);
+  } else if (reward.type === 'diamonds') {
+    grantedDiamonds = reward.amount;
+    user.diamonds = (user.diamonds || 0) + grantedDiamonds;
+    logReward(user, '💎', `Battle Pass T${tier} — ${BP_SEASON.name}`, grantedDiamonds);
   }
   saveUsers();
-  res.json({ success:true, coins:user.coins, claimed:bp.claimed, reward });
+  // Echo what actually landed so the client can show the right toast and
+  // animate both pills (the existing client read d.coins only — it now also
+  // reads d.diamonds).
+  res.json({
+    success:  true,
+    coins:    user.coins,
+    diamonds: user.diamonds || 0,
+    claimed:  bp.claimed,
+    reward,
+    granted:  { coins: grantedCoins, diamonds: grantedDiamonds, multiplied: track==='free' && bp.premium && reward.type==='coins' },
+  });
 });
 
 app.post('/api/battlepass/unlock', authMiddleware, (req, res) => {
@@ -1705,6 +1742,56 @@ app.post('/api/battlepass/unlock', authMiddleware, (req, res) => {
   bp.premium = true;
   saveUsers();
   res.json({ success:true, coins:user.coins, premium:true });
+});
+
+// GDD §6.2 — alt premium unlock paid in diamonds (parallel to the coin path).
+// $9.99 in real money would be ~1000 simulated diamonds; we use 200 for trial
+// usability so testers can actually try the path without grinding.
+const BP_PREMIUM_DIAMOND_PRICE = 200;
+app.post('/api/battlepass/unlock-diamonds', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const bp = ensureBP(user);
+  if (bp.premium) return res.status(400).json({ error: 'Already unlocked' });
+  if ((user.diamonds || 0) < BP_PREMIUM_DIAMOND_PRICE)
+    return res.status(402).json({ error: `Need ${BP_PREMIUM_DIAMOND_PRICE} diamonds`, need: BP_PREMIUM_DIAMOND_PRICE, have: user.diamonds || 0 });
+  user.diamonds -= BP_PREMIUM_DIAMOND_PRICE;
+  bp.premium = true;
+  saveUsers();
+  res.json({ success:true, coins:user.coins, diamonds:user.diamonds, premium:true });
+});
+
+// GDD §6.2 — "Skip to tier" instant buy. The GDD spec is "skip to tier 50 for
+// $4.99"; we only have 20 tiers, so the trial equivalent is "skip 10 tiers for
+// 50 diamonds". Adds 10×xpPerTier XP, capped at the season's tier ceiling, so
+// users at low levels jump roughly half the pass and high-level users get
+// clamped without losing diamonds (refunds if they're already at max).
+const BP_SKIP_DIAMOND_PRICE = 50;
+const BP_SKIP_TIERS         = 10;
+app.post('/api/battlepass/skip', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const bp = ensureBP(user);
+  if ((user.diamonds || 0) < BP_SKIP_DIAMOND_PRICE)
+    return res.status(402).json({ error: `Need ${BP_SKIP_DIAMOND_PRICE} diamonds`, need: BP_SKIP_DIAMOND_PRICE, have: user.diamonds || 0 });
+  const currentLevel = bpLevel(bp);
+  if (currentLevel >= BP_SEASON.tiers.length) {
+    return res.status(400).json({ error: 'Already at max tier' });
+  }
+  user.diamonds -= BP_SKIP_DIAMOND_PRICE;
+  bp.xp += BP_SKIP_TIERS * BP_SEASON.xpPerTier;
+  // Cap at the season ceiling so we don't grow xp beyond the highest tier.
+  const maxXP = BP_SEASON.tiers.length * BP_SEASON.xpPerTier;
+  if (bp.xp > maxXP) bp.xp = maxXP;
+  const newLevel = bpLevel(bp);
+  saveUsers();
+  console.log(`[BP] ${user.username} skipped ${BP_SKIP_TIERS} tiers (${currentLevel} -> ${newLevel}) for ${BP_SKIP_DIAMOND_PRICE} 💎`);
+  res.json({
+    success:true,
+    coins: user.coins, diamonds: user.diamonds,
+    bp: { xp: bp.xp, level: newLevel, premium: !!bp.premium, claimed: bp.claimed },
+    jumped: { from: currentLevel, to: newLevel },
+  });
 });
 
 // ─────────────────────────────────────────
