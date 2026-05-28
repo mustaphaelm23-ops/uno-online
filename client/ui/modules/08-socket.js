@@ -158,6 +158,20 @@
     // of truth for the post-match balance; showWin reads data.payout from
     // the game:over broadcast for the DISPLAY but no longer mirrors coins
     // locally (server is authoritative).
+    // P4-NEW.1a — opponent disconnect / abandon / reconnect events. Light
+    // toasts so the room reads the right state at a glance; deeper UI
+    // polish (greyed-out avatar, grace-bar countdown) is a follow-up.
+    sk.on('player:disconnected',({username,voluntary,graceMs})=>{
+      const tag = voluntary ? 'left the match' : `disconnected — ${Math.round((graceMs||30000)/1000)}s to reconnect`;
+      toast(`⚠️ ${username} ${tag}`,'w');
+    });
+    sk.on('player:abandoned',({username})=>{
+      toast(`💀 ${username} abandoned — bot taking over`,'w');
+    });
+    sk.on('player:reconnected',({username,abandoned})=>{
+      toast(`✓ ${username} reconnected${abandoned?' (forfeit still applies)':''}`,'s');
+    });
+
     sk.on('match:payout',({coins,gained,reason})=>{
       if(typeof coins==='number'){
         S.user.coins=coins;

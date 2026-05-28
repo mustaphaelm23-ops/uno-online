@@ -17,6 +17,10 @@ class Player {
     this.isConnected = true;
     this.socketId    = null;
     this.status      = 'waiting';
+    // P4-NEW.1a — set true when a disconnected player exceeds the 30s grace
+    // window. The bot keeps playing their seat, but they're excluded from
+    // pot payouts at match-end (forfeit rule, GDD §5.5).
+    this.abandoned   = false;
     this.stats = { cardsPlayed:0, cardsDrawn:0, gamesWon:0, gamesLost:0 };
   }
 
@@ -64,7 +68,9 @@ class Player {
       id:this.id, username:this.username, coins:this.coins, avatar:this.avatar,
       hand:this._hand.map(c=>c.toJSON()), handSize:this._hand.length,
       isHost:this.isHost, saidUno:this.saidUno,
-      isConnected:this.isConnected, status:this.status, stats:{...this.stats},
+      isConnected:this.isConnected, status:this.status,
+      abandoned:this.abandoned||false,                 // P4-NEW.1a
+      stats:{...this.stats},
     };
   }
 
@@ -73,6 +79,7 @@ class Player {
       id:this.id, username:this.username, avatar:this.avatar,
       handSize:this._hand.length, isHost:this.isHost, saidUno:this.saidUno,
       isConnected:this.isConnected, status:this.status,
+      abandoned:this.abandoned||false,                 // P4-NEW.1a
       isBot:this.isBot||false,
     };
   }

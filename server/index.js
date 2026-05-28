@@ -1873,6 +1873,26 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.currentRoomId = roomId;
 
+    // P4-NEW.1a — if this user was in a 30s grace window after a disconnect,
+    // clear the pending abandon timer (they reconnected in time). Also flip
+    // their player object back to connected so the bot stops playing their
+    // seat. The abandoned flag is sticky for the match — if they reconnect
+    // AFTER the grace already fired, isConnected goes true but abandoned
+    // stays true (pot payout still excludes them per GDD forfeit).
+    if (room.graceTimers && room.graceTimers.has(userId)) {
+      clearTimeout(room.graceTimers.get(userId));
+      room.graceTimers.delete(userId);
+      console.log(`[Grace] ${user.username} reconnected to ${roomId} in time`);
+    }
+    const reconnectedPlayer = room.game.players.find(p => p.id === userId);
+    if (reconnectedPlayer && !reconnectedPlayer.isConnected) {
+      reconnectedPlayer.setConnected(socket.id);
+      socket.to(roomId).emit('player:reconnected', {
+        playerId: userId, username: socket.username,
+        abandoned: !!reconnectedPlayer.abandoned,
+      });
+    }
+
     const state = room.game._publicState();
     ack?.({ success: true, state });
 
@@ -1885,10 +1905,12 @@ io.on('connection', (socket) => {
   });
 
   // ── Room: Leave ──
+  // Voluntary exit. During a live match, this is "abandon immediately" —
+  // no 30s grace, no bot-to-rescue. The player chose to quit.
   socket.on('room:leave', ({} = {}, ack) => {
     const roomId = socket.currentRoomId;
     if (!roomId) return ack?.({ success: false });
-    handlePlayerLeave(socket, roomId);
+    handlePlayerLeave(socket, roomId, { voluntary: true });
     ack?.({ success: true });
   });
 
@@ -2369,7 +2391,8 @@ io.on('connection', (socket) => {
           spectatorId: userId, count: room.spectators.size,
         });
       } else {
-        handlePlayerLeave(socket, roomId);
+        // Involuntary disconnect — 30s grace before abandon (GDD §5.5).
+        handlePlayerLeave(socket, roomId, { voluntary: false });
       }
     }
     const idx = matchmakingQueue.findIndex(e => e.userId === userId);
@@ -2522,49 +2545,75 @@ function attachGameListeners(room) {
       }
     });
 
-    // ── P4: Pot distribution ─────────────────────────────────────────
-    // Pot was collected at match start (entry fee × humans). Server keeps
-    // HOUSE_CUT of it; the rest goes to the winner. If the winner is a bot
-    // (not in usersDB) the payout splits equally among remaining humans —
-    // bots play free, bots don't profit. Per-recipient 'match:payout' events
-    // push the new balance to each affected socket so the client doesn't
-    // need to compute or mirror anything locally.
+    // ── P4: Pot distribution (+ P4-NEW.1a abandoned forfeit) ──────────
+    // Pot was collected at match start. Server keeps HOUSE_CUT; the rest
+    // goes to the winner. Three cases:
+    //   1. Winner is a NON-abandoned human  -> they get the full payout.
+    //   2. Winner is a bot OR an abandoned human -> they forfeit; split
+    //      the payout equally among remaining NON-abandoned humans.
+    //   3. No non-abandoned humans remaining -> pot stays with the house.
+    // Per-recipient 'match:payout' events push the new balance to each
+    // affected socket so the client doesn't need to mirror balances.
+    const winnerPlayer = winnerData
+      ? room.game?.players?.find(p => p.id === winnerData.id)
+      : null;
+    const winnerAbandoned = !!winnerPlayer?.abandoned;
+    // potEligibleHumans: humans who DIDN'T win and DIDN'T abandon. Used for
+    // the bot/abandoned-winner redistribute. Kept separate from loserUsers
+    // (which drives ELO) so abandoned players still lose ELO normally.
+    const potEligibleHumans = data.players
+      .filter(p => p.id !== winnerData?.id)
+      .map(p => {
+        const gp = room.game?.players?.find(rp => rp.id === p.id);
+        if (gp?.abandoned) return null;                  // abandoned humans don't get pot share
+        return usersDB.get(p.id);
+      })
+      .filter(Boolean);
+
     const pot = room.pot || 0;
     let houseCut = 0, payout = 0;
     if (pot > 0) {
       houseCut = Math.floor(pot * HOUSE_CUT);
       payout   = pot - houseCut;
-      const winnerUser = winnerData ? usersDB.get(winnerData.id) : null;
+      const winnerUser = (winnerData && !winnerAbandoned) ? usersDB.get(winnerData.id) : null;
       if (winnerUser) {
         winnerUser.coins += payout;
         logReward(winnerUser, '🪙', `Match win — pot ${pot} (−${houseCut} fee)`, payout);
         const sock = findSocketByUserId(winnerUser.id);
         if (sock) sock.emit('match:payout', { coins: winnerUser.coins, gained: payout, reason: 'win', pot, houseCut });
-      } else if (loserUsers.length > 0) {
-        // Bot won — split the payout evenly among remaining humans.
-        const share = Math.floor(payout / loserUsers.length);
+      } else if (potEligibleHumans.length > 0) {
+        // Bot won OR human winner abandoned — split among non-abandoned humans.
+        const share = Math.floor(payout / potEligibleHumans.length);
+        const reason = winnerAbandoned ? 'abandoned_split' : 'bot_split';
         if (share > 0) {
-          loserUsers.forEach(u => {
+          potEligibleHumans.forEach(u => {
             u.coins += share;
-            logReward(u, '🪙', `Bot win — pot split (${loserUsers.length} ways)`, share);
+            logReward(u, '🪙', `${winnerAbandoned ? 'Opponent abandoned' : 'Bot win'} — pot split (${potEligibleHumans.length} ways)`, share);
             const sock = findSocketByUserId(u.id);
-            if (sock) sock.emit('match:payout', { coins: u.coins, gained: share, reason: 'bot_split', pot, houseCut });
+            if (sock) sock.emit('match:payout', { coins: u.coins, gained: share, reason, pot, houseCut });
           });
         }
         // Integer-division remainder stays with the house (rare, ≤ #humans).
       }
-      // else: no humans at all in this match → pot kept by house.
+      // else: no non-abandoned humans at all → pot kept by house.
       room.pot = 0;
       if (room.game) room.game.pot = 0;
     }
     data.pot      = pot;
     data.houseCut = houseCut;
     data.payout   = payout;
+    data.winnerAbandoned = winnerAbandoned;              // client can show "opponent abandoned" copy
     // P5 — let the client know which featured type this was so the
     // 'Play Again' button on the victory podium can route back into
     // the same Classic / Fun / Ranked / Chill pool. Falls back to
     // QUICK_MATCH client-side if missing (e.g. legacy / private rooms).
     data.roomType = room.roomType || null;
+
+    // P4-NEW.1a — clear any pending grace timers; match is done.
+    if (room.graceTimers) {
+      for (const handle of room.graceTimers.values()) clearTimeout(handle);
+      room.graceTimers.clear();
+    }
 
     saveUsers();
     io.to(roomId).emit('game:over', data);
@@ -2737,72 +2786,99 @@ function broadcastPrivateStates(room) {
 }
 
 // ← FIX: handlePlayerLeave now properly removes from playerIds
-function handlePlayerLeave(socket, roomId) {
+// P4-NEW.1a — Mark a player as abandoned (GDD §5.5). Idempotent. The bot
+// keeps playing their seat (the existing turn-timer mechanism handles that
+// for any disconnected/abandoned player). At match-end, abandoned players
+// are excluded from pot payouts in the game:over handler.
+function markAbandoned(room, userId) {
+  if (!room || !room.game) return;
+  const player = room.game.players.find(p => p.id === userId);
+  if (!player || player.abandoned) return;
+  player.abandoned = true;
+  io.to(room.id).emit('player:abandoned', {
+    playerId: userId,
+    username: player.username,
+  });
+  console.log(`[Abandoned] ${player.username} in ${room.id}`);
+}
+
+const GRACE_MS = 30 * 1000;                              // GDD §5.5 reconnect window
+
+function handlePlayerLeave(socket, roomId, opts = {}) {
+  const { voluntary = false } = opts;
   const room = roomsDB.get(roomId);
   if (!room) return;
 
-  // If game is playing — leaver forfeits, opponent wins
-  if (room.status === 'playing' && room.game.phase === 'playing') {
-    const bet = room.settings.bet || 0;
-    const leaver = usersDB.get(socket.userId);
-    const remainingIds = room.playerIds.filter(id => id !== socket.userId);
-
-    if (leaver && bet > 0) {
-      leaver.coins = Math.max(0, leaver.coins - bet);
+  // ── Lobby phase / non-playing room — same instant cleanup as before ──
+  // No grace needed; the player wasn't in a live match.
+  if (room.status !== 'playing' || room.game?.phase !== 'playing') {
+    room.game.removePlayer(socket.userId);
+    const pidIdx = room.playerIds.indexOf(socket.userId);
+    if (pidIdx !== -1) room.playerIds.splice(pidIdx, 1);
+    socket.leave(roomId);
+    delete socket.currentRoomId;
+    socket.to(roomId).emit('room:player_left', {
+      playerId: socket.userId, username: socket.username,
+    });
+    if (room.playerIds.length === 0) {
+      roomsDB.delete(roomId);
+      console.log(`[Room] Deleted empty room: ${roomId}`);
     }
-
-    // Give bet to remaining players (winner)
-    remainingIds.forEach(pid => {
-      const winner = usersDB.get(pid);
-      if (winner) {
-        winner.coins += bet;
-        winner.stats.gamesWon = (winner.stats.gamesWon || 0) + 1;
-      }
-    });
-
-    if (leaver) leaver.stats.gamesPlayed = (leaver.stats.gamesPlayed || 0) + 1;
-    remainingIds.forEach(pid => {
-      const u = usersDB.get(pid);
-      if (u) u.stats.gamesPlayed = (u.stats.gamesPlayed || 0) + 1;
-    });
-
-    saveUsers();
-
-    // Notify remaining players they won
-    const winnerSocket = remainingIds.length > 0 ? findSocketByUserId(remainingIds[0]) : null;
-    const winnerUser = remainingIds.length > 0 ? usersDB.get(remainingIds[0]) : null;
-
-    io.to(roomId).emit('game:player_won', {
-      winnerId: remainingIds[0],
-      username: winnerUser?.username || 'Player',
-      score: 0,
-      coinsEarned: bet,
-      bet,
-      forfeit: true,
-      quitter: socket.username,
-    });
-
-    room.status = 'finished';
-    setTimeout(() => { roomsDB.delete(roomId); }, 10000);
-    console.log(`[Game] ${socket.username} forfeited. ${winnerUser?.username} wins +${bet} coins`);
+    return;
   }
 
-  room.game.removePlayer(socket.userId);
+  // ── Match in progress — GDD §5.5 grace model ──
+  // Mark the player as disconnected (still in players[] so the bot can keep
+  // playing their seat) and broadcast. Do NOT splice playerIds — they're
+  // still a seat; the room economy depends on it.
+  const player = room.game.players.find(p => p.id === socket.userId);
+  if (!player) {
+    socket.leave(roomId);
+    delete socket.currentRoomId;
+    return;
+  }
+  player.setDisconnected();
 
-  const pidIdx = room.playerIds.indexOf(socket.userId);
-  if (pidIdx !== -1) room.playerIds.splice(pidIdx, 1);
+  // If it was their turn, advance so the table doesn't stall waiting on them.
+  // The bot will pick up subsequent turns via the existing turn-timer flow.
+  if (room.game.current?.id === socket.userId) {
+    try { room.game._clearTimers(); } catch(e){}
+    room.game._drawnCard = null;
+    room.game._drawnBy   = null;
+    try { room.game._forceAdvance(); } catch(e){}
+  }
 
   socket.leave(roomId);
   delete socket.currentRoomId;
 
-  socket.to(roomId).emit('room:player_left', {
-    playerId: socket.userId, username: socket.username,
+  // Tell remaining players about the DC so the UI can show the right state.
+  socket.to(roomId).emit('player:disconnected', {
+    playerId: socket.userId,
+    username: socket.username,
+    voluntary,
+    graceMs: voluntary ? 0 : GRACE_MS,
   });
 
-  if (room.playerIds.length === 0) {
-    roomsDB.delete(roomId);
-    console.log(`[Room] Deleted empty room: ${roomId}`);
+  if (voluntary) {
+    // Player chose to quit mid-match — abandon immediately, no grace.
+    markAbandoned(room, socket.userId);
+    return;
   }
+
+  // Involuntary DC — start the 30s grace window. If they reconnect via
+  // room:join before the timer fires, the handler clears this; otherwise
+  // markAbandoned() runs and the seat stays bot-controlled for the rest
+  // of the match.
+  if (!room.graceTimers) room.graceTimers = new Map();
+  const existing = room.graceTimers.get(socket.userId);
+  if (existing) clearTimeout(existing);
+  const handle = setTimeout(() => {
+    if (!room.graceTimers) return;
+    room.graceTimers.delete(socket.userId);
+    if (room.game?.phase === 'playing') markAbandoned(room, socket.userId);
+  }, GRACE_MS);
+  room.graceTimers.set(socket.userId, handle);
+  console.log(`[Grace] ${socket.username} disconnected from ${roomId} — ${GRACE_MS/1000}s reconnect window`);
 }
 
 function sanitizeUser(user) {
