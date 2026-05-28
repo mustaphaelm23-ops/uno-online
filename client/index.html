@@ -333,6 +333,18 @@
       </div>
     </div>
     <!-- Bottom nav removed in P2.3 — every item consolidated into the left rail (mockup-faithful). -->
+    <!-- Special Offer banner (GDD §3.3.I). Floating bottom-right, populated by 26-offers.js on goLobby. -->
+    <div id="offerBanner" class="offer-banner" style="display:none" role="region" aria-label="Special offer">
+      <button class="offer-banner-close" onclick="Offers.dismiss()" title="Dismiss" aria-label="Dismiss">×</button>
+      <div class="offer-banner-badge" id="offerBadge">🎁</div>
+      <div class="offer-banner-body">
+        <div class="offer-banner-title" id="offerTitle">SPECIAL OFFER!</div>
+        <div class="offer-banner-headline" id="offerHeadline">—</div>
+        <div class="offer-banner-sub" id="offerSub">—</div>
+        <div class="offer-banner-timer">⏱️ <span id="offerTimer">—</span></div>
+      </div>
+      <button class="offer-banner-cta" onclick="Offers.view()">VIEW OFFER</button>
+    </div>
   </div>
 
   <!-- ═══ ROOM WAITING ═══ -->
@@ -773,6 +785,7 @@
   <script src="ui/modules/22-parallax.js"></script>
   <script src="ui/modules/23-shop.js"></script>
   <script src="ui/modules/24-atmosphere.js"></script>
+  <script src="ui/modules/26-offers.js"></script>
   <script src="ui/app.js"></script>
   </body>
   </html>

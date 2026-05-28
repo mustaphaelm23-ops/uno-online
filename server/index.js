@@ -303,6 +303,27 @@ const HOUSE_CUT = 0.10;
 // re-queue and ruin the next match.
 const RANKED_ABANDON_ELO_PENALTY = 50;
 const RANKED_ABANDON_BAN_MS      = 30 * 60 * 1000;       // 30 minutes
+
+// ── Special Offers (GDD §3.3.I / §6.2.C) ──────────────────────────────
+// One global offer at a time; the active id is whatever this server's
+// current rotation is. Rolling 24h timer from server start — restart
+// resets the countdown. Each user can claim once (tracked on user.claimed
+// Offers[id]). Real-money/Stripe integration not in scope here — claim
+// just grants coins + diamonds (DEMO MODE, same as the shop).
+const SPECIAL_OFFERS = {
+  starter_bonus: {
+    id: 'starter_bonus',
+    title: 'SPECIAL OFFER!',
+    headline: '2,000 🪙 + 50 💎',
+    sub: 'Limited-time welcome gift',
+    coins: 2000,
+    diamonds: 50,
+    badge: '🎁',
+  },
+};
+const SPECIAL_OFFER_ACTIVE_ID  = 'starter_bonus';
+const SPECIAL_OFFER_DURATION_MS = 24 * 60 * 60 * 1000;  // 24h rolling
+const SPECIAL_OFFER_ENDS_AT     = Date.now() + SPECIAL_OFFER_DURATION_MS;
 const voiceRooms = new Map(); // roomId -> Set<userId> currently in voice chat
 const worldChat = [];          // last ~60 global lobby messages
 
@@ -872,6 +893,64 @@ app.post('/api/shop/purchase', authMiddleware, async (req, res) => {
     simulated: true,                                // flip to false when real provider lands
     package: { id: pkg.id, coins: pkg.coins, diamonds: pkg.diamonds, usd_cents: pkg.usd_cents },
     user: sanitizeUser(user),
+  });
+});
+
+// ── Special Offers ───────────────────────────────────────────────────
+// GET  /api/offers/current — returns the active offer + endsAt + whether
+//                            the caller has already claimed it. The banner
+//                            hides itself when alreadyClaimed:true or
+//                            endsAt < Date.now().
+// POST /api/offers/claim/:id — one-time grant of coins + diamonds. Marks
+//                              user.claimedOffers[id] = timestamp so subsequent
+//                              calls return 409. Demo-mode parallel of /api/shop/purchase.
+app.get('/api/offers/current', authMiddleware, (req, res) => {
+  const offer = SPECIAL_OFFERS[SPECIAL_OFFER_ACTIVE_ID];
+  if (!offer) return res.json({ offer: null, demo_mode: true });
+  const user = usersDB.get(req.user.userId);
+  const claimedAt = user?.claimedOffers?.[offer.id] || null;
+  res.json({
+    offer: {
+      id:       offer.id,
+      title:    offer.title,
+      headline: offer.headline,
+      sub:      offer.sub,
+      coins:    offer.coins,
+      diamonds: offer.diamonds,
+      badge:    offer.badge,
+    },
+    endsAt:         SPECIAL_OFFER_ENDS_AT,
+    alreadyClaimed: !!claimedAt,
+    claimedAt,
+    demo_mode:      true,
+  });
+});
+
+app.post('/api/offers/claim/:id', authMiddleware, async (req, res) => {
+  const offerId = req.params.id;
+  const offer = SPECIAL_OFFERS[offerId];
+  if (!offer) return res.status(400).json({ error: 'Unknown offer' });
+  if (offerId !== SPECIAL_OFFER_ACTIVE_ID) return res.status(410).json({ error: 'Offer no longer active' });
+  if (Date.now() > SPECIAL_OFFER_ENDS_AT) return res.status(410).json({ error: 'Offer expired' });
+
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user.claimedOffers) user.claimedOffers = {};
+  if (user.claimedOffers[offerId]) {
+    return res.status(409).json({ error: 'Already claimed', claimedAt: user.claimedOffers[offerId] });
+  }
+
+  user.coins    = (user.coins    || 0) + offer.coins;
+  user.diamonds = (user.diamonds || 0) + offer.diamonds;
+  user.claimedOffers[offerId] = Date.now();
+  console.log(`[Offer] ${user.username} claimed '${offer.id}' (demo): +${offer.coins} coins, +${offer.diamonds} diamonds`);
+  await saveUsers();
+
+  res.json({
+    success:   true,
+    simulated: true,
+    offer:     { id: offer.id, coins: offer.coins, diamonds: offer.diamonds },
+    user:      sanitizeUser(user),
   });
 });
 
