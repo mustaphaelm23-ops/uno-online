@@ -2049,6 +2049,20 @@
     box-shadow:0 8px 20px rgba(0,0,0,.4);
   }
   .ucard:hover:not(.nohov){transform:translateY(-10px) scale(1.06);box-shadow:0 16px 40px rgba(0,0,0,.5);}
+  /* P5.2 — face-down deal-card overlay. Spawned by animateMatchDeal at the
+     deck position and flown to each hand slot / opp panel. .cardback already
+     exists as the deck visual; .ucard-deal just disables hover + adds a soft
+     motion glow during the flight. */
+  .ucard.ucard-deal{
+    transition:none !important;
+    cursor:default !important;
+    box-shadow:
+      0 12px 30px rgba(0,0,0,.55),
+      0 0 18px rgba(96,165,250,.20);
+    will-change:transform;
+  }
+  .ucard.ucard-deal:hover{transform:none;box-shadow:0 12px 30px rgba(0,0,0,.55);}
+
   /* P3.4 — flying overlay card (created in JS, animated by GSAP, removed onComplete).
      Disables hover/transitions so GSAP fully owns the motion. Adds a soft
      premium glow during flight so the card visibly catches venue light. */

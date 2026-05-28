@@ -69,6 +69,102 @@
     else{btn.classList.add('disabled');if(S.g.myHand.length!==1)S.calledUNO=false;}
   }
 
+  /* ═══ MATCH-START CARD-DEAL ANIMATION ═══
+     P5.2. Fired by applyFullState when phase transitions lobby->playing
+     (i.e. the host just clicked Start). Spawns face-down overlay cards at
+     the deck position and flies one to each of MY hand-card slots, then a
+     symbolic card per opponent to their panel. The actual #myhand cards
+     are hidden during the fly so the overlay reads as the same card; on
+     landing, the overlay removes and the real card is revealed. Pure
+     additive layer — does NOT touch the deck logic or play/draw flow.
+
+     Collision-safe with parallel gameplay work:
+       - Reads ONLY #drawpile / .myhand .hcard / .opanel bounding rects.
+       - Does NOT read data-card-id or modify any state.
+       - Bails silently on missing rects, GSAP, or reduced-motion. */
+  function animateMatchDeal(){
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    if(!window.gsap) return;
+    const deck = document.getElementById('drawpile');
+    if(!deck) return;
+    const fromRect = deck.getBoundingClientRect();
+    if(!fromRect.width) return;
+
+    // Self hand: each .hcard slot is a deal target. We hide the real card
+    // for the flight duration so the overlay reads as the same physical card.
+    const handCards = Array.from(document.querySelectorAll('.myhand .hcard'));
+    // Opponents: one symbolic deal-card per opp panel, fired after self's
+    // deal so the human sees their own hand land first.
+    const oppPanels = Array.from(document.querySelectorAll('.opanel'));
+
+    const selfPerCard = 0.07;                     // stagger between self cards
+    const selfDuration = 0.42;
+    const oppPerCard   = 0.10;
+    const oppDuration  = 0.50;
+    const oppStartDelay = handCards.length * selfPerCard + 0.05;
+
+    handCards.forEach((card, i) => {
+      const toRect = card.getBoundingClientRect();
+      if(!toRect.width) return;
+      // Hide the real hand card until the overlay lands on it.
+      card.style.visibility = 'hidden';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'ucard ucard-deal cardback';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.position = 'fixed';
+      overlay.style.left = (fromRect.left + fromRect.width/2) + 'px';
+      overlay.style.top  = (fromRect.top  + fromRect.height/2) + 'px';
+      overlay.style.zIndex = '9001';
+      overlay.style.pointerEvents = 'none';
+      document.body.appendChild(overlay);
+
+      const dx = (toRect.left + toRect.width/2) - (fromRect.left + fromRect.width/2);
+      const dy = (toRect.top  + toRect.height/2) - (fromRect.top  + fromRect.height/2);
+      window.gsap.set(overlay, { xPercent: -50, yPercent: -50, scale: 0.65, rotation: 0 });
+      window.gsap.to(overlay, {
+        x: dx, y: dy,
+        scale: 1.0,
+        rotation: -180 + Math.random() * 360,
+        duration: selfDuration,
+        ease: 'power2.out',
+        delay: i * selfPerCard,
+        onComplete: () => {
+          overlay.remove();
+          card.style.visibility = '';
+        },
+      });
+    });
+
+    oppPanels.forEach((panel, i) => {
+      const toRect = panel.getBoundingClientRect();
+      if(!toRect.width) return;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'ucard ucard-deal cardback';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.position = 'fixed';
+      overlay.style.left = (fromRect.left + fromRect.width/2) + 'px';
+      overlay.style.top  = (fromRect.top  + fromRect.height/2) + 'px';
+      overlay.style.zIndex = '9001';
+      overlay.style.pointerEvents = 'none';
+      document.body.appendChild(overlay);
+
+      const dx = (toRect.left + toRect.width/2) - (fromRect.left + fromRect.width/2);
+      const dy = (toRect.top  + toRect.height/2) - (fromRect.top  + fromRect.height/2);
+      window.gsap.set(overlay, { xPercent: -50, yPercent: -50, scale: 0.50, rotation: 0 });
+      window.gsap.to(overlay, {
+        x: dx, y: dy,
+        scale: 0.65,                            // opp cards stay smaller (perspective)
+        rotation: 180,
+        duration: oppDuration,
+        ease: 'power2.out',
+        delay: oppStartDelay + i * oppPerCard,
+        onComplete: () => overlay.remove(),
+      });
+    });
+  }
+
   /* ═══ CARD-PLAY FLY ANIMATION ═══
      P3.4. When game:card_played fires, an overlay copy of the played card
      flies from the sender's seat (or .myhand for self) to the discard pile,

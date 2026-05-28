@@ -1,6 +1,11 @@
   /* ═══ STATE ═══ */
   function applyFullState(state){
     const g=S.g;
+    // P5.2 — detect lobby->playing transition for the card-deal animation.
+    // Snapshotted BEFORE any other state mutation so the comparison is
+    // against the previous render's phase, not the incoming one.
+    const prevPhase = g.phase;
+    if(state.phase!==undefined) g.phase=state.phase;
     if(state.players!==undefined)g.players=state.players;
     if(state.topCard!==undefined)g.topCard=state.topCard;
     if(state.currentTurn!==undefined)g.currentTurn=state.currentTurn;
@@ -32,6 +37,14 @@
     else document.getElementById('cancelArea').style.display='none';
     updateTurnUI();
     if(typeof TurnTimer!=='undefined') TurnTimer.sync();
+    // P5.2 — card-deal animation fires ONLY on the actual lobby->playing
+    // transition. Reconnects (where prevPhase is undefined because we
+    // just joined the socket) don't trigger it — cards aren't being dealt
+    // fresh, the game's already in progress.
+    if(prevPhase==='lobby' && g.phase==='playing' && typeof animateMatchDeal==='function'){
+      // Defer one frame so renderHand's DOM is settled before we read rects.
+      requestAnimationFrame(()=>animateMatchDeal());
+    }
   }
 
   // Spectator: render full game state with every player's hand visible
