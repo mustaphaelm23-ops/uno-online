@@ -171,6 +171,12 @@
     sk.on('player:reconnected',({username,abandoned})=>{
       toast(`✓ ${username} reconnected${abandoned?' (forfeit still applies)':''}`,'s');
     });
+    // GDD §7.5 — quick-chat incoming + throttle feedback.
+    sk.on('chat:quick',(data)=>{
+      if(typeof QuickChat !== 'undefined') QuickChat.onIncoming(data);
+    });
+    sk.on('chat:quick_throttled',()=>{ try{ toast('Quick chat throttled — wait 2s','i'); }catch(e){} });
+
     // GDD §7.2 — account level-up. Server has already granted the rewards
     // (coins + occasional diamonds); we just sync the new XP/level + toast.
     sk.on('account:levelup',(data)=>{

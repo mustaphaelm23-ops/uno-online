@@ -296,6 +296,26 @@ const DIAMOND_TO_COIN_RATE = 100;
 // Single source of truth — adjust here only. 0.10 = 10% (GDD §2.2 Classic).
 const HOUSE_CUT = 0.10;
 
+// ── Quick Chat presets (GDD §7.5) ──────────────────────────────────────
+// Pre-vetted phrases the client sends by ID (never raw text — prevents the
+// quick-chat path from being abused as a free-form chat bypass). Keep the
+// list short and broadly useful; this isn't a chat replacement, it's a
+// social-presence channel during a match.
+const QUICK_CHAT_PRESETS = {
+  1:  '👋 Hi!',
+  2:  '🎯 Nice play!',
+  3:  '🤣 GG',
+  4:  '😤 So close!',
+  5:  '🙏 Sorry!',
+  6:  '🎉 UNO!',
+  7:  '⚠️ Watch out!',
+  8:  '🔥 Let\'s go!',
+  9:  '😅 Oops',
+  10: '🤝 Good luck!',
+  11: '⏰ Hurry up!',
+  12: '👏 Well played',
+};
+
 // ── Ranked abandon penalty (P4-NEW.1b, GDD §5.5) ──────────────────────
 // Applied ONLY when a human abandons a RANKED match (room.roomType === 'RANKED').
 // The base ELO loss from the normal game:over branch still applies; this is
@@ -2443,6 +2463,32 @@ io.on('connection', (socket) => {
       console.error('[Chat] Error:', e.message);
       ack?.({ success: false });
     }
+  });
+
+  // ── Quick Chat (GDD §7.5) ──
+  // Pre-vetted phrases for in-match social. Client sends an ID; server looks
+  // up the actual text from QUICK_CHAT_PRESETS (defined at module scope) so
+  // a tampered client can't inject custom text. 2s per-socket rate-limit
+  // floor; client also enforces its own UI cooldown.
+  socket.on('chat:quick', ({ id } = {}, ack) => {
+    const presetId = parseInt(id, 10);
+    const text = QUICK_CHAT_PRESETS[presetId];
+    if (!text) return ack?.({ success: false, reason: 'unknown_preset' });
+    const roomId = socket.currentRoomId;
+    if (!roomId) return ack?.({ success: false, reason: 'not_in_room' });
+    const now = Date.now();
+    if (socket._lastQuickChat && now - socket._lastQuickChat < 2000) {
+      socket.emit('chat:quick_throttled', { ms: 2000 });
+      return ack?.({ success: false, reason: 'rate_limit' });
+    }
+    socket._lastQuickChat = now;
+    io.to(roomId).emit('chat:quick', {
+      playerId: socket.userId,
+      username: socket.username,
+      id: presetId,
+      text,
+    });
+    ack?.({ success: true });
   });
 
   // ── Game: Emoji Reaction ──

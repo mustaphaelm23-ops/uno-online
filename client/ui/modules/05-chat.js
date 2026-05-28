@@ -18,6 +18,8 @@
       if (typeof VoiceChat !== 'undefined' && VoiceChat.isOn) VoiceChat.leave();
     }
     document.getElementById('chatFab').classList.toggle('visible',show);
+    document.getElementById('qcFab')?.classList.toggle('visible',show);
+    if(!show) document.getElementById('qcPanel')?.classList.remove('show');
   }
   function switchChatTab(tab){
     Chat.activeTab=tab;

@@ -2712,6 +2712,64 @@
     box-shadow:0 2px 8px rgba(232,50,74,.5);
   }
   .chat-badge.show{display:flex;}
+
+  /* GDD §7.5 — Quick chat fab (game-screen only) sits below chat-fab on the left edge. */
+  .qc-fab{
+    position:fixed;left:12px;top:118px;z-index:40;
+    width:50px;height:50px;border-radius:50%;
+    background:linear-gradient(135deg,var(--bg2),var(--bg3));
+    border:1px solid var(--border);
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;font-size:20px;transition:all .2s;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  .qc-fab:hover{border-color:var(--accent);transform:scale(1.1);}
+  .qc-fab.visible{display:flex;}
+  .qc-panel{
+    position:fixed;left:70px;top:90px;z-index:41;
+    display:none;grid-template-columns:repeat(3,1fr);gap:6px;
+    padding:10px;border-radius:14px;
+    background:linear-gradient(180deg,var(--bg2),var(--bg));
+    border:1px solid var(--border);
+    box-shadow:0 12px 32px rgba(0,0,0,.55);
+    max-width:280px;
+    animation:qcPanelIn .18s ease-out;
+  }
+  .qc-panel.show{display:grid;}
+  .qc-preset{
+    background:linear-gradient(135deg,var(--bg3),var(--bg2));
+    border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:10px;cursor:pointer;
+    font-size:13px;font-weight:600;white-space:nowrap;
+    transition:transform .12s, border-color .12s, background .12s;
+  }
+  .qc-preset:hover{border-color:var(--accent);transform:translateY(-1px);background:linear-gradient(135deg,var(--bg2),var(--bg3));}
+  .qc-preset:active{transform:translateY(0);}
+  @keyframes qcPanelIn{
+    from{opacity:0;transform:translateY(-6px) scale(.96);}
+    to  {opacity:1;transform:translateY(0)    scale(1);}
+  }
+  /* Speech bubble — appears above the sender's panel for 2.4s, then fades. */
+  .qc-bubble{
+    position:absolute;top:-32px;left:50%;transform:translateX(-50%);
+    padding:6px 12px;border-radius:14px;
+    background:linear-gradient(135deg,#1e293b,#0f172a);
+    border:1px solid var(--accent);color:#fff;
+    font-size:13px;font-weight:600;white-space:nowrap;
+    box-shadow:0 6px 18px rgba(0,0,0,.5);
+    pointer-events:none;z-index:45;
+    animation:qcBubble 2.4s ease-out forwards;
+  }
+  .qc-bubble-fly{
+    position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);
+  }
+  @keyframes qcBubble{
+    0%  {opacity:0;transform:translateX(-50%) translateY(6px) scale(.85);}
+    12% {opacity:1;transform:translateX(-50%) translateY(0)   scale(1);}
+    82% {opacity:1;transform:translateX(-50%) translateY(0)   scale(1);}
+    100%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.95);}
+  }
+
   .chat-panel{
     position:fixed;right:0;top:0;bottom:0;width:320px;
     background:linear-gradient(180deg,var(--bg2),var(--bg));
@@ -3020,6 +3078,8 @@
     .card-num{font-size:30px!important;}
     .card-tl,.card-br{font-size:13px!important;}
     .chat-fab{left:10px;top:50px;width:36px;height:36px;font-size:15px;}
+    .qc-fab{left:10px;top:94px;width:36px;height:36px;font-size:15px;}
+    .qc-panel{left:54px;top:90px;max-width:240px;}
     .btnUNO{width:64px;height:64px;font-size:18px;}
     .myinfo{bottom:10px;left:10px;padding:5px 10px;}
     .miname{font-size:11px;}
@@ -3066,6 +3126,9 @@
     .cancel-area{top:50%;}
     .myhand{min-height:80px;padding-bottom:14px;}
     .chat-fab{left:8px;top:46px;width:32px;height:32px;font-size:14px;}
+    .qc-fab{left:8px;top:84px;width:32px;height:32px;font-size:13px;}
+    .qc-panel{left:48px;top:80px;max-width:220px;padding:8px;gap:5px;}
+    .qc-preset{font-size:12px;padding:6px 8px;}
     .btnUNO{width:56px;height:56px;font-size:16px;}
     .hpill{font-size:9px;padding:3px 8px;}
     .wtitle{font-size:36px;}
