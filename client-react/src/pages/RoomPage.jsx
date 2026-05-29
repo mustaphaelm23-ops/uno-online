@@ -3,27 +3,30 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { getSocket } from '../api/socket';
+import { gameApi } from '../api/game';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import useGameState from '../hooks/useGameState';
 import Avatar from '../components/ui/Avatar';
 import FriendsRail from '../components/lobby/FriendsRail';
+import GameScreen from '../components/game/GameScreen';
+import VictoryOverlay from '../components/game/VictoryOverlay';
 
-// RoomPage is the lobby for a single room: shows the code, seated players,
-// invite controls + a Start CTA for the host. Actual gameplay UI ships in a
-// follow-up commit; for now we wire the join/leave plumbing so creating a
-// room and inviting a friend produces a functional end-to-end loop:
+// RoomPage owns the room socket lifecycle (join on mount, leave on unmount)
+// and dispatches its child UI by phase:
+//   no state || phase==='lobby'  → seat grid + Start CTA (the pre-game lobby)
+//   phase==='playing'            → GameScreen
+//   game:over received           → VictoryOverlay over the current screen
 //
-//   Host:    Create Room → land here → click Invite on a friend in the rail
-//   Friend:  Receive friend:invite toast in lobby → (manual /room/:id for now)
-//
-// We emit 'room:join' on mount so the server seats us; on unmount we emit
-// 'room:leave' so the seat is freed.
+// The lifecycle stays anchored at this single page component so we never
+// emit room:leave mid-game just because the inner UI swapped.
 
 export default function RoomPage() {
   const { roomId } = useParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const { state, over, reset } = useGameState();
   const [room, setRoom] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -41,7 +44,8 @@ export default function RoomPage() {
     const sk = getSocket();
     if (!sk) return;
 
-    sk.emit('room:join', { roomId }, (res) => {
+    let left = false;
+    gameApi.joinRoom(roomId).then((res) => {
       if (res?.success === false) {
         toast.error(res.reason || 'Failed to join');
         navigate('/');
@@ -51,29 +55,58 @@ export default function RoomPage() {
     });
 
     const onChanged = () => refresh();
+    const onPayout  = (p) => { toast.success(`+${p.gained || 0} 🪙`); refreshUser(); };
+
     sk.on('room:player_change', onChanged);
     sk.on('room:state',         onChanged);
-    sk.on('game:start',         () => toast.info('Game starting — UI ships in a follow-up commit'));
+    sk.on('match:payout',       onPayout);
 
     return () => {
-      sk.emit('room:leave', {});
+      left = true;
+      gameApi.leaveRoom();
       sk.off('room:player_change', onChanged);
       sk.off('room:state',         onChanged);
+      sk.off('match:payout',       onPayout);
     };
-  }, [roomId, refresh, navigate, toast]);
+  }, [roomId, refresh, navigate, refreshUser, toast]);
 
   const leave = () => navigate('/');
 
-  const startMatch = () => {
+  const startMatch = async () => {
     if (busy) return;
     setBusy(true);
-    const sk = getSocket();
-    sk?.emit('room:start', {}, (res) => {
-      setBusy(false);
-      if (res?.success === false) toast.error(res.reason || 'Cannot start yet');
-    });
+    const res = await gameApi.start();
+    setBusy(false);
+    if (res?.success === false) toast.error(res.reason || 'Cannot start yet');
   };
 
+  const playAgain = () => {
+    // For now, drop back to the lobby; the host can re-queue a quick match.
+    reset();
+    navigate('/');
+  };
+
+  const phase = state?.phase;
+  const inGame = phase === 'playing' || phase === 'finished';
+
+  // ── In-game screen ──────────────────────────────────────────────────
+  if (inGame) {
+    return (
+      <>
+        <GameScreen state={state} onLeave={leave} />
+        {over && (
+          <VictoryOverlay
+            data={over}
+            myId={user?.id}
+            onPlayAgain={playAgain}
+            onLobby={leave}
+          />
+        )}
+      </>
+    );
+  }
+
+  // ── Pre-game room lobby (seat grid + Start) ─────────────────────────
   if (!room) {
     return <div className="h-full grid place-items-center text-ink-soft animate-pulse">Joining room…</div>;
   }
@@ -100,7 +133,9 @@ export default function RoomPage() {
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         <main className="flex-1 panel-card p-6">
-          <h2 className="font-display text-xl tracking-wider text-ink mb-4">Players ({seats.length}/{room.settings?.maxPlayers ?? 4})</h2>
+          <h2 className="font-display text-xl tracking-wider text-ink mb-4">
+            Players ({seats.length}/{room.settings?.maxPlayers ?? 4})
+          </h2>
           <ul className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Array.from({ length: room.settings?.maxPlayers ?? 4 }).map((_, i) => {
               const p = seats[i];
@@ -141,11 +176,6 @@ export default function RoomPage() {
             </button>
             <button type="button" className="btn-ghost" onClick={leave}>Leave</button>
           </div>
-
-          <p className="text-xs text-ink-faint mt-4">
-            Game UI ships in the next commit. Once the host taps Start, the existing backend handles the match
-            (cards, turns, payouts) but the React-rendered table will be wired in a follow-up.
-          </p>
         </main>
 
         <aside className="w-full lg:w-72 shrink-0">
