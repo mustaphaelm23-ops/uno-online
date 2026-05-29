@@ -23,18 +23,28 @@ export default function useFriends() {
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 10_000);
+    // Backstop poll: kept long because friend:presence + friend:request /
+    // friend:accepted cover the live cases. Only triggers if a friend's
+    // username/avatar changed (rare).
+    const t = setInterval(refresh, 30_000);
     const sk = getSocket();
-    const onChange = () => refresh();
+    const onChange   = () => refresh();
+    const onPresence = ({ userId, online }) => {
+      // Surgical merge — flip the dot without losing scroll position or
+      // re-rendering the whole list. New friends still land via refresh().
+      setFriends((cur) => cur.map((f) => f.id === userId ? { ...f, isOnline: online } : f));
+    };
     if (sk) {
       sk.on('friend:request',  onChange);
       sk.on('friend:accepted', onChange);
+      sk.on('friend:presence', onPresence);
     }
     return () => {
       clearInterval(t);
       if (sk) {
         sk.off('friend:request',  onChange);
         sk.off('friend:accepted', onChange);
+        sk.off('friend:presence', onPresence);
       }
     };
   }, [refresh]);

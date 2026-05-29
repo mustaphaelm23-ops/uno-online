@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { getSocket } from '../../api/socket';
 import Avatar from '../ui/Avatar';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -25,8 +26,18 @@ export default function FriendsRail({ activeRoomId }) {
       finally { if (alive) setLoading(false); }
     };
     fetchFriends();
-    const t = setInterval(fetchFriends, 8000);
-    return () => { alive = false; clearInterval(t); };
+    // Backstop poll is long now — live updates come from friend:presence.
+    const t = setInterval(fetchFriends, 30_000);
+    const sk = getSocket();
+    const onPresence = ({ userId, online }) => {
+      setFriends((cur) => cur.map((f) => f.id === userId ? { ...f, isOnline: online } : f));
+    };
+    if (sk) sk.on('friend:presence', onPresence);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      if (sk) sk.off('friend:presence', onPresence);
+    };
   }, []);
 
   const sendInvite = async (friendId) => {

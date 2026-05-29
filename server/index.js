@@ -2291,10 +2291,30 @@ io.use((socket, next) => {
   next();
 });
 
+// Presence helper — fan out a friend:online / friend:offline event to all
+// sockets belonging to the given user's friends. Idempotent on the
+// client (the dot just flips state); honest clients also re-poll every
+// few seconds so a missed event isn't permanent.
+function emitPresenceToFriends(userId, payload) {
+  const u = usersDB.get(userId);
+  if (!u) return;
+  const friendIds = u.friends || [];
+  if (!friendIds.length) return;
+  for (const [sid, uid] of socketToUser) {
+    if (!friendIds.includes(uid)) continue;
+    const sock = io.sockets.sockets.get(sid);
+    if (sock) sock.emit('friend:presence', payload);
+  }
+}
+
 io.on('connection', (socket) => {
   const userId = socket.userId;
   socketToUser.set(socket.id, userId);
   console.log(`[Socket] Connected: ${socket.username} (${socket.id})`);
+  // Tell this user's friends they're online. The check before emit is
+  // implicit — we always emit on connect, even if another tab is already
+  // online for them; clients treat online:true as idempotent.
+  emitPresenceToFriends(userId, { userId, online: true });
 
   // Wrap every socket handler so a thrown error is contained to this
   // event instead of crashing the whole server mid-game.
@@ -2970,6 +2990,11 @@ io.on('connection', (socket) => {
   // ── Disconnect ──
   socket.on('disconnect', (reason) => {
     socketToUser.delete(socket.id);
+    // Only emit offline if this was the LAST socket for this user (multi-tab
+    // edge case — if another tab is still connected, the friend should still
+    // see them online).
+    const stillOnline = [...socketToUser.values()].includes(userId);
+    if (!stillOnline) emitPresenceToFriends(userId, { userId, online: false });
     const roomId = socket.currentRoomId;
     // Drop from voice room if applicable so peers can clean up
     if (roomId && voiceRooms.has(roomId)) {
