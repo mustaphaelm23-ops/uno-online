@@ -24,6 +24,7 @@ import DailyRewardModal from '../components/lobby/DailyRewardModal';
 import JoinByCodeModal from '../components/lobby/JoinByCodeModal';
 import LeaderboardModal from '../components/lobby/LeaderboardModal';
 import EventModal from '../components/lobby/EventModal';
+import AchievementsModal from '../components/lobby/AchievementsModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -64,6 +65,7 @@ export default function LobbyPage() {
   const [lbTab, setLbTab]               = useState('ranked');
   const openLb = (t = 'ranked') => { setLbTab(t); setLbOpen(true); };
   const [eventOpen, setEventOpen]       = useState(false);
+  const [achOpen, setAchOpen]           = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -159,8 +161,9 @@ export default function LobbyPage() {
           <PublicRooms rooms={featured.rooms} hotType={featured.hotType} onJoin={joinFeatured} />
           <ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} />
           <BottomNav onAction={(id) => {
-            if (id === 'leaderboard') return openLb('ranked');
-            if (id === 'missions')    return setEventOpen(true);
+            if (id === 'leaderboard')  return openLb('ranked');
+            if (id === 'missions')     return setEventOpen(true);
+            if (id === 'achievements') return setAchOpen(true);
             toast.info(`${id} — follow-up commit`);
           }} />
         </main>
@@ -214,6 +217,10 @@ export default function LobbyPage() {
       <EventModal
         open={eventOpen}
         onClose={() => setEventOpen(false)}
+      />
+      <AchievementsModal
+        open={achOpen}
+        onClose={() => setAchOpen(false)}
       />
     </div>
   );

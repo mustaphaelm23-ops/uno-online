@@ -2174,6 +2174,86 @@ app.post('/api/friends/invite', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Achievements (trophy collection) ──────────────────────────────────
+// Server-owned catalog. Each entry has a getValue(user) that derives the
+// player's current progress from the user object — so a new server release
+// can change targets/rewards without a per-user migration, and players
+// "unlock" achievements they qualified for at any prior time.
+// Claimed IDs persist on user.achievementsClaimed[].
+const ACHIEVEMENTS = [
+  { id:'first_win',    icon:'🥇', name:'First Victory',  desc:'Win your first match',                  target:1,      reward:200,
+    getValue:(u) => u.stats?.gamesWon || 0 },
+  { id:'ten_wins',     icon:'🏆', name:'Hot Streak',      desc:'Win 10 matches',                        target:10,     reward:500,
+    getValue:(u) => u.stats?.gamesWon || 0 },
+  { id:'fifty_wins',   icon:'👑', name:'Champion',        desc:'Win 50 matches',                        target:50,     reward:2500,
+    getValue:(u) => u.stats?.gamesWon || 0 },
+  { id:'hundred_wins', icon:'🌟', name:'Master',          desc:'Win 100 matches',                       target:100,    reward:5000,
+    getValue:(u) => u.stats?.gamesWon || 0 },
+  { id:'veteran',      icon:'🎖️', name:'Veteran',         desc:'Play 50 matches',                       target:50,     reward:500,
+    getValue:(u) => u.stats?.gamesPlayed || 0 },
+  { id:'centurion',    icon:'💯', name:'Centurion',       desc:'Play 100 matches',                      target:100,    reward:1000,
+    getValue:(u) => u.stats?.gamesPlayed || 0 },
+  { id:'social_5',     icon:'🤝', name:'Friend Club',     desc:'Add 5 friends',                         target:5,      reward:300,
+    getValue:(u) => (u.friends || []).length },
+  { id:'social_20',    icon:'👥', name:'Networker',       desc:'Add 20 friends',                        target:20,     reward:1000,
+    getValue:(u) => (u.friends || []).length },
+  { id:'bp_premium',   icon:'🎟️', name:'Pass Holder',     desc:'Own the premium Battle Pass',           target:1,      reward:500,
+    getValue:(u) => u.bp?.premium ? 1 : 0 },
+  { id:'bp_max',       icon:'📈', name:'Season Climber',  desc:'Reach Battle Pass tier 20',             target:20,     reward:2000,
+    getValue:(u) => u.bp ? bpLevel(u.bp) : 0 },
+  { id:'level_10',     icon:'⭐', name:'Rising Star',      desc:'Reach account level 10',                target:10,     reward:500,
+    getValue:(u) => accountLevelProgress(u.accountXP || 0).level },
+  { id:'level_50',     icon:'🚀', name:'Skyrocket',       desc:'Reach account level 50',                target:50,     reward:2500,
+    getValue:(u) => accountLevelProgress(u.accountXP || 0).level },
+  { id:'ranked_1500',  icon:'💎', name:'Diamond Mind',    desc:'Climb to 1500 rating',                  target:1500,   reward:1000,
+    getValue:(u) => u.elo || 1000 },
+  { id:'ranked_2000',  icon:'🔥', name:'Legendary',       desc:'Climb to 2000 rating',                  target:2000,   reward:3000,
+    getValue:(u) => u.elo || 1000 },
+  { id:'rich_50k',     icon:'💰', name:'Big Pocket',      desc:'Hold 50,000 coins',                     target:50000,  reward:500,
+    getValue:(u) => u.coins || 0 },
+  { id:'rich_500k',    icon:'🤑', name:'Tycoon',          desc:'Hold 500,000 coins',                    target:500000, reward:5000,
+    getValue:(u) => u.coins || 0 },
+];
+
+function ensureAchievements(user) {
+  if (!Array.isArray(user.achievementsClaimed)) user.achievementsClaimed = [];
+  return user.achievementsClaimed;
+}
+
+app.get('/api/achievements', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const claimed = ensureAchievements(user);
+  const items = ACHIEVEMENTS.map(a => {
+    const current = a.getValue(user);
+    return {
+      id: a.id, icon: a.icon, name: a.name, desc: a.desc,
+      target: a.target, reward: a.reward,
+      current: Math.min(current, a.target),
+      complete: current >= a.target,
+      claimed:  claimed.includes(a.id),
+    };
+  });
+  const earned = items.filter(i => i.complete).length;
+  res.json({ achievements: items, total: ACHIEVEMENTS.length, earned });
+});
+
+app.post('/api/achievements/claim', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const claimed = ensureAchievements(user);
+  const id = String(req.body?.id || '');
+  const a  = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return res.status(400).json({ error: 'Unknown achievement' });
+  if (claimed.includes(a.id)) return res.status(400).json({ error: 'Already claimed' });
+  if (a.getValue(user) < a.target) return res.status(400).json({ error: 'Not complete yet' });
+  claimed.push(a.id);
+  user.coins = (user.coins || 0) + a.reward;
+  logReward(user, a.icon, `Achievement — ${a.name}`, a.reward);
+  saveUsers();
+  res.json({ success: true, coins: user.coins, reward: a.reward, id: a.id });
+});
+
 app.get('/api/leaderboard/ranked', (req, res) => {
   const top = [...usersDB.values()]
     .filter(u => u.elo)
