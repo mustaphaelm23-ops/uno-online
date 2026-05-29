@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { api } from '../api/client';
 import { getSocket } from '../api/socket';
+// Above-the-fold lobby pieces — render on every visit, stay in the main
+// chunk. The TopBar's NotificationsContext subscription would also need
+// to be top-level, so it stays here.
+import LazyWhenOpened from '../components/ui/LazyWhenOpened';
 import Sidebar from '../components/lobby/Sidebar';
 import TopBar from '../components/lobby/TopBar';
 import WelcomeCard from '../components/lobby/WelcomeCard';
@@ -15,20 +19,25 @@ import BattlePassCard from '../components/lobby/BattlePassCard';
 import SpecialOfferCard from '../components/lobby/SpecialOfferCard';
 import BottomNav from '../components/lobby/BottomNav';
 import ActionTiles from '../components/lobby/ActionTiles';
-import CreateRoomModal from '../components/lobby/CreateRoomModal';
-import ShopModal from '../components/lobby/ShopModal';
-import BattlePassModal from '../components/lobby/BattlePassModal';
-import FriendsPanel from '../components/lobby/FriendsPanel';
-import SettingsModal from '../components/lobby/SettingsModal';
-import DailyRewardModal from '../components/lobby/DailyRewardModal';
-import JoinByCodeModal from '../components/lobby/JoinByCodeModal';
-import LeaderboardModal from '../components/lobby/LeaderboardModal';
-import EventModal from '../components/lobby/EventModal';
-import AchievementsModal from '../components/lobby/AchievementsModal';
-import NotificationsPanel from '../components/lobby/NotificationsPanel';
-import LiveGamesModal from '../components/lobby/LiveGamesModal';
-import CollectionModal from '../components/lobby/CollectionModal';
-import EmotesModal from '../components/lobby/EmotesModal';
+
+// Modals + slide-outs — code-split per surface. Each fetches on first
+// open and cache-hits thereafter. Rendered inside <Suspense fallback=null>
+// so the brief network round-trip is invisible (the modal would be
+// invisible during open animation anyway).
+const CreateRoomModal   = lazy(() => import('../components/lobby/CreateRoomModal'));
+const ShopModal         = lazy(() => import('../components/lobby/ShopModal'));
+const BattlePassModal   = lazy(() => import('../components/lobby/BattlePassModal'));
+const FriendsPanel      = lazy(() => import('../components/lobby/FriendsPanel'));
+const SettingsModal     = lazy(() => import('../components/lobby/SettingsModal'));
+const DailyRewardModal  = lazy(() => import('../components/lobby/DailyRewardModal'));
+const JoinByCodeModal   = lazy(() => import('../components/lobby/JoinByCodeModal'));
+const LeaderboardModal  = lazy(() => import('../components/lobby/LeaderboardModal'));
+const EventModal        = lazy(() => import('../components/lobby/EventModal'));
+const AchievementsModal = lazy(() => import('../components/lobby/AchievementsModal'));
+const NotificationsPanel= lazy(() => import('../components/lobby/NotificationsPanel'));
+const LiveGamesModal    = lazy(() => import('../components/lobby/LiveGamesModal'));
+const CollectionModal   = lazy(() => import('../components/lobby/CollectionModal'));
+const EmotesModal       = lazy(() => import('../components/lobby/EmotesModal'));
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -193,67 +202,102 @@ export default function LobbyPage() {
         </div>
       </motion.div>
 
-      <CreateRoomModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={onCreated}
-      />
-      <ShopModal
-        open={shopOpen}
-        onClose={() => setShopOpen(false)}
-        initialTab={shopTab}
-      />
-      <BattlePassModal
-        open={bpOpen}
-        onClose={() => setBpOpen(false)}
-      />
-      <FriendsPanel
-        open={socialOpen}
-        onClose={() => setSocialOpen(false)}
-        initialTab={socialTab}
-        activeRoomId={activeRoomId}
-      />
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-      <DailyRewardModal
-        open={dailyOpen}
-        onClose={() => setDailyOpen(false)}
-      />
-      <JoinByCodeModal
-        open={joinOpen}
-        onClose={() => setJoinOpen(false)}
-      />
-      <LeaderboardModal
-        open={lbOpen}
-        onClose={() => setLbOpen(false)}
-        initialTab={lbTab}
-      />
-      <EventModal
-        open={eventOpen}
-        onClose={() => setEventOpen(false)}
-      />
-      <AchievementsModal
-        open={achOpen}
-        onClose={() => setAchOpen(false)}
-      />
-      <NotificationsPanel
-        open={notifOpen}
-        onClose={() => setNotifOpen(false)}
-      />
-      <LiveGamesModal
-        open={liveOpen}
-        onClose={() => setLiveOpen(false)}
-      />
-      <CollectionModal
-        open={collOpen}
-        onClose={() => setCollOpen(false)}
-      />
-      <EmotesModal
-        open={emotesOpen}
-        onClose={() => setEmotesOpen(false)}
-      />
+      {/* Code-split modal layer. Each surface only loads its chunk on
+          first open; after that it stays mounted so exit animations play
+          and reopen is instant. Suspense fallback is null because the
+          modal would be invisible during the ~50–200 ms chunk fetch
+          window anyway. */}
+      <Suspense fallback={null}>
+        <LazyWhenOpened open={createOpen}>
+          <CreateRoomModal
+            open={createOpen}
+            onClose={() => setCreateOpen(false)}
+            onCreated={onCreated}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={shopOpen}>
+          <ShopModal
+            open={shopOpen}
+            onClose={() => setShopOpen(false)}
+            initialTab={shopTab}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={bpOpen}>
+          <BattlePassModal
+            open={bpOpen}
+            onClose={() => setBpOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={socialOpen}>
+          <FriendsPanel
+            open={socialOpen}
+            onClose={() => setSocialOpen(false)}
+            initialTab={socialTab}
+            activeRoomId={activeRoomId}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={settingsOpen}>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={dailyOpen}>
+          <DailyRewardModal
+            open={dailyOpen}
+            onClose={() => setDailyOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={joinOpen}>
+          <JoinByCodeModal
+            open={joinOpen}
+            onClose={() => setJoinOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={lbOpen}>
+          <LeaderboardModal
+            open={lbOpen}
+            onClose={() => setLbOpen(false)}
+            initialTab={lbTab}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={eventOpen}>
+          <EventModal
+            open={eventOpen}
+            onClose={() => setEventOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={achOpen}>
+          <AchievementsModal
+            open={achOpen}
+            onClose={() => setAchOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={notifOpen}>
+          <NotificationsPanel
+            open={notifOpen}
+            onClose={() => setNotifOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={liveOpen}>
+          <LiveGamesModal
+            open={liveOpen}
+            onClose={() => setLiveOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={collOpen}>
+          <CollectionModal
+            open={collOpen}
+            onClose={() => setCollOpen(false)}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={emotesOpen}>
+          <EmotesModal
+            open={emotesOpen}
+            onClose={() => setEmotesOpen(false)}
+          />
+        </LazyWhenOpened>
+      </Suspense>
     </div>
   );
 }

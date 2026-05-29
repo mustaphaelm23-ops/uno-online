@@ -1,9 +1,15 @@
+import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import AuthPage from './pages/AuthPage.jsx';
-import LobbyPage from './pages/LobbyPage.jsx';
-import RoomPage from './pages/RoomPage.jsx';
-import WatchPage from './pages/WatchPage.jsx';
+
+// Lazy page chunks — the auth page is tiny (Sign In / Register), but the
+// lobby/room/watch pages pull in heavy descendants (Framer Motion,
+// dozens of modals, game-table assemblies). Splitting them keeps the
+// initial download to "shell + the page the user actually needs".
+const AuthPage  = lazy(() => import('./pages/AuthPage.jsx'));
+const LobbyPage = lazy(() => import('./pages/LobbyPage.jsx'));
+const RoomPage  = lazy(() => import('./pages/RoomPage.jsx'));
+const WatchPage = lazy(() => import('./pages/WatchPage.jsx'));
 
 function Protected({ children }) {
   const { user, ready } = useAuth();
@@ -23,12 +29,14 @@ function BootSplash() {
 export default function App() {
   const { user, ready } = useAuth();
   return (
-    <Routes>
-      <Route path="/auth"        element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-      <Route path="/"            element={<Protected><LobbyPage /></Protected>} />
-      <Route path="/room/:roomId"  element={<Protected><RoomPage /></Protected>} />
-      <Route path="/watch/:roomId" element={<Protected><WatchPage /></Protected>} />
-      <Route path="*"            element={ready ? <Navigate to={user ? '/' : '/auth'} replace /> : <BootSplash />} />
-    </Routes>
+    <Suspense fallback={<BootSplash />}>
+      <Routes>
+        <Route path="/auth"          element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+        <Route path="/"              element={<Protected><LobbyPage /></Protected>} />
+        <Route path="/room/:roomId"  element={<Protected><RoomPage /></Protected>} />
+        <Route path="/watch/:roomId" element={<Protected><WatchPage /></Protected>} />
+        <Route path="*"              element={ready ? <Navigate to={user ? '/' : '/auth'} replace /> : <BootSplash />} />
+      </Routes>
+    </Suspense>
   );
 }
