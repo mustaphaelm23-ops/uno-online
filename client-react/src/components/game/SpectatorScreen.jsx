@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import CenterTable from './CenterTable';
 import OpponentPanel from './OpponentPanel';
 import TurnTimer from './TurnTimer';
 import Card from './Card';
+import ChatPanel from './ChatPanel';
 import useEquippedBack from '../../hooks/useEquippedBack';
+import useSpectatorChat from '../../hooks/useSpectatorChat';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 
 // Read-only "watching" view of an in-progress match. Backend ships
 // game:spectator_state which includes EVERY player's full hand under
@@ -17,6 +22,15 @@ import useEquippedBack from '../../hooks/useEquippedBack';
 export default function SpectatorScreen({ state, onLeave }) {
   const navigate = useNavigate();
   const back = useEquippedBack();
+  const { user } = useAuth();
+  const toast = useToast();
+  const { messages, send } = useSpectatorChat();
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const handleSend = async (text) => {
+    const res = await send(text);
+    if (res?.success === false) toast.error(res.reason || 'Chat failed');
+  };
   if (!state) {
     return <div className="h-full grid place-items-center text-ink-soft animate-pulse">Joining as spectator…</div>;
   }
@@ -46,8 +60,21 @@ export default function SpectatorScreen({ state, onLeave }) {
           <TurnTimer endsAt={state.turnEndsAt} totalMs={state.turnTimeout || 30000} label="Turn" />
           <span className="chip bg-rose/20 border border-rose/40 text-rose">📺 SPECTATING</span>
         </div>
-        <button type="button" onClick={leave}
-                className="w-9 h-9 rounded-full bg-bg-2/80 border border-line grid place-items-center hover:border-rose">≡</button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setChatOpen(true)}
+                  aria-label="Watchers chat"
+                  className="relative w-9 h-9 rounded-full bg-bg-2/80 border border-line grid place-items-center hover:border-violet/50">
+            💬
+            {messages.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose text-white rounded-full
+                               min-w-[16px] h-[16px] px-1 text-[9px] font-bold grid place-items-center">
+                {messages.length > 99 ? '99+' : messages.length}
+              </span>
+            )}
+          </button>
+          <button type="button" onClick={leave} aria-label="Leave watching"
+                  className="w-9 h-9 rounded-full bg-bg-2/80 border border-line grid place-items-center hover:border-rose">≡</button>
+        </div>
       </header>
 
       {topOpp && (
@@ -107,6 +134,15 @@ export default function SpectatorScreen({ state, onLeave }) {
           </motion.div>
         </div>
       </div>
+
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={messages}
+        myId={user?.id}
+        onSend={handleSend}
+        title="📺 Watchers"
+      />
     </div>
   );
 }

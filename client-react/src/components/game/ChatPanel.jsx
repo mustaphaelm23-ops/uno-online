@@ -10,7 +10,7 @@ function fmtTime(ts) {
   catch { return ''; }
 }
 
-export default function ChatPanel({ open, onClose, messages = [], myId, onSend }) {
+export default function ChatPanel({ open, onClose, messages = [], myId, onSend, title = '💬 Room Chat' }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef(null);
@@ -43,7 +43,7 @@ export default function ChatPanel({ open, onClose, messages = [], myId, onSend }
                      border-l border-line flex flex-col"
         >
           <header className="flex items-center justify-between p-3 border-b border-line">
-            <h3 className="font-display text-lg tracking-wider">💬 Room Chat</h3>
+            <h3 className="font-display text-lg tracking-wider">{title}</h3>
             <button type="button" onClick={onClose}
                     aria-label="Close chat"
                     className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose">✕</button>
