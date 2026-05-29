@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import ResetPasswordModal from '../components/auth/ResetPasswordModal';
 
 // Auth page mirrors the lobby's vibe — same vignette + panel-card aesthetic
 // — so the transition into the lobby feels continuous rather than two
@@ -13,6 +14,7 @@ export default function AuthPage() {
   const [tab, setTab] = useState('login');
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', email: '' });
+  const [resetOpen, setResetOpen] = useState(false);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -88,12 +90,24 @@ export default function AuthPage() {
           <button type="submit" disabled={busy} className="btn-primary mt-2 disabled:opacity-60">
             {busy ? '…' : tab === 'login' ? 'Sign In' : 'Create Account'}
           </button>
+          {tab === 'login' && (
+            <button
+              type="button"
+              onClick={() => setResetOpen(true)}
+              className="text-xs text-ink-faint hover:text-violet-soft self-center mt-1"
+            >Forgot password?</button>
+          )}
         </form>
 
         <p className="text-center text-xs text-ink-faint mt-6">
           By continuing, you accept the house rules. House cut: 10% per match.
         </p>
       </motion.div>
+
+      <ResetPasswordModal
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+      />
     </div>
   );
 }
