@@ -37,7 +37,7 @@ function IconBtn({ icon, label, dot, onClick }) {
   );
 }
 
-export default function TopBar({ user, onShop, onSettings, onLogout, onChat }) {
+export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onFriends }) {
   return (
     <header className="flex items-center gap-3 sm:gap-4">
       <div className="font-display text-4xl text-accent drop-shadow-[0_4px_24px_rgba(245,158,11,0.4)] tracking-wider select-none">
@@ -53,7 +53,8 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat }) {
 
       <div className="flex items-center gap-2">
         <IconBtn icon="🔔" label="Notifications" dot onClick={() => {}} />
-        <IconBtn icon="💬" label="Chat" onClick={onChat} />
+        <IconBtn icon="👥" label="Friends" onClick={onFriends} />
+        <IconBtn icon="💬" label="Messages" onClick={onChat} />
         <IconBtn icon="⚙️" label="Settings" onClick={onSettings} />
       </div>
 

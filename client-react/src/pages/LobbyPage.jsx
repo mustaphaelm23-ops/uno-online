@@ -18,6 +18,7 @@ import ActionTiles from '../components/lobby/ActionTiles';
 import CreateRoomModal from '../components/lobby/CreateRoomModal';
 import ShopModal from '../components/lobby/ShopModal';
 import BattlePassModal from '../components/lobby/BattlePassModal';
+import FriendsPanel from '../components/lobby/FriendsPanel';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -48,6 +49,9 @@ export default function LobbyPage() {
   const [shopOpen, setShopOpen]     = useState(false);
   const [shopTab, setShopTab]       = useState('packages');
   const [bpOpen, setBpOpen]         = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [socialTab, setSocialTab]   = useState('friends');
+  const openSocial = (t = 'friends') => { setSocialTab(t); setSocialOpen(true); };
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -119,7 +123,8 @@ export default function LobbyPage() {
         onShop={() => openShop('packages')}
         onSettings={() => toast.info('Settings ships in a follow-up commit')}
         onLogout={logout}
-        onChat={() => toast.info('Chat overlay ships in a follow-up commit')}
+        onChat={() => openSocial('dms')}
+        onFriends={() => openSocial('friends')}
       />
 
       <motion.div
@@ -164,6 +169,12 @@ export default function LobbyPage() {
       <BattlePassModal
         open={bpOpen}
         onClose={() => setBpOpen(false)}
+      />
+      <FriendsPanel
+        open={socialOpen}
+        onClose={() => setSocialOpen(false)}
+        initialTab={socialTab}
+        activeRoomId={activeRoomId}
       />
     </div>
   );

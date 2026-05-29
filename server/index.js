@@ -2088,6 +2088,20 @@ app.get('/api/friends', authMiddleware, (req, res) => {
   res.json({ friends });
 });
 
+// Incoming friend requests — resolves user.friendRequests IDs into the
+// {id, username, avatar} the client needs to render an accept/decline row.
+// Mirrors the GET /api/friends shape so callers can treat both lists the same.
+app.get('/api/friends/requests', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if(!user) return res.status(404).json({ error: 'User not found' });
+  const requests = (user.friendRequests || []).map(fid => {
+    const f = usersDB.get(fid);
+    if(!f) return { id: fid, username: 'Unknown' };
+    return { id: f.id, username: f.username, avatar: f.avatar || null };
+  });
+  res.json({ requests });
+});
+
 // Friends: send request
 app.post('/api/friends/request', authMiddleware, (req, res) => {
   const { username } = req.body;
