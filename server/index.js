@@ -316,6 +316,96 @@ const QUICK_CHAT_PRESETS = {
   12: '👏 Well played',
 };
 
+// ── Private DMs (GDD §7.5 B) ──────────────────────────────────────────
+// Friends-only 1:1 messaging. Messages persisted to Mongo; the in-memory
+// path is the canonical send/read flow during a session (Mongo is just
+// durability so threads survive restart). 240-char cap and a 1.5s
+// per-socket rate-limit protect against spam; client also enforces its
+// own UI cooldown so honest players never hit the server floor.
+const DM_MAX_LEN        = 240;
+const DM_RATE_LIMIT_MS  = 1500;
+const DM_THREAD_LIMIT   = 50;          // last N messages when a thread opens
+const DirectMessageSchema = new mongoose.Schema({
+  from:  { type: String, required: true, index: true },
+  to:    { type: String, required: true, index: true },
+  text:  { type: String, required: true },
+  at:    { type: Number, index: true },
+  read:  { type: Boolean, default: false },
+}, { strict: false });
+// Composite indexes for the two read paths:
+//   thread fetch  → find by (from in {A,B}, to in {A,B}) sorted by at desc
+//   unread count  → find by (to=me, read=false)
+DirectMessageSchema.index({ from: 1, to: 1, at: -1 });
+DirectMessageSchema.index({ to: 1, read: 1 });
+const DirectMessageModel = mongoose.model('DirectMessage', DirectMessageSchema);
+
+// Are A and B friends? Both directions checked (the friend lists should
+// agree, but we don't want a stale half-write to expose a DM channel).
+function areFriends(userA, userB){
+  if(!userA || !userB) return false;
+  const aHasB = (userA.friends || []).includes(userB.id);
+  const bHasA = (userB.friends || []).includes(userA.id);
+  return aHasB && bHasA;
+}
+
+// Load the last N messages between two users (oldest first for natural
+// chat-scroll rendering). Falls back to [] when DB is unavailable.
+async function fetchThread(userIdA, userIdB, limit = DM_THREAD_LIMIT){
+  if(!mongoose.connection.readyState) return [];
+  try{
+    const msgs = await DirectMessageModel.find({
+      $or: [
+        { from: userIdA, to: userIdB },
+        { from: userIdB, to: userIdA },
+      ],
+    }).sort({ at: -1 }).limit(limit).lean();
+    msgs.reverse();
+    return msgs;
+  }catch(e){
+    console.error('[DM] fetchThread:', e.message);
+    return [];
+  }
+}
+
+// One row per friend with whom we have any DM history: last message + unread count.
+async function fetchThreadList(userId){
+  if(!mongoose.connection.readyState) return [];
+  try{
+    // All DMs touching this user, newest first, capped — we only need the
+    // tail to compute "last message per partner". 500 is plenty for any
+    // realistic social graph here.
+    const recent = await DirectMessageModel.find({
+      $or: [{ from: userId }, { to: userId }],
+    }).sort({ at: -1 }).limit(500).lean();
+    const byPartner = new Map();
+    for(const m of recent){
+      const partnerId = m.from === userId ? m.to : m.from;
+      if(!byPartner.has(partnerId)){
+        byPartner.set(partnerId, { partnerId, lastText: m.text, lastAt: m.at, lastFromMe: m.from === userId, unread: 0 });
+      }
+      if(m.to === userId && !m.read) byPartner.get(partnerId).unread += 1;
+    }
+    return [...byPartner.values()];
+  }catch(e){
+    console.error('[DM] fetchThreadList:', e.message);
+    return [];
+  }
+}
+
+async function markThreadRead(meId, partnerId){
+  if(!mongoose.connection.readyState) return 0;
+  try{
+    const res = await DirectMessageModel.updateMany(
+      { from: partnerId, to: meId, read: false },
+      { $set: { read: true } }
+    );
+    return res.modifiedCount || 0;
+  }catch(e){
+    console.error('[DM] markThreadRead:', e.message);
+    return 0;
+  }
+}
+
 // ── Ranked abandon penalty (P4-NEW.1b, GDD §5.5) ──────────────────────
 // Applied ONLY when a human abandons a RANKED match (room.roomType === 'RANKED').
 // The base ELO loss from the normal game:over branch still applies; this is
@@ -2489,6 +2579,109 @@ io.on('connection', (socket) => {
       text,
     });
     ack?.({ success: true });
+  });
+
+  // ── Private DMs (GDD §7.5 B) ──
+  // Friends-only 1:1. Server validates relationship, length, and rate.
+  // Persists to Mongo so threads survive restart, then emits dm:incoming
+  // to both ends (recipient AND sender's other tabs) — the sender's own
+  // socket also gets dm:sent_ack via the callback so the open thread can
+  // append immediately without a round-trip render lag.
+  socket.on('dm:send', async ({ toUserId, text } = {}, ack) => {
+    try{
+      if(!socket.userId) return ack?.({ success: false, reason: 'unauth' });
+      const me = usersDB.get(socket.userId);
+      const other = toUserId && usersDB.get(toUserId);
+      if(!me || !other)               return ack?.({ success: false, reason: 'unknown_user' });
+      if(me.id === other.id)          return ack?.({ success: false, reason: 'self_dm' });
+      if(!areFriends(me, other))      return ack?.({ success: false, reason: 'not_friends' });
+      const clean = (typeof text === 'string' ? text : '').trim().slice(0, DM_MAX_LEN);
+      if(!clean)                      return ack?.({ success: false, reason: 'empty' });
+      const now = Date.now();
+      if(socket._lastDM && now - socket._lastDM < DM_RATE_LIMIT_MS){
+        return ack?.({ success: false, reason: 'rate_limit' });
+      }
+      socket._lastDM = now;
+      const doc = { from: me.id, to: other.id, text: clean, at: now, read: false };
+      // Skip persist when DB is offline — broadcast still goes through so the
+      // in-session experience works; without this guard Mongoose buffers and
+      // the ack would never fire.
+      if(mongoose.connection.readyState){
+        try{ await DirectMessageModel.create(doc); }catch(e){ console.error('[DM] persist:', e.message); }
+      }
+      const payload = { ...doc, fromName: me.username, toName: other.username };
+      // Recipient's socket (if online). The sender's tab gets the message via
+      // the ack so it can append without a flicker; offline recipients pick
+      // it up next time they call dm:thread / dm:threads.
+      const recvSock = findSocketByUserId(other.id);
+      if(recvSock) recvSock.emit('dm:incoming', payload);
+      ack?.({ success: true, message: payload });
+    }catch(e){
+      console.error('[DM] send:', e.message);
+      ack?.({ success: false, reason: 'server_error' });
+    }
+  });
+
+  // Open a thread → returns last 50 messages + auto-marks them read.
+  socket.on('dm:thread', async ({ withUserId } = {}, ack) => {
+    try{
+      if(!socket.userId) return ack?.({ success: false, reason: 'unauth' });
+      const me = usersDB.get(socket.userId);
+      const other = withUserId && usersDB.get(withUserId);
+      if(!me || !other)          return ack?.({ success: false, reason: 'unknown_user' });
+      if(!areFriends(me, other)) return ack?.({ success: false, reason: 'not_friends' });
+      const messages = await fetchThread(me.id, other.id, DM_THREAD_LIMIT);
+      const marked = await markThreadRead(me.id, other.id);
+      if(marked > 0){
+        // Tell the sender (other) that the recipient (me) saw the messages
+        // so their read-receipt UI can update without a refetch.
+        const otherSock = findSocketByUserId(other.id);
+        if(otherSock) otherSock.emit('dm:read_by', { byUserId: me.id });
+        socket.emit('dm:thread_marked_read', { withUserId: other.id, count: marked });
+      }
+      ack?.({ success: true, messages, partner: { id: other.id, username: other.username, avatar: other.avatar } });
+    }catch(e){
+      console.error('[DM] thread:', e.message);
+      ack?.({ success: false, reason: 'server_error' });
+    }
+  });
+
+  // List threads (inbox).
+  socket.on('dm:threads', async (_payload, ack) => {
+    try{
+      if(!socket.userId) return ack?.({ success: false, reason: 'unauth' });
+      const threads = await fetchThreadList(socket.userId);
+      // Decorate with usernames + avatars so client can render without
+      // a second round-trip.
+      const decorated = threads.map(t => {
+        const u = usersDB.get(t.partnerId);
+        return {
+          ...t,
+          partnerName: u?.username || 'Unknown',
+          partnerAvatar: u?.avatar || '',
+        };
+      }).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+      ack?.({ success: true, threads: decorated });
+    }catch(e){
+      console.error('[DM] threads:', e.message);
+      ack?.({ success: false, reason: 'server_error' });
+    }
+  });
+
+  // Explicit "mark read" (e.g. user closes the thread without scrolling).
+  socket.on('dm:read', async ({ withUserId } = {}, ack) => {
+    try{
+      if(!socket.userId) return ack?.({ success: false, reason: 'unauth' });
+      const marked = await markThreadRead(socket.userId, withUserId);
+      if(marked > 0){
+        const otherSock = findSocketByUserId(withUserId);
+        if(otherSock) otherSock.emit('dm:read_by', { byUserId: socket.userId });
+      }
+      ack?.({ success: true, count: marked });
+    }catch(e){
+      console.error('[DM] read:', e.message);
+      ack?.({ success: false, reason: 'server_error' });
+    }
   });
 
   // ── Game: Emoji Reaction ──

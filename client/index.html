@@ -744,6 +744,26 @@
   <div class="qc-fab" id="qcFab" title="Quick chat" aria-label="Quick chat">💭</div>
   <div class="qc-panel" id="qcPanel" role="menu" aria-label="Quick chat presets"></div>
 
+  <!-- ═══ PRIVATE DMs (GDD §7.5 B) ═══ Inbox + thread overlay, opened from friends panel or fab. -->
+  <div class="dm-fab" id="dmFab" title="Messages" aria-label="Messages" onclick="DM.openInbox()">
+    ✉️
+    <div class="dm-fab-badge" id="dmFabBadge">0</div>
+  </div>
+  <div class="dm-overlay" id="dmOverlay" role="dialog" aria-modal="true" aria-label="Direct messages">
+    <div class="dm-card">
+      <div class="dm-header">
+        <button class="dm-back" id="dmBack" type="button" title="Back to inbox">←</button>
+        <div class="dm-title" id="dmTitle">Messages</div>
+        <button class="dm-close" id="dmClose" type="button" title="Close">✕</button>
+      </div>
+      <div class="dm-body" id="dmBody"></div>
+      <form class="dm-composer" id="dmForm" autocomplete="off">
+        <input type="text" id="dmInput" class="dm-input" maxlength="240" placeholder="Type a message…">
+        <button type="submit" class="dm-send">Send</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ═══ CHAT PANEL ═══ -->
   <div class="chat-panel" id="chatPanel">
     <div class="chat-header">
@@ -797,6 +817,7 @@
   <script src="ui/modules/26-offers.js"></script>
   <script src="ui/modules/27-music.js"></script>
   <script src="ui/modules/28-quickchat.js"></script>
+  <script src="ui/modules/29-dms.js"></script>
   <script src="ui/app.js"></script>
   </body>
   </html>

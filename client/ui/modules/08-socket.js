@@ -177,6 +177,11 @@
     });
     sk.on('chat:quick_throttled',()=>{ try{ toast('Quick chat throttled — wait 2s','i'); }catch(e){} });
 
+    // GDD §7.5 B — private DM incoming + read-receipt + post-connect badge refresh.
+    sk.on('dm:incoming',(msg)=>{ if(typeof DM !== 'undefined') DM.onIncoming(msg); });
+    sk.on('dm:read_by',(_d)=>{ /* read-receipt; future UI hook */ });
+    if(typeof DM !== 'undefined') setTimeout(()=>DM.refreshUnread(), 600);
+
     // GDD §7.2 — account level-up. Server has already granted the rewards
     // (coins + occasional diamonds); we just sync the new XP/level + toast.
     sk.on('account:levelup',(data)=>{

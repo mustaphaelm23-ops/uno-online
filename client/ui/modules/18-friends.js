@@ -44,6 +44,7 @@
         <div class="friend-row">
           <div class="friend-dot ${f.isOnline?'online':'offline'}"></div>
           <div class="friend-name">${esc(f.username)}<br><span style="font-size:10px;color:var(--muted)">${f.isOnline?'Online':'Offline'}</span></div>
+          <button class="friend-action dm" title="Message" onclick="DM.openThread('${f.id}','${esc(f.username)}','${esc(f.avatar||'')}')">💬</button>
           ${S.roomId && f.isOnline ? `<button class="friend-action invite" onclick="doInviteFriend('${f.id}')">Invite</button>` : ''}
           <button class="friend-action decline" onclick="doRemoveFriend('${f.id}')">✕</button>
         </div>
