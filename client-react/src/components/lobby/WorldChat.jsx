@@ -56,7 +56,10 @@ export default function WorldChat() {
         className="h-32 lg:h-36 overflow-y-auto pr-1 space-y-1 mb-3 text-[12px] leading-snug"
       >
         {messages.length === 0 ? (
-          <div className="text-ink-faint text-xs italic text-center py-6">Say hi to the world…</div>
+          <div className="text-center py-6">
+            <div className="text-2xl mb-1 opacity-50">💬</div>
+            <div className="text-ink-faint text-[11px] italic">Say hi to the world…</div>
+          </div>
         ) : messages.map((m, i) => (
           <div key={m.id || i} className="truncate">
             <span className="font-bold text-accent">{m.name || m.username}:</span>{' '}

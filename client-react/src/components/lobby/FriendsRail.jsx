@@ -91,11 +91,14 @@ export default function FriendsRail({ activeRoomId }) {
       </header>
 
       {loading ? (
-        <div className="text-ink-soft text-sm py-6 text-center">Loading…</div>
+        <div className="text-ink-soft text-sm py-6 text-center animate-pulse">Loading…</div>
       ) : friends.length === 0 ? (
-        <div className="text-ink-soft text-sm py-8 text-center leading-relaxed">
-          No friends yet.<br/>
-          <span className="text-ink-faint text-xs">Add some from the friends panel.</span>
+        <div className="text-center py-6">
+          <div className="text-4xl mb-2 opacity-60">👥</div>
+          <div className="text-ink-soft text-[13px] font-bold">No friends yet</div>
+          <div className="text-ink-faint text-[11px] mt-1 leading-snug px-4">
+            Tap 👥 in the top bar to add some by username.
+          </div>
         </div>
       ) : (
         <ul className="flex flex-col gap-1.5 max-h-[420px] overflow-y-auto pr-1 -mr-1">

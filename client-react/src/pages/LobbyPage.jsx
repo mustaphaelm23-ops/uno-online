@@ -58,6 +58,23 @@ const EmotesModal       = lazy(() => import('../components/lobby/EmotesModal'));
 // with a Join CTA. (Wired via plain socket .on inside the page so the
 // notification flow doesn't need a dedicated context yet.)
 
+// Single-line motion wrapper used to stagger lobby sections on mount.
+// Parent `motion.div` drives the staggerChildren timing via variants;
+// each Reveal just declares the per-child hidden/show transform.
+function Reveal({ children, className = '' }) {
+  return (
+    <motion.div
+      className={className}
+      variants={{
+        hidden: { opacity: 0, y: 10 },
+        show:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function LobbyPage() {
   const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
@@ -175,45 +192,55 @@ export default function LobbyPage() {
       />
 
       <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: {},
+          show:   { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+        }}
         className="flex gap-3 sm:gap-4 lg:gap-5 items-start"
       >
         <Sidebar onAction={onSidebar} />
 
-        {/* Center column */}
+        {/* Center column — each section fades + lifts in sequence so the
+            lobby reveals itself rather than popping fully formed. */}
         <main className="flex-1 min-w-0 flex flex-col gap-4">
-          <WelcomeCard user={user} />
-          <PublicRooms
-            rooms={featured.rooms}
-            hotType={featured.hotType}
-            onJoin={joinFeatured}
-            onWatchLive={() => setLiveOpen(true)}
-          />
-          <ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} />
+          <Reveal><WelcomeCard user={user} /></Reveal>
+          <Reveal>
+            <PublicRooms
+              rooms={featured.rooms}
+              hotType={featured.hotType}
+              onJoin={joinFeatured}
+              onWatchLive={() => setLiveOpen(true)}
+            />
+          </Reveal>
+          <Reveal><ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} /></Reveal>
 
           {/* Mobile-only surface for right-rail cards. On lg+ the right rail
               renders the same components and these duplicates are hidden. */}
-          <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Reveal className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
             <BattlePassCard user={user} onView={() => setBpOpen(true)} />
             <SpecialOfferCard onClaim={() => openShop('offer')} />
-          </div>
+          </Reveal>
 
-          <BottomNav onAction={(id) => {
-            if (id === 'leaderboard')  return openLb('ranked');
-            if (id === 'missions')     return setEventOpen(true);
-            if (id === 'achievements') return setAchOpen(true);
-            if (id === 'collection')   return setCollOpen(true);
-            if (id === 'emotes')       return setEmotesOpen(true);
-            toast.info(`${id} — follow-up commit`);
-          }} />
+          <Reveal>
+            <BottomNav onAction={(id) => {
+              if (id === 'leaderboard')  return openLb('ranked');
+              if (id === 'missions')     return setEventOpen(true);
+              if (id === 'achievements') return setAchOpen(true);
+              if (id === 'collection')   return setCollOpen(true);
+              if (id === 'emotes')       return setEmotesOpen(true);
+              toast.info(`${id} — follow-up commit`);
+            }} />
+          </Reveal>
         </main>
 
         {/* Right rail */}
         <div className="hidden lg:flex flex-col gap-4 w-72 shrink-0">
-          <BattlePassCard user={user} onView={() => setBpOpen(true)} />
-          <FriendsRail activeRoomId={activeRoomId} />
-          <WorldChat />
-          <SpecialOfferCard onClaim={() => openShop('offer')} />
+          <Reveal><BattlePassCard user={user} onView={() => setBpOpen(true)} /></Reveal>
+          <Reveal><FriendsRail activeRoomId={activeRoomId} /></Reveal>
+          <Reveal><WorldChat /></Reveal>
+          <Reveal><SpecialOfferCard onClaim={() => openShop('offer')} /></Reveal>
         </div>
       </motion.div>
 
