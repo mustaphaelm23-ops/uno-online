@@ -47,9 +47,15 @@ export default function WorldChat() {
 
   return (
     <section className="panel-card p-4">
-      <header className="flex items-center gap-2 mb-3">
-        <span>🌐</span>
-        <h3 className="font-display text-base lg:text-lg tracking-wider">WORLD CHAT</h3>
+      <header className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <span>🌐</span>
+          <h3 className="font-display text-base lg:text-lg tracking-wider">WORLD CHAT</h3>
+        </div>
+        <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-emerald font-extrabold">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" />
+          LIVE
+        </span>
       </header>
       <div
         ref={bodyRef}

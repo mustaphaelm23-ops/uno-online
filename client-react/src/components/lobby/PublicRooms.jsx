@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import Avatar from '../ui/Avatar';
 
@@ -29,6 +30,18 @@ function SeatStrip({ seats = [], max = 4 }) {
 }
 
 export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, onRefresh, refreshing }) {
+  // Horizontal scroll container for the cards — on phone the row becomes
+  // a snap-scroll carousel that the chevron buttons advance one card at
+  // a time. On lg+ the grid layout fits all 4 cards so chevrons are
+  // hidden via the responsive classes below.
+  const scrollerRef = useRef(null);
+  const scroll = (dir) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const card = el.querySelector('[data-room-card]');
+    const step = card ? card.getBoundingClientRect().width + 12 /* gap-3 */ : 200;
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
   return (
     <section className="panel-card p-4 sm:p-6">
       <header className="flex items-end justify-between mb-4 sm:mb-5 gap-2 sm:gap-3">
@@ -63,7 +76,25 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
         </div>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Carousel on phone (snap-scroll + chevron nav) — grid on lg+. */}
+      <div className="relative">
+        {/* Left chevron: hidden on lg+ where the grid fits everything. */}
+        <button
+          type="button"
+          onClick={() => scroll(-1)}
+          aria-label="Previous rooms"
+          className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10
+                     w-9 h-9 grid place-items-center rounded-full bg-bg-2/90 border border-line
+                     text-ink hover:border-accent/60 hover:text-accent shadow-card backdrop-blur-sm"
+        >‹</button>
+
+        <div
+          ref={scrollerRef}
+          className="flex lg:grid lg:grid-cols-4 gap-3 sm:gap-4
+                     overflow-x-auto lg:overflow-visible scroll-smooth snap-x snap-mandatory
+                     -mx-1 px-1
+                     [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
         {rooms.map((r, idx) => {
           const t = THEME[r.type] || THEME.CLASSIC;
           const isHot = r.type === hotType;
@@ -71,6 +102,7 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
           return (
             <motion.button
               key={r.type}
+              data-room-card
               type="button"
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.98 }}
@@ -79,7 +111,9 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               className={`relative rounded-2xl p-3 sm:p-5 text-left border border-line bg-gradient-to-br ${t.bg}
-                          hover:ring-1 ${t.ring} ${t.glow} transition-all`}
+                          hover:ring-1 ${t.ring} ${t.glow} transition-all
+                          shrink-0 w-[calc(50%-0.375rem)] sm:w-[calc(50%-0.5rem)] lg:w-auto
+                          snap-start`}
             >
               {isRanked && (
                 <span className="absolute -top-2 right-4 chip bg-gradient-to-br from-violet to-violet-deep text-white">RANKED</span>
@@ -105,6 +139,17 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
             </motion.button>
           );
         })}
+        </div>
+
+        {/* Right chevron */}
+        <button
+          type="button"
+          onClick={() => scroll(1)}
+          aria-label="Next rooms"
+          className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-10
+                     w-9 h-9 grid place-items-center rounded-full bg-bg-2/90 border border-line
+                     text-ink hover:border-accent/60 hover:text-accent shadow-card backdrop-blur-sm"
+        >›</button>
       </div>
     </section>
   );
