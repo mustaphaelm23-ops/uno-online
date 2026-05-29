@@ -6,6 +6,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { gameApi } from '../../api/game';
 import useRoomSocial from '../../hooks/useRoomSocial';
 import useEquippedBack from '../../hooks/useEquippedBack';
+import useVoiceChat from '../../hooks/useVoiceChat';
+import VoiceBar from './VoiceBar';
 import CenterTable from './CenterTable';
 import MyHand from './MyHand';
 import OpponentPanel from './OpponentPanel';
@@ -31,6 +33,7 @@ export default function GameScreen({ state, onLeave }) {
   const [chatOpen, setChatOpen] = useState(false);
   const { messages, bubbles, reactions, echoReaction, echoBubble } = useRoomSocial();
   const back = useEquippedBack();
+  const voice = useVoiceChat();
 
   // Card-fly state — when state.topCard.id changes (someone played), we
   // dispatch a transient FlyingCard animation from the source player's
@@ -187,6 +190,7 @@ export default function GameScreen({ state, onLeave }) {
             bubble={bubbleFor(topOpp.id)}
             reactions={reactionsFor(topOpp.id)}
             back={back}
+            speaking={voice.speakingPeers.has(topOpp.id)}
           />
         </div>
       )}
@@ -200,6 +204,7 @@ export default function GameScreen({ state, onLeave }) {
             bubble={bubbleFor(leftOpp.id)}
             reactions={reactionsFor(leftOpp.id)}
             back={back}
+            speaking={voice.speakingPeers.has(leftOpp.id)}
           />
         </div>
       )}
@@ -213,6 +218,7 @@ export default function GameScreen({ state, onLeave }) {
             bubble={bubbleFor(rightOpp.id)}
             reactions={reactionsFor(rightOpp.id)}
             back={back}
+            speaking={voice.speakingPeers.has(rightOpp.id)}
           />
         </div>
       )}
@@ -281,6 +287,10 @@ export default function GameScreen({ state, onLeave }) {
             onOpenChat={() => setChatOpen(true)}
             onQuickChat={handleQuickChat}
             onReaction={handleReaction}
+          />
+          <VoiceBar
+            voice={voice}
+            onError={(m) => toast.error(m)}
           />
         </div>
       </div>

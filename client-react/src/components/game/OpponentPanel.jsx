@@ -12,7 +12,7 @@ import ReactionFly from './ReactionFly';
 //   • bubble    : { id, text } from quick-chat — single bubble, 2.4 s
 //   • reactions : array of { id, emoji } currently floating up
 
-export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno, bubble, reactions = [], back }) {
+export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno, bubble, reactions = [], back, speaking = false }) {
   if (!player) return null;
   const showWarn = player.handSize === 1 && !player.saidUno;
   const cardsToShow = Math.min(5, Math.max(1, player.handSize || 1));
@@ -23,6 +23,7 @@ export default function OpponentPanel({ player, isCurrent, position = 'top', onC
       animate={{ opacity: 1, scale: 1 }}
       className={`relative panel-card px-3 py-2 flex items-center gap-2.5 min-w-[140px]
                   ${isCurrent ? 'ring-2 ring-accent shadow-glow-gold' : ''}
+                  ${speaking ? 'ring-2 ring-emerald animate-pulse' : ''}
                   ${player.abandoned ? 'opacity-50 grayscale' : ''}`}
     >
       <Avatar src={player.avatar} name={player.username} size="sm" online={player.isConnected !== false} />
