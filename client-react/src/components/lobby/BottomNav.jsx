@@ -1,14 +1,22 @@
-// Bottom action nav from the mockup. Mostly stubs for follow-up commits
-// — each tile calls onAction(id) so the lobby page can route to the right
-// modal/page once those features are ported over.
+// Bottom action nav from the mockup. Each tile has its own icon tint
+// (cyan / violet / gold / rose / amber) so the strip reads as a
+// colorful row of distinct categories rather than five uniform buttons.
 
 const ITEMS = [
-  { id: 'leaderboard', label: 'Leaderboard', icon: '📊' },
-  { id: 'missions',    label: 'Missions',    icon: '🎯', badge: 3 },
-  { id: 'achievements',label: 'Achievements', icon: '🏆' },
-  { id: 'collection',  label: 'Collection',  icon: '🎴' },
-  { id: 'emotes',      label: 'Emotes',      icon: '😎' },
+  { id: 'leaderboard', label: 'Leaderboard', icon: '📊', tint: 'sky'     },
+  { id: 'missions',    label: 'Missions',    icon: '🎯', tint: 'violet', badge: 3 },
+  { id: 'achievements',label: 'Achievements',icon: '🏆', tint: 'accent'  },
+  { id: 'collection',  label: 'Collection',  icon: '🎴', tint: 'rose'    },
+  { id: 'emotes',      label: 'Emotes',      icon: '😎', tint: 'emerald' },
 ];
+
+const TINT = {
+  sky:     'text-sky',
+  violet:  'text-violet-soft',
+  accent:  'text-accent',
+  rose:    'text-rose',
+  emerald: 'text-emerald',
+};
 
 export default function BottomNav({ onAction }) {
   return (
@@ -19,11 +27,13 @@ export default function BottomNav({ onAction }) {
             key={item.id}
             type="button"
             onClick={() => onAction?.(item.id)}
-            className="relative group flex-1 min-w-0 flex flex-col items-center gap-0.5 sm:gap-1 py-1 sm:py-1.5 rounded-xl
+            className="relative group flex-1 min-w-0 flex flex-col items-center gap-1 py-1 sm:py-1.5 rounded-xl
                        hover:bg-bg-3/40 transition"
           >
-            <div className="text-xl sm:text-2xl group-hover:scale-110 transition-transform">{item.icon}</div>
-            <div className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-ink-soft group-hover:text-ink truncate w-full text-center">
+            <div className={`text-xl sm:text-2xl group-hover:scale-110 transition-transform drop-shadow-[0_2px_8px_rgba(0,0,0,.5)] ${TINT[item.tint] || ''}`}>
+              {item.icon}
+            </div>
+            <div className="text-[9px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-ink-soft group-hover:text-ink truncate w-full text-center font-bold">
               {item.label}
             </div>
             {item.badge && (

@@ -2083,7 +2083,25 @@ app.get('/api/friends', authMiddleware, (req, res) => {
     const f = usersDB.get(fid);
     if(!f) return null;
     const isOnline = [...socketToUser.values()].includes(fid);
-    return { id: f.id, username: f.username, coins: f.coins, avatar: f.avatar || null, isOnline };
+    // Surface room presence so the lobby friends rail can show "In Match"
+    // / "In Lobby" status + a JOIN button (vs the bare INVITE-when-host).
+    // Looks up the friend's socket → currentRoomId → room.status. Public
+    // info only (room id + status), so a tampered client can't read
+    // anything they couldn't query via /api/rooms anyway.
+    let status = isOnline ? 'online' : 'offline';
+    let currentRoom = null;
+    if (isOnline) {
+      const friendSock = findSocketByUserId(fid);
+      const rid = friendSock?.currentRoomId;
+      const room = rid ? roomsDB.get(rid) : null;
+      if (room && !room.settings.isPrivate) {
+        currentRoom = { id: room.id, code: room.code, status: room.status };
+        if (room.status === 'playing') status = 'in_match';
+        else if (room.status === 'lobby') status = 'in_lobby';
+      }
+    }
+    return { id: f.id, username: f.username, coins: f.coins, avatar: f.avatar || null,
+             isOnline, status, currentRoom };
   }).filter(Boolean);
   res.json({ friends });
 });
