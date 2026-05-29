@@ -1,0 +1,89 @@
+import { motion } from 'framer-motion';
+import Avatar from '../ui/Avatar';
+
+// PublicRooms — featured 4-room carousel (CLASSIC / FUN / RANKED / CHILL)
+// driven by GET /api/rooms/featured. Each card is themed by accent color
+// matching the mockup; "HOT" / "RANKED" badges come straight from the
+// server payload so client never invents categorization.
+
+const THEME = {
+  CLASSIC: { accent: 'text-emerald', glow: 'shadow-[0_0_42px_rgba(16,185,129,0.25)]', bg: 'from-emerald/15 to-emerald/0',  ring: 'ring-emerald/40' },
+  FUN:     { accent: 'text-orange-400', glow: 'shadow-[0_0_42px_rgba(249,115,22,0.30)]', bg: 'from-orange-500/20 to-orange-500/0', ring: 'ring-orange-500/40' },
+  RANKED:  { accent: 'text-accent',  glow: 'shadow-[0_0_42px_rgba(245,158,11,0.30)]', bg: 'from-accent/20 to-accent/0',   ring: 'ring-accent/40' },
+  CHILL:   { accent: 'text-sky',     glow: 'shadow-[0_0_42px_rgba(14,165,233,0.30)]', bg: 'from-sky/20 to-sky/0',         ring: 'ring-sky/40' },
+};
+
+function SeatStrip({ seats = [], max = 4 }) {
+  const filled = seats.slice(0, max);
+  const empty  = Math.max(0, max - filled.length);
+  return (
+    <div className="flex justify-center -space-x-2">
+      {filled.map((s, i) => (
+        <Avatar key={i} src={s.avatar} name={s.name} size="sm" className="ring-2 ring-bg-2" />
+      ))}
+      {Array.from({ length: empty }).map((_, i) => (
+        <div key={`e${i}`} className="w-9 h-9 rounded-full border-2 border-dashed border-line bg-bg/40 grid place-items-center text-ink-faint text-xs">+</div>
+      ))}
+    </div>
+  );
+}
+
+export default function PublicRooms({ rooms = [], hotType, onJoin }) {
+  return (
+    <section className="panel-card p-5 sm:p-6">
+      <header className="flex items-end justify-between mb-5">
+        <div>
+          <div className="flex items-center gap-2 text-accent">
+            <span className="text-xl">🏆</span>
+            <h2 className="font-display text-2xl tracking-wider">PUBLIC ROOMS</h2>
+          </div>
+          <div className="text-[11px] uppercase tracking-widest text-ink-faint mt-1">
+            {rooms.length} rooms available
+          </div>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {rooms.map((r, idx) => {
+          const t = THEME[r.type] || THEME.CLASSIC;
+          const isHot = r.type === hotType;
+          const isRanked = r.badge === 'RANKED';
+          return (
+            <motion.button
+              key={r.type}
+              type="button"
+              whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onJoin?.(r.type)}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className={`relative rounded-2xl p-5 text-left border border-line bg-gradient-to-br ${t.bg}
+                          hover:ring-1 ${t.ring} ${t.glow} transition-all`}
+            >
+              {isRanked && (
+                <span className="absolute -top-2 right-4 chip bg-gradient-to-br from-violet to-violet-deep text-white">RANKED</span>
+              )}
+              {isHot && !isRanked && (
+                <span className="absolute -top-2 left-4 chip bg-gradient-to-br from-rose to-orange-500 text-white">HOT</span>
+              )}
+              <div className="text-center">
+                <div className={`font-display text-xl tracking-wider ${t.accent}`}>{r.label.replace(/ Room$/i, ' ROOM').toUpperCase()}</div>
+                <div className="text-[11px] uppercase tracking-widest text-ink-faint mt-0.5">
+                  {r.players}/{r.maxPlayers} Players
+                </div>
+              </div>
+              <div className="my-5">
+                <SeatStrip seats={r.seats} max={r.maxPlayers} />
+              </div>
+              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs uppercase tracking-widest text-ink-soft">
+                <span>Entry</span>
+                <span className="flex items-center gap-1 text-accent font-bold">🪙 {r.entryFee}</span>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
