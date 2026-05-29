@@ -20,6 +20,8 @@ import ShopModal from '../components/lobby/ShopModal';
 import BattlePassModal from '../components/lobby/BattlePassModal';
 import FriendsPanel from '../components/lobby/FriendsPanel';
 import SettingsModal from '../components/lobby/SettingsModal';
+import DailyRewardModal from '../components/lobby/DailyRewardModal';
+import JoinByCodeModal from '../components/lobby/JoinByCodeModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -54,6 +56,8 @@ export default function LobbyPage() {
   const [socialTab, setSocialTab]   = useState('friends');
   const openSocial = (t = 'friends') => { setSocialTab(t); setSocialOpen(true); };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dailyOpen, setDailyOpen]       = useState(false);
+  const [joinOpen, setJoinOpen]         = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -135,9 +139,10 @@ export default function LobbyPage() {
       >
         <Sidebar onAction={(id) => {
           if (id === 'play')    return;
-          if (id === 'join')    return toast.info('Join by code — follow-up commit');
+          if (id === 'join')    return setJoinOpen(true);
           if (id === 'quick')   return quickMatch();
           if (id === 'shop')    return openShop('packages');
+          if (id === 'daily')   return setDailyOpen(true);
           return toast.info(`${id} ships in a follow-up commit`);
         }} />
 
@@ -181,6 +186,14 @@ export default function LobbyPage() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+      <DailyRewardModal
+        open={dailyOpen}
+        onClose={() => setDailyOpen(false)}
+      />
+      <JoinByCodeModal
+        open={joinOpen}
+        onClose={() => setJoinOpen(false)}
       />
     </div>
   );
