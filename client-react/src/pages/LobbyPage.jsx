@@ -25,6 +25,7 @@ import JoinByCodeModal from '../components/lobby/JoinByCodeModal';
 import LeaderboardModal from '../components/lobby/LeaderboardModal';
 import EventModal from '../components/lobby/EventModal';
 import AchievementsModal from '../components/lobby/AchievementsModal';
+import NotificationsPanel from '../components/lobby/NotificationsPanel';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -66,6 +67,7 @@ export default function LobbyPage() {
   const openLb = (t = 'ranked') => { setLbTab(t); setLbOpen(true); };
   const [eventOpen, setEventOpen]       = useState(false);
   const [achOpen, setAchOpen]           = useState(false);
+  const [notifOpen, setNotifOpen]       = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -139,6 +141,7 @@ export default function LobbyPage() {
         onLogout={logout}
         onChat={() => openSocial('dms')}
         onFriends={() => openSocial('friends')}
+        onNotifications={() => setNotifOpen(true)}
       />
 
       <motion.div
@@ -221,6 +224,10 @@ export default function LobbyPage() {
       <AchievementsModal
         open={achOpen}
         onClose={() => setAchOpen(false)}
+      />
+      <NotificationsPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
       />
     </div>
   );

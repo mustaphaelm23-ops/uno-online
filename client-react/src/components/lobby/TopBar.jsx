@@ -1,4 +1,5 @@
 import Avatar from '../ui/Avatar';
+import { useNotifications } from '../../contexts/NotificationsContext';
 
 // Top bar across the lobby: coins + diamonds chips, gift / notifications /
 // chat icons, settings, and a user pill on the right. Closer to mockup #2
@@ -22,7 +23,7 @@ function CurrencyChip({ icon, color, value, onAdd }) {
   );
 }
 
-function IconBtn({ icon, label, dot, onClick }) {
+function IconBtn({ icon, label, dot, badge, onClick }) {
   return (
     <button
       type="button"
@@ -32,12 +33,19 @@ function IconBtn({ icon, label, dot, onClick }) {
                  hover:border-violet/40 transition"
     >
       <span className="text-base">{icon}</span>
-      {dot && <span className="absolute top-1 right-1 w-2 h-2 bg-rose rounded-full" />}
+      {dot && !badge && <span className="absolute top-1 right-1 w-2 h-2 bg-rose rounded-full" />}
+      {badge > 0 && (
+        <span className="absolute -top-1 -right-1 bg-rose text-white rounded-full
+                         min-w-[18px] h-[18px] px-1 text-[10px] font-bold grid place-items-center shadow-card">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }
 
-export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onFriends }) {
+export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onFriends, onNotifications }) {
+  const { unread } = useNotifications();
   return (
     <header className="flex items-center gap-3 sm:gap-4">
       <div className="font-display text-4xl text-accent drop-shadow-[0_4px_24px_rgba(245,158,11,0.4)] tracking-wider select-none">
@@ -52,7 +60,7 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onF
       </div>
 
       <div className="flex items-center gap-2">
-        <IconBtn icon="🔔" label="Notifications" dot onClick={() => {}} />
+        <IconBtn icon="🔔" label="Notifications" badge={unread} onClick={onNotifications} />
         <IconBtn icon="👥" label="Friends" onClick={onFriends} />
         <IconBtn icon="💬" label="Messages" onClick={onChat} />
         <IconBtn icon="⚙️" label="Settings" onClick={onSettings} />
