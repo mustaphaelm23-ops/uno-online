@@ -19,6 +19,7 @@ import CreateRoomModal from '../components/lobby/CreateRoomModal';
 import ShopModal from '../components/lobby/ShopModal';
 import BattlePassModal from '../components/lobby/BattlePassModal';
 import FriendsPanel from '../components/lobby/FriendsPanel';
+import SettingsModal from '../components/lobby/SettingsModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -52,6 +53,7 @@ export default function LobbyPage() {
   const [socialOpen, setSocialOpen] = useState(false);
   const [socialTab, setSocialTab]   = useState('friends');
   const openSocial = (t = 'friends') => { setSocialTab(t); setSocialOpen(true); };
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -121,7 +123,7 @@ export default function LobbyPage() {
       <TopBar
         user={user}
         onShop={() => openShop('packages')}
-        onSettings={() => toast.info('Settings ships in a follow-up commit')}
+        onSettings={() => setSettingsOpen(true)}
         onLogout={logout}
         onChat={() => openSocial('dms')}
         onFriends={() => openSocial('friends')}
@@ -175,6 +177,10 @@ export default function LobbyPage() {
         onClose={() => setSocialOpen(false)}
         initialTab={socialTab}
         activeRoomId={activeRoomId}
+      />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );
