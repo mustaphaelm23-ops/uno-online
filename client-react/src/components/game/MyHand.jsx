@@ -13,10 +13,17 @@ export default function MyHand({ hand = [], playable = [], myTurn, onPlayCard })
 
   // Tighter overlap and a scale-down on small screens so a 7+ card hand
   // still fits across a narrow phone viewport without truncating.
+  const playableCount = hand.filter((c) => playableSet.has(c.id)).length;
   return (
     <div className="w-full flex flex-col items-center pointer-events-none">
-      <div className="text-[10px] uppercase tracking-[0.3em] text-ink-faint mb-1 sm:mb-1.5 pointer-events-auto">
-        Your hand · {hand.length}
+      <div className="text-[10px] uppercase tracking-[0.3em] text-ink-faint mb-1 sm:mb-1.5 pointer-events-auto flex items-center gap-2">
+        <span>Your hand · <span className="text-ink tabular-nums">{hand.length}</span></span>
+        {myTurn && playableCount > 0 && (
+          <span className="inline-flex items-center gap-1 text-emerald font-extrabold normal-case tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" />
+            {playableCount} PLAYABLE
+          </span>
+        )}
       </div>
       <div className="relative h-24 sm:h-36 w-full max-w-3xl pointer-events-auto
                       scale-[0.82] sm:scale-100 origin-bottom">

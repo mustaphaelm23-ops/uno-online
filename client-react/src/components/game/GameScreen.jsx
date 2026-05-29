@@ -253,7 +253,7 @@ export default function GameScreen({ state, onLeave }) {
               <div className="chip bg-bg-2/80 border border-line">
                 <span className="text-accent">●</span>
                 {me.username}
-                {myTurn && <span className="text-accent font-bold ml-1">— Your turn</span>}
+                {myTurn && <span className="text-accent font-extrabold tracking-wider ml-1 uppercase">· Your Turn</span>}
               </div>
               {/* My own bubble + reactions float above the chip */}
               <div className="absolute left-1/2 -translate-x-1/2 -top-10">

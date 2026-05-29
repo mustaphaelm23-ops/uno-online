@@ -116,21 +116,38 @@ export default function RoomPage() {
   const isHost   = room.hostId === user?.id || seats[0]?.id === user?.id;
   const canStart = isHost && seats.length >= (room.settings?.minPlayers || 2);
 
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(`Code ${code} copied`);
+    } catch {
+      toast.info('Press and hold the code to copy');
+    }
+  };
+
   return (
     <div className="min-h-full max-w-[1480px] mx-auto px-2 sm:px-6 py-3 sm:py-5 flex flex-col gap-3 sm:gap-4">
       <header className="panel-card p-3 sm:p-5 flex items-center gap-2 sm:gap-4">
         <button
           type="button"
           onClick={leave}
-          className="btn-ghost px-2 sm:px-3 py-1.5 text-xs sm:text-sm shrink-0"
-        >← Lobby</button>
-        <div className="min-w-0 flex-1">
-          <div className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Room code</div>
+          className="btn-ghost px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs tracking-wider shrink-0"
+        >← LOBBY</button>
+        <button
+          type="button"
+          onClick={copyCode}
+          title="Copy room code"
+          className="min-w-0 flex-1 text-left rounded-lg hover:bg-bg-3/30 transition px-1 py-0.5 -mx-1 -my-0.5 group"
+        >
+          <div className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint flex items-center gap-1.5">
+            Room code
+            <span className="opacity-0 group-hover:opacity-100 transition text-ink-soft normal-case tracking-normal">tap to copy</span>
+          </div>
           <div className="font-display text-xl sm:text-3xl tracking-[0.25em] sm:tracking-[0.4em] text-accent truncate">{code}</div>
-        </div>
+        </button>
         <div className="text-right shrink-0">
           <div className="text-[9px] sm:text-[11px] uppercase tracking-widest text-ink-faint">Entry</div>
-          <div className="font-bold text-accent text-sm sm:text-base">🪙 {room.settings?.bet ?? 0}</div>
+          <div className="font-bold text-accent text-sm sm:text-base tabular-nums">🪙 {room.settings?.bet ?? 0}</div>
         </div>
       </header>
 

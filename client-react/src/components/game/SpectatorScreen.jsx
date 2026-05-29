@@ -157,7 +157,7 @@ export default function SpectatorScreen({ state, onLeave }) {
           <div className="chip bg-bg-2/80 border border-line flex items-center gap-2">
             <span className="text-accent">●</span>
             {current?.username || '—'}
-            <span className="text-accent font-bold">— On the clock</span>
+            <span className="text-accent font-extrabold tracking-wider uppercase">· On The Clock</span>
             {current?.saidUno && <span className="chip bg-accent text-bg shadow-glow-gold">UNO</span>}
           </div>
         </div>

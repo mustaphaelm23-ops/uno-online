@@ -27,30 +27,39 @@ export function ToastProvider({ children }) {
     error:   (t) => push(t, 'e'),
   };
 
-  const palette = {
-    i: 'from-violet to-violet-deep',
-    s: 'from-emerald to-emerald',
-    e: 'from-rose to-rose',
+  // Kind drives the colour ramp + the leading icon. Keeping the variants
+  // tight on purpose — three semantic states only.
+  const KIND = {
+    i: { palette: 'from-violet to-violet-deep',  icon: 'ℹ',  ring: 'ring-violet-soft/40'  },
+    s: { palette: 'from-emerald to-emerald',     icon: '✓', ring: 'ring-emerald/40'      },
+    e: { palette: 'from-rose to-rose',           icon: '✕', ring: 'ring-rose/40'         },
   };
 
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none">
+      {/* Top-right on desktop; top-center on phone so it isn't clipped
+          under the hamburger button or hand of cards. */}
+      <div className="fixed top-3 sm:top-4 inset-x-3 sm:inset-x-auto sm:right-4 z-[200] flex flex-col gap-2 pointer-events-none items-center sm:items-end">
         <AnimatePresence>
-          {items.map((t) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, x: 40, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 40, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className={`pointer-events-auto px-4 py-3 rounded-xl text-sm font-semibold text-white
-                          bg-gradient-to-br ${palette[t.kind]} shadow-card max-w-xs`}
-            >
-              {t.text}
-            </motion.div>
-          ))}
+          {items.map((t) => {
+            const k = KIND[t.kind] || KIND.i;
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: -12, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0,   scale: 1    }}
+                exit={{    opacity: 0, y: -8,  scale: 0.95 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className={`pointer-events-auto flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold text-white
+                            bg-gradient-to-br ${k.palette} shadow-card-lg ring-1 ${k.ring}
+                            max-w-xs sm:max-w-sm`}
+              >
+                <span className="text-base shrink-0 leading-none">{k.icon}</span>
+                <span className="leading-snug">{t.text}</span>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
     </ToastCtx.Provider>
