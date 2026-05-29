@@ -1,12 +1,18 @@
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Avatar from '../ui/Avatar';
 import Card from './Card';
+import SpeechBubble from './SpeechBubble';
+import ReactionFly from './ReactionFly';
 
 // Opponent panel: avatar + name + stack of card-backs proportional to
 // handSize (capped at 5 stacked icons for legibility). Glows when it's
 // their turn. Shows ⚠ when hand size = 1 and they HAVEN'T called UNO.
+//
+// Social overlays:
+//   • bubble    : { id, text } from quick-chat — single bubble, 2.4 s
+//   • reactions : array of { id, emoji } currently floating up
 
-export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno }) {
+export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno, bubble, reactions = [] }) {
   if (!player) return null;
   const showWarn = player.handSize === 1 && !player.saidUno;
   const cardsToShow = Math.min(5, Math.max(1, player.handSize || 1));
@@ -46,6 +52,15 @@ export default function OpponentPanel({ player, isCurrent, position = 'top', onC
       {player.saidUno && (
         <span className="absolute -top-2 -right-2 chip bg-accent text-bg shadow-glow-gold">UNO</span>
       )}
+
+      <AnimatePresence>
+        {bubble && <SpeechBubble key={bubble.id} text={bubble.text} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {reactions.map((r, i) => (
+          <ReactionFly key={r.id} emoji={r.emoji} seed={i + 1} />
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 }

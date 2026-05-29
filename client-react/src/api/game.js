@@ -21,6 +21,12 @@ export const gameApi = {
   callUno:   ()                            => emit('game:call_uno'),
   catchUno:  (targetId)                    => emit('game:catch_uno', { targetId }),
   reaction:  (emoji)                       => { const sk = getSocket(); sk?.emit('game:reaction', { emoji }); },
+  // Room chat: send free-form 200-char message. Server broadcasts to room
+  // as 'chat:message' with { id, userId, username, text, createdAt }.
+  chatSend:  (text)                        => emit('chat:send', { text }),
+  // Quick-chat: ID into server's preset table (1–12). Server validates and
+  // broadcasts 'chat:quick' with { playerId, username, id, text }.
+  quickChat: (id)                          => emit('chat:quick', { id }),
   leaveRoom: ()                            => emit('room:leave'),
   joinRoom:  (roomId, password)            => emit('room:join', { roomId, password }),
 };
