@@ -49,7 +49,7 @@ function TierCard({ tier, idx, level, claimed, premium, onClaim }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.015 }}
-      className={`shrink-0 w-32 rounded-xl border p-2.5 flex flex-col gap-2
+      className={`shrink-0 w-28 sm:w-32 rounded-xl border p-2 sm:p-2.5 flex flex-col gap-1.5 sm:gap-2
                   ${isCurrent ? 'border-accent shadow-glow-gold' :
                     isReached ? 'border-violet/40 bg-bg-3/40' :
                                 'border-line bg-bg-2/40 opacity-80'}`}

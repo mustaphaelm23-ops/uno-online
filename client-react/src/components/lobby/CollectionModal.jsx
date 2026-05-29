@@ -83,17 +83,17 @@ function BackTile({ item, busy, onAction, idx }) {
         type="button"
         onClick={() => onAction(item)}
         disabled={busy || (isEquipped) || (isGated && !isOwned && !item.progress.met)}
-        className={`mt-3 w-full py-1.5 rounded-lg text-xs font-bold transition
+        className={`mt-3 w-full py-1.5 rounded-lg text-[11px] font-extrabold tracking-wider transition
           ${isEquipped         ? 'bg-emerald/15 text-emerald cursor-default' :
             isOwned            ? 'bg-violet text-white hover:brightness-110' :
             isPaid             ? 'bg-accent text-bg hover:brightness-110' :
             isGated && item.progress.met ? 'bg-emerald text-bg hover:brightness-110' :
                                  'bg-bg-2 text-ink-faint cursor-not-allowed'}`}
       >
-        {isEquipped ? '✓ Equipped' :
-         isOwned    ? 'Equip' :
-         isPaid     ? `Buy — 🪙 ${fmt(item.cost)}` :
-         item.progress.met ? 'Unlock' :
+        {isEquipped ? '✓ EQUIPPED' :
+         isOwned    ? 'EQUIP' :
+         isPaid     ? `BUY — 🪙 ${fmt(item.cost)}` :
+         item.progress.met ? 'UNLOCK' :
                              `${pct}%`}
       </button>
     </motion.div>

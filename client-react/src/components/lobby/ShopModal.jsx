@@ -56,8 +56,8 @@ function PackageCard({ pkg, busy, onBuy }) {
         type="button"
         onClick={() => onBuy(pkg)}
         disabled={busy}
-        className="btn-primary w-full disabled:opacity-50"
-      >{busy ? '…' : usd(pkg.usd_cents)}</button>
+        className="btn-primary w-full disabled:opacity-50 text-[12px] tracking-wider"
+      >{busy ? '…' : `BUY — ${usd(pkg.usd_cents)}`}</button>
     </motion.div>
   );
 }

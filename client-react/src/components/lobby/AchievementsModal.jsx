@@ -64,12 +64,12 @@ function AchievementCard({ a, busy, onClaim, idx }) {
         type="button"
         onClick={() => onClaim(a.id)}
         disabled={!claimable || busy}
-        className={`mt-3 w-full py-1.5 rounded-lg text-xs font-bold transition
+        className={`mt-3 w-full py-1.5 rounded-lg text-[11px] font-extrabold tracking-wider transition
           ${earned ? 'bg-emerald/15 text-emerald cursor-default' :
             claimable ? 'bg-accent text-bg hover:brightness-110' :
             'bg-bg-2 text-ink-faint cursor-not-allowed'}`}
       >
-        {earned ? '✓ Claimed' : claimable ? 'Claim Reward' : `${pct}%`}
+        {earned ? '✓ CLAIMED' : claimable ? 'CLAIM REWARD' : `${pct}%`}
       </button>
     </motion.div>
   );

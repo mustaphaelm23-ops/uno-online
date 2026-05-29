@@ -74,15 +74,15 @@ function EmoteTile({ item, busy, onUnlock, idx }) {
         type="button"
         onClick={() => onUnlock(item)}
         disabled={busy || isOwned || !canUnlock}
-        className={`mt-3 w-full py-1.5 rounded-lg text-xs font-bold transition
+        className={`mt-3 w-full py-1.5 rounded-lg text-[11px] font-extrabold tracking-wider transition
           ${isOwned ? 'bg-emerald/15 text-emerald cursor-default' :
             isPaid  ? 'bg-accent text-bg hover:brightness-110' :
             canUnlock ? 'bg-emerald text-bg hover:brightness-110' :
                         'bg-bg-2 text-ink-faint cursor-not-allowed'}`}
       >
-        {isOwned ? '✓ Owned' :
-         isPaid  ? `Buy — 🪙 ${fmt(item.cost)}` :
-         canUnlock ? 'Unlock' :
+        {isOwned ? '✓ OWNED' :
+         isPaid  ? `BUY — 🪙 ${fmt(item.cost)}` :
+         canUnlock ? 'UNLOCK' :
                      `${pct}%`}
       </button>
     </motion.div>

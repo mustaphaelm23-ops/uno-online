@@ -19,14 +19,20 @@ function MissionRow({ m, busy, onClaim }) {
     <motion.li
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-bg-3/40 border border-line"
+      className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl border transition
+        ${m.claimed ? 'bg-emerald/10 border-emerald/30' :
+          claimable ? 'bg-accent/10 border-accent/40 shadow-glow-gold' :
+                      'bg-bg-3/40 border-line'}`}
     >
-      <div className="w-10 h-10 grid place-items-center rounded-lg bg-bg-2 border border-line text-xl">
+      <div className={`w-10 h-10 grid place-items-center rounded-lg text-xl shrink-0 border
+        ${m.claimed ? 'bg-emerald/15 border-emerald/30' :
+          claimable ? 'bg-accent/15 border-accent/40' :
+                      'bg-bg-2 border-line'}`}>
         {m.icon || '🎯'}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold truncate">{m.name}</div>
-        <div className="text-[11px] text-ink-soft truncate">{m.desc}</div>
+      <div className="flex-1 min-w-0 leading-tight">
+        <div className="text-[13px] sm:text-sm font-bold truncate">{m.name}</div>
+        <div className="text-[10px] sm:text-[11px] text-ink-soft truncate mt-0.5">{m.desc}</div>
         <div className="mt-1.5 flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-bg-3 overflow-hidden">
             <div
@@ -34,24 +40,24 @@ function MissionRow({ m, busy, onClaim }) {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-[10px] tabular-nums text-ink-faint">
+          <span className="text-[10px] tabular-nums text-ink-faint shrink-0">
             {fmt(m.current)}/{fmt(m.target)}
           </span>
         </div>
       </div>
-      <div className="text-right shrink-0">
-        <div className="text-[10px] uppercase tracking-widest text-ink-faint">Reward</div>
-        <div className="text-sm font-extrabold text-accent">🪙 {fmt(m.reward)}</div>
+      <div className="text-right shrink-0 leading-tight">
+        <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-ink-faint">Reward</div>
+        <div className="text-[13px] sm:text-sm font-extrabold text-accent tabular-nums">🪙 {fmt(m.reward)}</div>
         <button
           type="button"
           onClick={() => onClaim(m.id)}
           disabled={!claimable || busy}
-          className={`mt-1 text-[11px] px-2 py-1 rounded-md font-bold
+          className={`mt-1 text-[10px] tracking-wider font-extrabold px-2 py-1 rounded-md transition
             ${m.claimed ? 'bg-emerald/15 text-emerald cursor-default' :
               claimable ? 'bg-accent text-bg hover:brightness-110' :
               'bg-bg-2 text-ink-faint cursor-not-allowed'}`}
         >
-          {m.claimed ? '✓ Claimed' : claimable ? 'Claim' : 'Locked'}
+          {m.claimed ? '✓ CLAIMED' : claimable ? 'CLAIM' : 'LOCKED'}
         </button>
       </div>
     </motion.li>
