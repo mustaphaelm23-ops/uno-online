@@ -311,7 +311,7 @@ export default function FriendsPanel({ open, onClose, initialTab = 'friends', ac
           animate={{ x: 0,   opacity: 1 }}
           exit={{    x: 360, opacity: 0 }}
           transition={{ duration: 0.24, ease: 'easeOut' }}
-          className="fixed top-0 right-0 bottom-0 z-50 w-[340px] panel-card rounded-none border-0 border-l border-line flex flex-col"
+          className="fixed top-0 right-0 bottom-0 z-50 w-[min(340px,100vw)] panel-card rounded-none border-0 border-l border-line flex flex-col"
         >
           <header className="flex items-center justify-between p-3 border-b border-line">
             <h3 className="font-display text-lg tracking-wider">Social</h3>
