@@ -44,13 +44,13 @@ export default function AuthPage() {
           <div className="text-ink-soft text-[10px] sm:text-xs uppercase tracking-[0.3em]">Online Arena</div>
         </div>
 
-        <div className="flex gap-1 mb-6 p-1 bg-bg/60 rounded-xl border border-line">
+        <div className="flex gap-1 mb-5 sm:mb-6 p-1 bg-bg/60 rounded-xl border border-line">
           {['login', 'register'].map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setTab(k)}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition
+              className={`flex-1 py-2 rounded-lg text-[12px] font-extrabold tracking-wider uppercase transition
                           ${tab === k ? 'bg-violet text-white shadow-glow' : 'text-ink-soft hover:text-ink'}`}
             >
               {k === 'login' ? 'Sign In' : 'Register'}
@@ -87,8 +87,12 @@ export default function AuthPage() {
             required
             minLength={6}
           />
-          <button type="submit" disabled={busy} className="btn-primary mt-2 disabled:opacity-60">
-            {busy ? '…' : tab === 'login' ? 'Sign In' : 'Create Account'}
+          <button
+            type="submit"
+            disabled={busy}
+            className="btn-primary mt-2 text-[12px] tracking-wider disabled:opacity-60"
+          >
+            {busy ? '…' : tab === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
           </button>
           {tab === 'login' && (
             <button

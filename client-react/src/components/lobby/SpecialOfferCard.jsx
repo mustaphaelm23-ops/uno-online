@@ -37,7 +37,7 @@ export default function SpecialOfferCard({ offer, onClaim }) {
           {String(h).padStart(2, '0')}h {String(m).padStart(2, '0')}m {String(s).padStart(2, '0')}s
         </div>
       </div>
-      <button type="button" className="btn-primary text-xs px-4" onClick={onClaim}>
+      <button type="button" className="btn-primary text-[11px] tracking-wider px-4" onClick={onClaim}>
         VIEW OFFER
       </button>
     </div>

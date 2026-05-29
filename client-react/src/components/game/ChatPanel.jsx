@@ -75,9 +75,12 @@ export default function ChatPanel({ open, onClose, messages = [], myId, onSend, 
               onChange={(e) => setText(e.target.value)}
               autoFocus
             />
-            <button type="submit" disabled={busy || !text.trim()} className="btn-violet py-2 px-3 text-sm disabled:opacity-50">
-              Send
-            </button>
+            <button
+              type="submit"
+              disabled={busy || !text.trim()}
+              aria-label="Send"
+              className="btn-violet py-2 px-3 text-[11px] tracking-wider disabled:opacity-50"
+            >SEND</button>
           </form>
         </motion.aside>
       )}

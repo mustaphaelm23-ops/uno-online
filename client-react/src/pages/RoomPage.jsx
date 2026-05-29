@@ -176,15 +176,15 @@ export default function RoomPage() {
               type="button"
               onClick={startMatch}
               disabled={!canStart || busy}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              className="btn-primary text-[12px] tracking-wider disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
-              {isHost ? (canStart ? 'Start Match' : 'Waiting for players…') : 'Waiting for host…'}
+              {isHost ? (canStart ? 'START MATCH' : 'WAITING FOR PLAYERS…') : 'WAITING FOR HOST…'}
             </button>
             <button
               type="button"
-              className="btn-ghost w-full sm:w-auto"
+              className="btn-ghost text-[12px] tracking-wider w-full sm:w-auto"
               onClick={leave}
-            >Leave</button>
+            >LEAVE</button>
           </div>
         </main>
 

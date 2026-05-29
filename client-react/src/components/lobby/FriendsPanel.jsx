@@ -118,7 +118,7 @@ function FriendsTab({ friends, loading, onMessage, refresh, activeRoomId }) {
           onChange={(e) => setAdding(e.target.value)}
         />
         <button type="submit" disabled={busy || !adding.trim()}
-                className="btn-violet py-2 px-3 text-sm disabled:opacity-50">Add</button>
+                className="btn-violet py-2 px-3 text-[11px] tracking-wider disabled:opacity-50">ADD</button>
       </form>
       <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
         {loading ? (
@@ -275,7 +275,7 @@ function ThreadView({ thread, myId, onSend, onBack }) {
         <input className="input py-2 text-sm" maxLength={240} placeholder="Message…"
                value={text} onChange={(e) => setText(e.target.value)} autoFocus />
         <button type="submit" disabled={busy || !text.trim()}
-                className="btn-violet py-2 px-3 text-sm disabled:opacity-50">Send</button>
+                className="btn-violet py-2 px-3 text-[11px] tracking-wider disabled:opacity-50">SEND</button>
       </form>
     </div>
   );
@@ -327,7 +327,7 @@ export default function FriendsPanel({ open, onClose, initialTab = 'friends', ac
                   key={t.id}
                   type="button"
                   onClick={() => { setTab(t.id); if (t.id !== 'dms') dms.closeThread(); }}
-                  className={`relative flex-1 py-1.5 rounded-lg text-xs font-bold transition
+                  className={`relative flex-1 py-1.5 rounded-lg text-[11px] font-extrabold tracking-wider uppercase transition
                     ${tab === t.id ? 'bg-violet text-white shadow-glow' : 'text-ink-soft hover:text-ink'}`}
                 >
                   {t.icon} {t.label}

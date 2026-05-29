@@ -153,8 +153,8 @@ function OfferTab({ refreshUser }) {
         type="button"
         onClick={claim}
         disabled={offer.alreadyClaimed || busy}
-        className="btn-primary w-full disabled:opacity-50"
-      >{offer.alreadyClaimed ? 'Already Claimed' : busy ? 'Claiming…' : 'Claim Offer'}</button>
+        className="btn-primary w-full text-[12px] tracking-wider disabled:opacity-50"
+      >{offer.alreadyClaimed ? '✓ ALREADY CLAIMED' : busy ? 'CLAIMING…' : 'CLAIM OFFER'}</button>
     </div>
   );
 }
@@ -209,9 +209,13 @@ function ConvertTab({ user, refreshUser }) {
           <span>{Math.max(1, have)} 💎</span>
         </div>
       </div>
-      <button type="button" onClick={convert} disabled={!canConvert || busy}
-              className="btn-primary w-full disabled:opacity-50">
-        {busy ? '…' : `Convert ${amount} 💎 → ${fmt(coinsGained)} 🪙`}
+      <button
+        type="button"
+        onClick={convert}
+        disabled={!canConvert || busy}
+        className="btn-primary w-full text-[12px] tracking-wider disabled:opacity-50"
+      >
+        {busy ? '…' : `CONVERT ${amount} 💎 → ${fmt(coinsGained)} 🪙`}
       </button>
       <p className="text-xs text-ink-faint text-center">Conversion is irreversible.</p>
     </div>
@@ -239,7 +243,7 @@ export default function ShopModal({ open, onClose, initialTab = 'packages' }) {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition
+              className={`px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold tracking-wider uppercase transition
                 ${tab === t.id ? 'bg-violet text-white shadow-glow'
                               : 'text-ink-soft hover:text-ink'}`}
             >{t.icon} {t.label}</button>

@@ -67,8 +67,12 @@ export default function ResetPasswordModal({ open, onClose }) {
           required
           minLength={6}
         />
-        <button type="submit" disabled={busy} className="btn-primary mt-2 disabled:opacity-60">
-          {busy ? '…' : 'Reset Password'}
+        <button
+          type="submit"
+          disabled={busy}
+          className="btn-primary mt-2 text-[12px] tracking-wider disabled:opacity-60"
+        >
+          {busy ? '…' : 'RESET PASSWORD'}
         </button>
       </form>
     </Modal>

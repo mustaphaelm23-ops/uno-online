@@ -40,8 +40,11 @@ function LiveCard({ g, idx, onWatch }) {
           {g.players}/{g.maxPlayers} · 👁 {g.spectators}
         </div>
       </div>
-      <button type="button" onClick={() => onWatch(g.id)}
-              className="btn-violet w-full text-xs">📺 Watch</button>
+      <button
+        type="button"
+        onClick={() => onWatch(g.id)}
+        className="btn-violet w-full text-[11px] tracking-wider"
+      >📺 WATCH</button>
     </motion.div>
   );
 }

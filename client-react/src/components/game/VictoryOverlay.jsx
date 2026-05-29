@@ -107,8 +107,8 @@ export default function VictoryOverlay({ data, myId, onPlayAgain, onLobby }) {
           </div>
 
           <div className="flex flex-wrap justify-center gap-3 mt-8">
-            <button type="button" onClick={onPlayAgain} className="btn-violet px-6">Play Again</button>
-            <button type="button" onClick={onLobby} className="btn-primary px-6">Back to Lobby</button>
+            <button type="button" onClick={onPlayAgain} className="btn-violet px-6 text-[12px] tracking-wider">PLAY AGAIN</button>
+            <button type="button" onClick={onLobby} className="btn-primary px-6 text-[12px] tracking-wider">BACK TO LOBBY</button>
           </div>
 
           {data.winnerAbandoned && (

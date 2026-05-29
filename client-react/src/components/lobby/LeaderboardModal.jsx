@@ -137,7 +137,7 @@ export default function LeaderboardModal({ open, onClose, initialTab = 'ranked' 
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition
+              className={`px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold tracking-wider uppercase transition
                 ${tab === t.id ? 'bg-violet text-white shadow-glow' : 'text-ink-soft hover:text-ink'}`}
             >{t.icon} {t.label}</button>
           ))}

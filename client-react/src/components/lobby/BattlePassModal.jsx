@@ -197,20 +197,26 @@ export default function BattlePassModal({ open, onClose }) {
             <div className="flex flex-col gap-2 w-full sm:w-auto">
               {!data.premium && (
                 <>
-                  <button type="button" onClick={unlockCoins} disabled={busy}
-                          className="btn-primary text-xs px-4 disabled:opacity-50">
-                    Unlock 🪙 {fmt(data.premiumPrice)}
-                  </button>
-                  <button type="button" onClick={unlockDiamonds} disabled={busy}
-                          className="btn-violet text-xs px-4 disabled:opacity-50">
-                    Unlock 💎 200
-                  </button>
+                  <button
+                    type="button"
+                    onClick={unlockCoins}
+                    disabled={busy}
+                    className="btn-primary text-[11px] tracking-wider px-4 disabled:opacity-50"
+                  >UNLOCK · 🪙 {fmt(data.premiumPrice)}</button>
+                  <button
+                    type="button"
+                    onClick={unlockDiamonds}
+                    disabled={busy}
+                    className="btn-violet text-[11px] tracking-wider px-4 disabled:opacity-50"
+                  >UNLOCK · 💎 200</button>
                 </>
               )}
-              <button type="button" onClick={skip} disabled={busy}
-                      className="btn-ghost text-xs px-4 disabled:opacity-50">
-                Skip 10 tiers — 💎 50
-              </button>
+              <button
+                type="button"
+                onClick={skip}
+                disabled={busy}
+                className="btn-ghost text-[11px] tracking-wider px-4 disabled:opacity-50"
+              >SKIP 10 TIERS · 💎 50</button>
             </div>
           </div>
 

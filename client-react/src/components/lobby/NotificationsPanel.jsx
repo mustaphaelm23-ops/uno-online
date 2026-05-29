@@ -54,10 +54,11 @@ export default function NotificationsPanel({ open, onClose }) {
             <h3 className="font-display text-lg tracking-wider">🔔 Notifications</h3>
             <div className="flex items-center gap-1">
               {items.length > 0 && (
-                <button type="button" onClick={clear}
-                        className="text-[10px] uppercase tracking-widest text-ink-faint hover:text-ink px-2 py-1">
-                  Clear
-                </button>
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="text-[10px] font-extrabold uppercase tracking-wider text-ink-faint hover:text-ink px-2 py-1"
+                >CLEAR</button>
               )}
               <button type="button" onClick={onClose} aria-label="Close"
                       className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose">✕</button>
