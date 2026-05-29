@@ -117,47 +117,53 @@ export default function RoomPage() {
   const canStart = isHost && seats.length >= (room.settings?.minPlayers || 2);
 
   return (
-    <div className="min-h-full max-w-[1480px] mx-auto px-3 sm:px-6 py-5 flex flex-col gap-4">
-      <header className="panel-card p-4 sm:p-5 flex items-center gap-4">
-        <button type="button" className="btn-ghost" onClick={leave}>← Lobby</button>
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.3em] text-ink-faint">Room code</div>
-          <div className="font-display text-3xl tracking-[0.4em] text-accent">{code}</div>
+    <div className="min-h-full max-w-[1480px] mx-auto px-2 sm:px-6 py-3 sm:py-5 flex flex-col gap-3 sm:gap-4">
+      <header className="panel-card p-3 sm:p-5 flex items-center gap-2 sm:gap-4">
+        <button
+          type="button"
+          onClick={leave}
+          className="btn-ghost px-2 sm:px-3 py-1.5 text-xs sm:text-sm shrink-0"
+        >← Lobby</button>
+        <div className="min-w-0 flex-1">
+          <div className="text-[9px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Room code</div>
+          <div className="font-display text-xl sm:text-3xl tracking-[0.25em] sm:tracking-[0.4em] text-accent truncate">{code}</div>
         </div>
-        <div className="flex-1" />
-        <div className="text-right">
-          <div className="text-[11px] uppercase tracking-widest text-ink-faint">Entry fee</div>
-          <div className="font-bold text-accent">🪙 {room.settings?.bet ?? 0}</div>
+        <div className="text-right shrink-0">
+          <div className="text-[9px] sm:text-[11px] uppercase tracking-widest text-ink-faint">Entry</div>
+          <div className="font-bold text-accent text-sm sm:text-base">🪙 {room.settings?.bet ?? 0}</div>
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        <main className="flex-1 panel-card p-6">
-          <h2 className="font-display text-xl tracking-wider text-ink mb-4">
-            Players ({seats.length}/{room.settings?.maxPlayers ?? 4})
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start">
+        <main className="w-full lg:flex-1 panel-card p-3 sm:p-6">
+          <h2 className="font-display text-base sm:text-xl tracking-wider text-ink mb-3 sm:mb-4 flex items-center justify-between gap-3">
+            <span>Players</span>
+            <span className="text-accent tabular-nums text-sm sm:text-base">
+              {seats.length}/{room.settings?.maxPlayers ?? 4}
+            </span>
           </h2>
-          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {Array.from({ length: room.settings?.maxPlayers ?? 4 }).map((_, i) => {
               const p = seats[i];
               return (
                 <motion.li
                   key={i}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                  className={`p-3 rounded-xl border flex flex-col items-center gap-2
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2
                     ${p ? 'bg-bg-3/60 border-violet/40' : 'bg-bg-2/40 border-dashed border-line'}`}
                 >
                   {p ? (
                     <>
-                      <Avatar src={p.avatar} name={p.username || p.name} size="lg" />
-                      <div className="text-sm font-bold truncate max-w-full">{p.username || p.name}</div>
+                      <Avatar src={p.avatar} name={p.username || p.name} size="md" />
+                      <div className="text-xs sm:text-sm font-bold truncate max-w-full">{p.username || p.name}</div>
                       {(p.id === room.hostId || (i === 0 && !room.hostId)) && (
-                        <span className="chip bg-accent/15 text-accent border border-accent/30">HOST</span>
+                        <span className="chip bg-accent/15 text-accent border border-accent/30 text-[9px] sm:text-xs">HOST</span>
                       )}
                     </>
                   ) : (
                     <>
-                      <div className="w-16 h-16 rounded-full grid place-items-center border-2 border-dashed border-line text-ink-faint text-2xl">+</div>
-                      <div className="text-xs text-ink-faint">Empty seat</div>
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full grid place-items-center border-2 border-dashed border-line text-ink-faint text-xl sm:text-2xl">+</div>
+                      <div className="text-[10px] sm:text-xs text-ink-faint">Empty</div>
                     </>
                   )}
                 </motion.li>
@@ -165,16 +171,20 @@ export default function RoomPage() {
             })}
           </ul>
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-2">
             <button
               type="button"
               onClick={startMatch}
               disabled={!canStart || busy}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isHost ? (canStart ? 'Start Match' : 'Waiting for players…') : 'Waiting for host…'}
             </button>
-            <button type="button" className="btn-ghost" onClick={leave}>Leave</button>
+            <button
+              type="button"
+              className="btn-ghost w-full sm:w-auto"
+              onClick={leave}
+            >Leave</button>
           </div>
         </main>
 

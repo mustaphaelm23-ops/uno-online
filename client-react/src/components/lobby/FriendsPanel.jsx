@@ -27,27 +27,40 @@ function fmtTime(ts) {
   catch { return ''; }
 }
 
+// Same status colors the FriendsRail uses so the two friend surfaces
+// stay visually aligned. Backend's status field comes from /api/friends:
+// 'in_match' / 'in_lobby' / 'online' / 'offline'. Falls back to isOnline
+// for older payloads.
+const FRIEND_STATUS = {
+  in_match: { label: 'In Match', color: 'text-rose',     dot: 'bg-rose'     },
+  in_lobby: { label: 'In Lobby', color: 'text-accent',   dot: 'bg-accent'   },
+  online:   { label: 'Online',   color: 'text-emerald',  dot: 'bg-emerald'  },
+  offline:  { label: 'Offline',  color: 'text-ink-faint',dot: 'bg-ink-faint'},
+};
+
 function FriendRow({ friend, onMessage, onRemove, onInvite, activeRoomId }) {
+  const s = FRIEND_STATUS[friend.status] || (friend.isOnline ? FRIEND_STATUS.online : FRIEND_STATUS.offline);
   return (
-    <li className="flex items-center gap-3 p-2.5 rounded-xl bg-bg-3/40 border border-line">
+    <li className="flex items-center gap-2.5 p-2 rounded-xl bg-bg-3/40 border border-line hover:border-violet/40 transition">
       <Avatar src={friend.avatar} name={friend.username} size="sm" online={friend.isOnline} />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold truncate">{friend.username}</div>
-        <div className={`text-[11px] ${friend.isOnline ? 'text-emerald' : 'text-ink-faint'}`}>
-          {friend.isOnline ? 'Online' : 'Offline'}
+      <div className="flex-1 min-w-0 leading-tight">
+        <div className="text-[13px] font-bold truncate">{friend.username}</div>
+        <div className={`text-[10px] flex items-center gap-1 ${s.color}`}>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.dot}`} />
+          {s.label}
         </div>
       </div>
       <button type="button" onClick={() => onMessage(friend)}
               title="Message"
-              className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-violet hover:text-violet-soft">💬</button>
+              className="w-8 h-8 grid place-items-center rounded-lg border border-line text-violet-soft hover:border-violet hover:bg-violet/10 transition shrink-0">💬</button>
       {activeRoomId && friend.isOnline && (
         <button type="button" onClick={() => onInvite(friend)}
                 title="Invite to room"
-                className="btn-violet text-[11px] px-2.5 py-1">INVITE</button>
+                className="rounded-lg bg-violet text-white text-[10px] font-extrabold tracking-wider px-2.5 py-1.5 hover:brightness-110 transition shrink-0">INVITE</button>
       )}
       <button type="button" onClick={() => onRemove(friend)}
               title="Remove friend"
-              className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose">✕</button>
+              className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose hover:bg-rose/10 transition shrink-0">✕</button>
     </li>
   );
 }
@@ -153,18 +166,18 @@ function RequestsTab({ requests, refresh }) {
     return <div className="text-ink-faint text-sm py-8 text-center">No pending requests.</div>;
   }
   return (
-    <ul className="flex flex-col gap-2 overflow-y-auto">
+    <ul className="flex flex-col gap-1.5 overflow-y-auto">
       {requests.map((r) => (
-        <li key={r.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-bg-3/40 border border-line">
+        <li key={r.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-bg-3/40 border border-line">
           <Avatar src={r.avatar} name={r.username} size="sm" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold truncate">{r.username}</div>
-            <div className="text-[11px] text-ink-faint">wants to be friends</div>
+          <div className="flex-1 min-w-0 leading-tight">
+            <div className="text-[13px] font-bold truncate">{r.username}</div>
+            <div className="text-[10px] text-ink-faint">wants to be friends</div>
           </div>
           <button type="button" onClick={() => accept(r)}
-                  className="btn-violet text-[11px] px-3 py-1.5">Accept</button>
+                  className="rounded-lg bg-emerald text-bg text-[10px] font-extrabold tracking-wider px-2.5 py-1.5 hover:brightness-110 transition shrink-0">ACCEPT</button>
           <button type="button" onClick={() => decline(r)}
-                  className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose">✕</button>
+                  className="w-8 h-8 grid place-items-center rounded-lg border border-line hover:border-rose hover:text-rose hover:bg-rose/10 transition shrink-0">✕</button>
         </li>
       ))}
     </ul>
@@ -178,27 +191,30 @@ function ThreadList({ threads, onOpen }) {
     </div>;
   }
   return (
-    <ul className="flex flex-col gap-2 overflow-y-auto">
+    <ul className="flex flex-col gap-1.5 overflow-y-auto">
       {threads.map((t) => (
         <li key={t.partnerId}>
           <button
             type="button"
             onClick={() => onOpen({ id: t.partnerId, username: t.partnerName, avatar: t.partnerAvatar })}
-            className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-bg-3/40 border border-line
+            className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-bg-3/40 border border-line
                        hover:border-violet/50 transition text-left"
           >
             <Avatar src={t.partnerAvatar} name={t.partnerName} size="sm" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate flex items-center justify-between gap-2">
-                <span>{t.partnerName}</span>
-                <span className="text-[10px] text-ink-faint">{fmtTime(t.lastAt)}</span>
+            <div className="flex-1 min-w-0 leading-tight">
+              <div className="text-[13px] font-bold truncate flex items-center justify-between gap-2">
+                <span className="truncate">{t.partnerName}</span>
+                <span className="text-[10px] text-ink-faint shrink-0">{fmtTime(t.lastAt)}</span>
               </div>
-              <div className="text-xs text-ink-soft truncate">
-                {t.lastFromMe ? 'You: ' : ''}{t.lastText}
+              <div className="text-[11px] text-ink-soft truncate">
+                {t.lastFromMe && <span className="text-ink-faint">You: </span>}
+                {t.lastText}
               </div>
             </div>
             {t.unread > 0 && (
-              <span className="chip bg-rose text-white">{t.unread}</span>
+              <span className="rounded-full bg-rose text-white text-[10px] font-bold min-w-[20px] h-5 px-1.5 grid place-items-center shrink-0">
+                {t.unread > 99 ? '99+' : t.unread}
+              </span>
             )}
           </button>
         </li>
