@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { gameApi } from '../../api/game';
 import useRoomSocial from '../../hooks/useRoomSocial';
+import useEquippedBack from '../../hooks/useEquippedBack';
 import CenterTable from './CenterTable';
 import MyHand from './MyHand';
 import OpponentPanel from './OpponentPanel';
@@ -29,6 +30,7 @@ export default function GameScreen({ state, onLeave }) {
   const [pendingWildId, setPendingWildId] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const { messages, bubbles, reactions, echoReaction, echoBubble } = useRoomSocial();
+  const back = useEquippedBack();
 
   // Card-fly state — when state.topCard.id changes (someone played), we
   // dispatch a transient FlyingCard animation from the source player's
@@ -184,6 +186,7 @@ export default function GameScreen({ state, onLeave }) {
             position="top"
             bubble={bubbleFor(topOpp.id)}
             reactions={reactionsFor(topOpp.id)}
+            back={back}
           />
         </div>
       )}
@@ -196,6 +199,7 @@ export default function GameScreen({ state, onLeave }) {
             position="left"
             bubble={bubbleFor(leftOpp.id)}
             reactions={reactionsFor(leftOpp.id)}
+            back={back}
           />
         </div>
       )}
@@ -208,6 +212,7 @@ export default function GameScreen({ state, onLeave }) {
             position="right"
             bubble={bubbleFor(rightOpp.id)}
             reactions={reactionsFor(rightOpp.id)}
+            back={back}
           />
         </div>
       )}
@@ -222,6 +227,7 @@ export default function GameScreen({ state, onLeave }) {
             pot={state.pot}
             onDraw={handleDraw}
             canDraw={canDraw}
+            back={back}
           />
           <AnimatePresence>
             {flyingCard && (

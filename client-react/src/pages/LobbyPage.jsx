@@ -27,6 +27,7 @@ import EventModal from '../components/lobby/EventModal';
 import AchievementsModal from '../components/lobby/AchievementsModal';
 import NotificationsPanel from '../components/lobby/NotificationsPanel';
 import LiveGamesModal from '../components/lobby/LiveGamesModal';
+import CollectionModal from '../components/lobby/CollectionModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -70,6 +71,7 @@ export default function LobbyPage() {
   const [achOpen, setAchOpen]           = useState(false);
   const [notifOpen, setNotifOpen]       = useState(false);
   const [liveOpen, setLiveOpen]         = useState(false);
+  const [collOpen, setCollOpen]         = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -174,6 +176,7 @@ export default function LobbyPage() {
             if (id === 'leaderboard')  return openLb('ranked');
             if (id === 'missions')     return setEventOpen(true);
             if (id === 'achievements') return setAchOpen(true);
+            if (id === 'collection')   return setCollOpen(true);
             toast.info(`${id} — follow-up commit`);
           }} />
         </main>
@@ -239,6 +242,10 @@ export default function LobbyPage() {
       <LiveGamesModal
         open={liveOpen}
         onClose={() => setLiveOpen(false)}
+      />
+      <CollectionModal
+        open={collOpen}
+        onClose={() => setCollOpen(false)}
       />
     </div>
   );

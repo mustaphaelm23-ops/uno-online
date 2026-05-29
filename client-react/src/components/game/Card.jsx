@@ -38,17 +38,21 @@ function CornerNumeral({ symbol, color, position, sizeCls }) {
   );
 }
 
-export default function Card({ card, size = 'md', face = true, playable = false, dim = false, onClick, className = '' }) {
+export default function Card({ card, size = 'md', face = true, playable = false, dim = false, onClick, className = '', back = null }) {
   const sz = SIZE[size] || SIZE.md;
 
   if (!face) {
-    // Back of card — UNO logo on dark red.
+    // Back of card — palette driven by the cosmetic `back` prop so the
+    // user's equipped Collection skin renders without a separate asset.
+    // Falls back to the classic crimson UNO design when no skin is set.
+    const v = (back && back.visual) || { bg:'#b91c1c', bg2:'#7f1d1d', accent:'#fbbf24', label:'UNO' };
     return (
       <div className={`${sz.card} rounded-lg overflow-hidden relative shadow-card border border-black/30 ${className}`}>
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #b91c1c, #7f1d1d)' }} />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${v.bg}, ${v.bg2})` }} />
         <div className="absolute inset-0 grid place-items-center">
-          <div className={`font-display ${sz.num} tracking-wider text-amber-300 -rotate-12 drop-shadow-[0_2px_4px_rgba(0,0,0,.5)]`}>
-            UNO
+          <div className={`font-display ${sz.num} tracking-wider -rotate-12 drop-shadow-[0_2px_4px_rgba(0,0,0,.5)]`}
+               style={{ color: v.accent }}>
+            {v.label || 'UNO'}
           </div>
         </div>
         <div className="absolute inset-1.5 rounded-md border-2 border-white/15 pointer-events-none" />

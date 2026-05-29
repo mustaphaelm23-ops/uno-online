@@ -7,7 +7,7 @@ import Card from './Card';
 //
 // Direction: server uses 1 for CW, -1 for CCW (per GameManager DIR).
 
-export default function CenterTable({ topCard, drawPileSize, direction, pot, onDraw, canDraw }) {
+export default function CenterTable({ topCard, drawPileSize, direction, pot, onDraw, canDraw, back }) {
   const cw = direction !== -1;
   return (
     <div className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] grid place-items-center">
@@ -49,7 +49,7 @@ export default function CenterTable({ topCard, drawPileSize, direction, pot, onD
                       transition-transform`}
           aria-label="Draw a card"
         >
-          <Card size="lg" face={false} />
+          <Card size="lg" face={false} back={back} />
           {drawPileSize > 0 && (
             <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 chip bg-bg-3 border border-line text-ink-soft">
               {drawPileSize}

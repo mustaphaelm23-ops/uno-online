@@ -2174,6 +2174,123 @@ app.post('/api/friends/invite', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Card-back Collection ──────────────────────────────────────────────
+// Cosmetic catalogue. Each entry has a visual config (palette + accent +
+// label) so the client can render the back deterministically from the id
+// without a separate asset pipeline. Unlock conditions follow the same
+// getValue(user) pattern as ACHIEVEMENTS so a player auto-qualifies for
+// any condition they've already met. `default` is owned by everyone.
+//
+// rarity: common | rare | epic | legendary — drives the React modal's
+// border tint and the sort order.
+const CARD_BACKS = [
+  { id:'default',     name:'Classic',       rarity:'common',
+    visual:{ bg:'#b91c1c', bg2:'#7f1d1d', accent:'#fbbf24', label:'UNO' },
+    cost:0,    requires:null,
+    desc:'The original. Owned by everyone.' },
+  { id:'midnight',    name:'Midnight',      rarity:'common',
+    visual:{ bg:'#1e293b', bg2:'#0f172a', accent:'#a78bfa', label:'UNO' },
+    cost:500,  requires:null,
+    desc:'Slate gradient with violet glow.' },
+  { id:'emerald',     name:'Emerald',       rarity:'rare',
+    visual:{ bg:'#047857', bg2:'#064e3b', accent:'#34d399', label:'UNO' },
+    cost:1500, requires:null,
+    desc:'Deep emerald — clean and bright.' },
+  { id:'ocean',       name:'Ocean',         rarity:'rare',
+    visual:{ bg:'#1e40af', bg2:'#1e3a8a', accent:'#7dd3fc', label:'UNO' },
+    cost:1500, requires:null,
+    desc:'Deep ocean blue with sky highlights.' },
+  { id:'gold',        name:'Gold',          rarity:'epic',
+    visual:{ bg:'#a16207', bg2:'#854d0e', accent:'#fde047', label:'UNO' },
+    cost:5000, requires:null,
+    desc:'Royal gold — for the rich and famous.' },
+  { id:'royal',       name:'Royal',         rarity:'epic',
+    visual:{ bg:'#7c3aed', bg2:'#5b21b6', accent:'#facc15', label:'UNO' },
+    cost:5000, requires:null,
+    desc:'Premium violet — fit for a champion.' },
+  { id:'champion',    name:'Champion',      rarity:'legendary',
+    visual:{ bg:'#9a3412', bg2:'#7c2d12', accent:'#fbbf24', label:'UNO' },
+    cost:0,    requires:{ kind:'wins',  value:50 },
+    desc:'Earned by winning 50 matches.' },
+  { id:'legendary',   name:'Legendary',     rarity:'legendary',
+    visual:{ bg:'#0f172a', bg2:'#020617', accent:'#f43f5e', label:'UNO' },
+    cost:0,    requires:{ kind:'elo',   value:2000 },
+    desc:'Forged at 2000 rating.' },
+];
+
+function cardBackProgressFor(user, req) {
+  if (!req) return { current: 1, target: 1, met: true };
+  if (req.kind === 'wins') {
+    const cur = user.stats?.gamesWon || 0;
+    return { current: cur, target: req.value, met: cur >= req.value };
+  }
+  if (req.kind === 'elo') {
+    const cur = user.elo || 1000;
+    return { current: cur, target: req.value, met: cur >= req.value };
+  }
+  return { current: 0, target: req.value || 1, met: false };
+}
+
+function ensureCollection(user) {
+  if (!Array.isArray(user.ownedBacks)) user.ownedBacks = ['default'];
+  if (!user.ownedBacks.includes('default')) user.ownedBacks.unshift('default');
+  if (!user.equippedBack) user.equippedBack = 'default';
+  return user;
+}
+
+app.get('/api/collection', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  ensureCollection(user);
+  const items = CARD_BACKS.map(cb => {
+    const progress = cardBackProgressFor(user, cb.requires);
+    return {
+      id: cb.id, name: cb.name, rarity: cb.rarity, visual: cb.visual,
+      desc: cb.desc, cost: cb.cost, requires: cb.requires,
+      progress,
+      owned:    user.ownedBacks.includes(cb.id),
+      equipped: user.equippedBack === cb.id,
+    };
+  });
+  res.json({ items, equipped: user.equippedBack });
+});
+
+app.post('/api/collection/unlock', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  ensureCollection(user);
+  const id = String(req.body?.id || '');
+  const cb = CARD_BACKS.find(x => x.id === id);
+  if (!cb) return res.status(400).json({ error: 'Unknown back' });
+  if (user.ownedBacks.includes(id)) return res.status(400).json({ error: 'Already owned' });
+  // Two unlock paths:
+  //   • Requirement-gated (free) — must meet the condition; e.g. champion (50 wins)
+  //   • Coin purchase            — cost-gated, currency check
+  if (cb.requires) {
+    const p = cardBackProgressFor(user, cb.requires);
+    if (!p.met) return res.status(400).json({ error: 'Requirement not met', progress: p });
+  } else if (cb.cost > 0) {
+    if ((user.coins || 0) < cb.cost) return res.status(400).json({ error: `Need ${cb.cost.toLocaleString()} coins` });
+    user.coins -= cb.cost;
+    logReward(user, '🎴', `Card back — ${cb.name}`, -cb.cost);
+  }
+  user.ownedBacks.push(cb.id);
+  saveUsers();
+  res.json({ success: true, coins: user.coins, ownedBacks: user.ownedBacks, id: cb.id });
+});
+
+app.post('/api/collection/equip', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  ensureCollection(user);
+  const id = String(req.body?.id || '');
+  if (!CARD_BACKS.find(x => x.id === id)) return res.status(400).json({ error: 'Unknown back' });
+  if (!user.ownedBacks.includes(id))      return res.status(400).json({ error: 'Not owned' });
+  user.equippedBack = id;
+  saveUsers();
+  res.json({ success: true, equipped: id });
+});
+
 // ── Achievements (trophy collection) ──────────────────────────────────
 // Server-owned catalog. Each entry has a getValue(user) that derives the
 // player's current progress from the user object — so a new server release

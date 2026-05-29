@@ -12,7 +12,7 @@ import ReactionFly from './ReactionFly';
 //   • bubble    : { id, text } from quick-chat — single bubble, 2.4 s
 //   • reactions : array of { id, emoji } currently floating up
 
-export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno, bubble, reactions = [] }) {
+export default function OpponentPanel({ player, isCurrent, position = 'top', onCatchUno, bubble, reactions = [], back }) {
   if (!player) return null;
   const showWarn = player.handSize === 1 && !player.saidUno;
   const cardsToShow = Math.min(5, Math.max(1, player.handSize || 1));
@@ -32,7 +32,7 @@ export default function OpponentPanel({ player, isCurrent, position = 'top', onC
           <div className="relative flex">
             {Array.from({ length: cardsToShow }).map((_, i) => (
               <div key={i} className="-ml-2 first:ml-0" style={{ zIndex: i }}>
-                <Card size="xs" face={false} />
+                <Card size="xs" face={false} back={back} />
               </div>
             ))}
           </div>

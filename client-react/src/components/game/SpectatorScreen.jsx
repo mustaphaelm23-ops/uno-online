@@ -4,6 +4,7 @@ import CenterTable from './CenterTable';
 import OpponentPanel from './OpponentPanel';
 import TurnTimer from './TurnTimer';
 import Card from './Card';
+import useEquippedBack from '../../hooks/useEquippedBack';
 
 // Read-only "watching" view of an in-progress match. Backend ships
 // game:spectator_state which includes EVERY player's full hand under
@@ -15,6 +16,7 @@ import Card from './Card';
 
 export default function SpectatorScreen({ state, onLeave }) {
   const navigate = useNavigate();
+  const back = useEquippedBack();
   if (!state) {
     return <div className="h-full grid place-items-center text-ink-soft animate-pulse">Joining as spectator…</div>;
   }
@@ -50,17 +52,17 @@ export default function SpectatorScreen({ state, onLeave }) {
 
       {topOpp && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10">
-          <OpponentPanel player={topOpp} isCurrent={false} />
+          <OpponentPanel player={topOpp} isCurrent={false} back={back} />
         </div>
       )}
       {leftOpp && (
         <div className="absolute top-1/2 left-4 sm:left-8 -translate-y-1/2 z-10">
-          <OpponentPanel player={leftOpp} isCurrent={false} />
+          <OpponentPanel player={leftOpp} isCurrent={false} back={back} />
         </div>
       )}
       {rightOpp && (
         <div className="absolute top-1/2 right-4 sm:right-8 -translate-y-1/2 z-10">
-          <OpponentPanel player={rightOpp} isCurrent={false} />
+          <OpponentPanel player={rightOpp} isCurrent={false} back={back} />
         </div>
       )}
 
@@ -71,6 +73,7 @@ export default function SpectatorScreen({ state, onLeave }) {
           direction={state.direction}
           pot={state.pot}
           canDraw={false}
+          back={back}
         />
       </div>
 
