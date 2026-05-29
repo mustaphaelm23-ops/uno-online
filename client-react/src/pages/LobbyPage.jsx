@@ -17,6 +17,7 @@ import BottomNav from '../components/lobby/BottomNav';
 import ActionTiles from '../components/lobby/ActionTiles';
 import CreateRoomModal from '../components/lobby/CreateRoomModal';
 import ShopModal from '../components/lobby/ShopModal';
+import BattlePassModal from '../components/lobby/BattlePassModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -46,6 +47,7 @@ export default function LobbyPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [shopOpen, setShopOpen]     = useState(false);
   const [shopTab, setShopTab]       = useState('packages');
+  const [bpOpen, setBpOpen]         = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -142,7 +144,7 @@ export default function LobbyPage() {
 
         {/* Right rail */}
         <div className="hidden lg:flex flex-col gap-4 w-72 shrink-0">
-          <BattlePassCard user={user} onView={() => toast.info('BP rewards — follow-up commit')} />
+          <BattlePassCard user={user} onView={() => setBpOpen(true)} />
           <FriendsRail activeRoomId={activeRoomId} />
           <WorldChat />
           <SpecialOfferCard onClaim={() => openShop('offer')} />
@@ -158,6 +160,10 @@ export default function LobbyPage() {
         open={shopOpen}
         onClose={() => setShopOpen(false)}
         initialTab={shopTab}
+      />
+      <BattlePassModal
+        open={bpOpen}
+        onClose={() => setBpOpen(false)}
       />
     </div>
   );
