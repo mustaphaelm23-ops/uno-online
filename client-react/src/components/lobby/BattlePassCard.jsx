@@ -22,16 +22,30 @@ export default function BattlePassCard({ user, onView }) {
   return (
     <div className={`panel-card p-4 sm:p-5 relative overflow-hidden transition
       ${isNear ? 'border-accent/50 shadow-glow-gold' : ''}`}>
-      {/* Decorative card cluster + level pill, top-right — matches the
-          mockup's mini playing-card stack with a numbered chip. */}
-      <div className="absolute right-3 top-3 select-none pointer-events-none flex items-center gap-1 opacity-70">
-        <div className="flex -space-x-2">
-          <div className="w-7 h-9 rounded-md rotate-[-12deg] bg-gradient-to-br from-rose to-rose/70 border border-white/20 shadow-card grid place-items-center text-[10px] font-display text-white">8</div>
-          <div className="w-7 h-9 rounded-md rotate-[6deg] bg-gradient-to-br from-violet to-violet-deep border border-white/20 shadow-card grid place-items-center text-[10px] font-display text-white">6</div>
-        </div>
-        <div className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-extrabold tabular-nums
-                        bg-gradient-to-br from-accent to-accent-deep text-bg border-2 border-bg shadow-card">
-          {level}
+      {/* Decorative card cluster + level pill + scattered coins, top-right.
+          Mirrors the mockup's tilted card stack with stacked coins beneath
+          and a circular level pill. */}
+      <div className="absolute right-2 top-2 select-none pointer-events-none">
+        <div className="relative w-28 h-16">
+          {/* Card stack */}
+          <div className="absolute right-8 top-1 w-8 h-11 rounded-md rotate-[-14deg]
+                          bg-gradient-to-br from-emerald to-emerald/60 border border-white/20 shadow-card-lg
+                          grid place-items-center text-[11px] font-display text-white">8</div>
+          <div className="absolute right-2 top-0 w-8 h-11 rounded-md rotate-[6deg]
+                          bg-gradient-to-br from-rose to-rose/60 border border-white/20 shadow-card-lg
+                          grid place-items-center text-[11px] font-display text-white">6</div>
+          {/* Center face card — black "UNO" face */}
+          <div className="absolute right-12 top-2 w-9 h-12 rounded-md rotate-[-2deg]
+                          bg-gradient-to-br from-bg-3 to-bg border border-white/20 shadow-card-lg
+                          grid place-items-center font-display text-[9px] text-accent">UNO</div>
+          {/* Scattered coins beneath */}
+          <span className="absolute right-3 -bottom-1 text-[10px]">🪙</span>
+          <span className="absolute right-10 -bottom-2 text-[10px] rotate-[20deg]">🪙</span>
+          {/* Level pill — bottom-right */}
+          <div className="absolute -bottom-1 right-0 w-6 h-6 rounded-full grid place-items-center text-[10px] font-extrabold tabular-nums
+                          bg-gradient-to-br from-accent to-accent-deep text-bg border-2 border-bg shadow-card">
+            {level}
+          </div>
         </div>
       </div>
 

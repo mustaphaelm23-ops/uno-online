@@ -32,13 +32,19 @@ export default function SpecialOfferCard({ offer, onClaim }) {
                     ${urgent
                       ? 'border-rose/50 bg-gradient-to-br from-rose/20 via-rose/5 to-bg-2 shadow-[0_8px_24px_rgba(244,63,94,0.3)]'
                       : 'border-violet/30 bg-gradient-to-br from-violet/20 via-violet/5 to-bg-2'}`}>
-      {/* Card-back thumbnail (mini cosmetic visual on the right edge) —
-          matches the mockup's "EXCLUSIVE CARD BACK" hero artwork. */}
-      <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 select-none pointer-events-none opacity-90">
-        <div className="relative w-10 h-14 sm:w-12 sm:h-16 rounded-md rotate-[10deg] overflow-hidden border border-white/20 shadow-card-lg
-                        bg-gradient-to-br from-rose to-rose/70">
-          <div className="absolute inset-0 grid place-items-center font-display text-amber-300 text-base sm:text-lg -rotate-12 drop-shadow-[0_2px_4px_rgba(0,0,0,.5)]">UNO</div>
-          <div className="absolute inset-1 rounded border border-white/20 pointer-events-none" />
+      {/* Card-back thumbnail + scattered coins — matches the mockup's
+          "EXCLUSIVE CARD BACK" hero artwork on the right edge. */}
+      <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 select-none pointer-events-none">
+        <div className="relative w-14 sm:w-16 h-14 sm:h-16">
+          {/* Stacked coins behind the card */}
+          <span className="absolute left-0 bottom-1 text-sm sm:text-base">🪙</span>
+          <span className="absolute left-3 -bottom-0 text-xs sm:text-sm rotate-[15deg]">🪙</span>
+          {/* Card-back thumbnail */}
+          <div className="absolute right-0 bottom-0 w-10 sm:w-12 h-14 sm:h-16 rounded-md rotate-[10deg] overflow-hidden border border-white/25 shadow-card-lg
+                          bg-gradient-to-br from-rose to-rose/70">
+            <div className="absolute inset-0 grid place-items-center font-display text-amber-300 text-base sm:text-lg -rotate-12 drop-shadow-[0_2px_4px_rgba(0,0,0,.5)]">UNO</div>
+            <div className="absolute inset-1 rounded border border-white/20 pointer-events-none" />
+          </div>
         </div>
       </div>
 

@@ -70,8 +70,18 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onF
         className="lg:hidden w-9 h-9 grid place-items-center rounded-lg bg-bg-2/80 border border-line hover:border-violet/40 transition shrink-0 text-lg"
       >☰</button>
 
-      <div className="font-display text-2xl sm:text-3xl lg:text-4xl text-accent drop-shadow-[0_4px_24px_rgba(245,158,11,0.4)] tracking-wider select-none">
-        UNO
+      {/* 3D UNO logo — layered text-shadow gives the mockup's chunky gold
+          depth, gradient adds the warm orange-to-yellow ramp. */}
+      <div className="relative font-display text-3xl sm:text-4xl lg:text-5xl tracking-wider select-none leading-none">
+        <span
+          className="bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-accent to-accent-deep
+                     drop-shadow-[0_4px_16px_rgba(245,158,11,0.55)]"
+          style={{
+            WebkitTextStroke: '1px rgba(0,0,0,0.35)',
+            textShadow:
+              '0 1px 0 #b45309, 0 2px 0 #b45309, 0 3px 0 #92400e, 0 4px 8px rgba(0,0,0,0.6)',
+          }}
+        >UNO</span>
       </div>
 
       <div className="flex-1" />

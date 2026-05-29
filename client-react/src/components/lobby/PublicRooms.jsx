@@ -110,10 +110,13 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className={`relative rounded-2xl p-3 sm:p-5 text-left border border-line bg-gradient-to-br ${t.bg}
+              className={`relative rounded-2xl p-3 sm:p-5 text-left border bg-gradient-to-br ${t.bg}
                           hover:ring-1 ${t.ring} ${t.glow} transition-all
                           shrink-0 w-[calc(50%-0.375rem)] sm:w-[calc(50%-0.5rem)] lg:w-auto
-                          snap-start`}
+                          snap-start
+                          ${isHot && !isRanked
+                            ? 'border-accent/60 ring-2 ring-accent/40 shadow-glow-gold'
+                            : 'border-line'}`}
             >
               {isRanked && (
                 <span className="absolute -top-2 right-4 chip bg-gradient-to-br from-violet to-violet-deep text-white">RANKED</span>
