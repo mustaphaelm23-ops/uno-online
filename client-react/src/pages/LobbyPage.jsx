@@ -22,6 +22,7 @@ import FriendsPanel from '../components/lobby/FriendsPanel';
 import SettingsModal from '../components/lobby/SettingsModal';
 import DailyRewardModal from '../components/lobby/DailyRewardModal';
 import JoinByCodeModal from '../components/lobby/JoinByCodeModal';
+import LeaderboardModal from '../components/lobby/LeaderboardModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -58,6 +59,9 @@ export default function LobbyPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dailyOpen, setDailyOpen]       = useState(false);
   const [joinOpen, setJoinOpen]         = useState(false);
+  const [lbOpen, setLbOpen]             = useState(false);
+  const [lbTab, setLbTab]               = useState('ranked');
+  const openLb = (t = 'ranked') => { setLbTab(t); setLbOpen(true); };
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -143,6 +147,7 @@ export default function LobbyPage() {
           if (id === 'quick')   return quickMatch();
           if (id === 'shop')    return openShop('packages');
           if (id === 'daily')   return setDailyOpen(true);
+          if (id === 'ranked')  return openLb('ranked');
           return toast.info(`${id} ships in a follow-up commit`);
         }} />
 
@@ -151,7 +156,10 @@ export default function LobbyPage() {
           <WelcomeCard user={user} />
           <PublicRooms rooms={featured.rooms} hotType={featured.hotType} onJoin={joinFeatured} />
           <ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} />
-          <BottomNav onAction={(id) => toast.info(`${id} — follow-up commit`)} />
+          <BottomNav onAction={(id) => {
+            if (id === 'leaderboard') return openLb('ranked');
+            toast.info(`${id} — follow-up commit`);
+          }} />
         </main>
 
         {/* Right rail */}
@@ -194,6 +202,11 @@ export default function LobbyPage() {
       <JoinByCodeModal
         open={joinOpen}
         onClose={() => setJoinOpen(false)}
+      />
+      <LeaderboardModal
+        open={lbOpen}
+        onClose={() => setLbOpen(false)}
+        initialTab={lbTab}
       />
     </div>
   );
