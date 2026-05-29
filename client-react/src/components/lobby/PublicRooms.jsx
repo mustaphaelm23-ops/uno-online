@@ -8,23 +8,63 @@ import Avatar from '../ui/Avatar';
 // server payload so client never invents categorization.
 
 const THEME = {
-  CLASSIC: { accent: 'text-emerald', glow: 'shadow-[0_0_42px_rgba(16,185,129,0.25)]', bg: 'from-emerald/15 to-emerald/0',  ring: 'ring-emerald/40' },
-  FUN:     { accent: 'text-orange-400', glow: 'shadow-[0_0_42px_rgba(249,115,22,0.30)]', bg: 'from-orange-500/20 to-orange-500/0', ring: 'ring-orange-500/40' },
-  RANKED:  { accent: 'text-accent',  glow: 'shadow-[0_0_42px_rgba(245,158,11,0.30)]', bg: 'from-accent/20 to-accent/0',   ring: 'ring-accent/40' },
-  CHILL:   { accent: 'text-sky',     glow: 'shadow-[0_0_42px_rgba(14,165,233,0.30)]', bg: 'from-sky/20 to-sky/0',         ring: 'ring-sky/40' },
+  CLASSIC: { accent: 'text-emerald', glow: 'shadow-[0_0_42px_rgba(16,185,129,0.25)]', bg: 'from-emerald/15 to-emerald/0',  ring: 'ring-emerald/40',
+             tableBg: 'from-emerald to-emerald/70', tableGlow: 'shadow-[inset_0_0_24px_rgba(0,0,0,0.5),0_0_28px_rgba(16,185,129,0.45)]' },
+  FUN:     { accent: 'text-orange-400', glow: 'shadow-[0_0_42px_rgba(249,115,22,0.30)]', bg: 'from-orange-500/20 to-orange-500/0', ring: 'ring-orange-500/40',
+             tableBg: 'from-rose to-rose/70', tableGlow: 'shadow-[inset_0_0_24px_rgba(0,0,0,0.5),0_0_28px_rgba(244,63,94,0.5)]' },
+  RANKED:  { accent: 'text-accent',  glow: 'shadow-[0_0_42px_rgba(245,158,11,0.30)]', bg: 'from-accent/20 to-accent/0',   ring: 'ring-accent/40',
+             tableBg: 'from-amber-700 to-amber-900', tableGlow: 'shadow-[inset_0_0_24px_rgba(0,0,0,0.6),0_0_28px_rgba(245,158,11,0.5)]' },
+  CHILL:   { accent: 'text-sky',     glow: 'shadow-[0_0_42px_rgba(14,165,233,0.30)]', bg: 'from-sky/20 to-sky/0',         ring: 'ring-sky/40',
+             tableBg: 'from-sky to-sky/70', tableGlow: 'shadow-[inset_0_0_24px_rgba(0,0,0,0.5),0_0_28px_rgba(14,165,233,0.5)]' },
 };
 
-function SeatStrip({ seats = [], max = 4 }) {
-  const filled = seats.slice(0, max);
-  const empty  = Math.max(0, max - filled.length);
+// Octagonal "table" viz with seats positioned around the perimeter,
+// mirroring the mockup's room-card composition. We use absolute
+// positioning + transform translate so 4 seats land at top, right,
+// bottom, left and the center holds the table glow with a UNO chip.
+const SEAT_POS = [
+  // {top, left, transform} for up to 4 seats around the table
+  { top: '0',     left: '50%',  tx: '-translate-x-1/2 -translate-y-1/2' }, // top
+  { top: '50%',   left: '100%', tx: '-translate-x-1/2 -translate-y-1/2' }, // right
+  { top: '100%',  left: '50%',  tx: '-translate-x-1/2 -translate-y-1/2' }, // bottom
+  { top: '50%',   left: '0',    tx: '-translate-x-1/2 -translate-y-1/2' }, // left
+];
+
+function RoomTable({ theme, seats = [], max = 4 }) {
   return (
-    <div className="flex justify-center -space-x-2">
-      {filled.map((s, i) => (
-        <Avatar key={i} src={s.avatar} name={s.name} size="sm" className="ring-2 ring-bg-2" />
-      ))}
-      {Array.from({ length: empty }).map((_, i) => (
-        <div key={`e${i}`} className="w-9 h-9 rounded-full border-2 border-dashed border-line bg-bg/40 grid place-items-center text-ink-faint text-xs">+</div>
-      ))}
+    <div className="relative mx-auto w-32 h-24 sm:w-40 sm:h-28">
+      {/* Octagonal table center */}
+      <div className={`absolute inset-x-4 inset-y-2 sm:inset-x-6 sm:inset-y-3 rounded-[28%]
+                      bg-gradient-to-br ${theme.tableBg} border border-white/15
+                      ${theme.tableGlow}`}>
+        {/* Table felt inner ring */}
+        <div className="absolute inset-1 rounded-[28%] border border-white/10" />
+        {/* Center UNO chip */}
+        <div className="absolute inset-0 grid place-items-center">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-bg-2 border border-white/20
+                          grid place-items-center font-display text-[10px] sm:text-xs text-accent
+                          shadow-card-lg">UNO</div>
+        </div>
+      </div>
+
+      {/* Seats around the perimeter */}
+      {Array.from({ length: max }).map((_, i) => {
+        const p = SEAT_POS[i] || SEAT_POS[0];
+        const seat = seats[i];
+        return (
+          <div
+            key={i}
+            className={`absolute ${p.tx} z-10`}
+            style={{ top: p.top, left: p.left }}
+          >
+            {seat ? (
+              <Avatar src={seat.avatar} name={seat.name} size="xs" className="ring-2 ring-bg-2" />
+            ) : (
+              <div className="w-7 h-7 rounded-full border-2 border-dashed border-line bg-bg/60 grid place-items-center text-ink-faint text-[10px]">+</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -132,8 +172,8 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
                   {r.players}/{r.maxPlayers} Players
                 </div>
               </div>
-              <div className="my-3 sm:my-5">
-                <SeatStrip seats={r.seats} max={r.maxPlayers} />
+              <div className="my-4 sm:my-5">
+                <RoomTable theme={t} seats={r.seats} max={r.maxPlayers} />
               </div>
               <div className="border-t border-line/60 pt-2 sm:pt-3 flex items-center justify-between text-[10px] sm:text-xs uppercase tracking-widest text-ink-soft">
                 <span>Entry</span>
