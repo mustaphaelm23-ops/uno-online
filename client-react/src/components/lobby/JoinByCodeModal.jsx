@@ -36,25 +36,33 @@ export default function JoinByCodeModal({ open, onClose }) {
 
   return (
     <Modal open={open} onClose={busy ? undefined : onClose} title="Join by Code" width="sm">
-      <form onSubmit={submit} className="flex flex-col gap-5 py-3">
+      <form onSubmit={submit} className="flex flex-col gap-4 sm:gap-5 py-2 sm:py-3">
         <div className="text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-ink-faint">Room code</div>
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Room code</div>
           <input
-            className="mt-2 w-full bg-bg/60 border border-line rounded-xl px-4 py-4 text-center
-                       font-display text-3xl tracking-[0.4em] text-accent uppercase
-                       focus:outline-none focus:border-violet/60 focus:ring-2 focus:ring-violet/20"
+            className="mt-2 w-full bg-bg/60 border border-line rounded-xl px-3 sm:px-4 py-3 sm:py-4 text-center
+                       font-display text-2xl sm:text-3xl tracking-[0.3em] sm:tracking-[0.4em] text-accent uppercase
+                       focus:outline-none focus:border-violet/60 focus:ring-2 focus:ring-violet/20 transition"
             placeholder="------"
             maxLength={8}
+            inputMode="text"
+            autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
             autoFocus
           />
         </div>
-        <button type="submit" disabled={busy || !code.trim()}
-                className="btn-primary disabled:opacity-50">
-          {busy ? 'Looking up…' : 'Join Room'}
+        <button
+          type="submit"
+          disabled={busy || !code.trim()}
+          className="btn-primary text-[12px] tracking-wider disabled:opacity-50"
+        >
+          {busy ? 'LOOKING UP…' : 'JOIN ROOM'}
         </button>
-        <p className="text-xs text-ink-faint text-center">
+        <p className="text-[11px] sm:text-xs text-ink-faint text-center leading-snug">
           Ask the host for the 6-character room code on their game screen.
         </p>
       </form>

@@ -72,32 +72,38 @@ export default function DailyRewardModal({ open, onClose }) {
 
   return (
     <Modal open={open} onClose={onClose} title="Daily Reward" width="sm">
-      <div className="flex flex-col items-center gap-5 py-4">
+      <div className="flex flex-col items-center gap-4 sm:gap-5 py-3 sm:py-4">
         <motion.div
           initial={{ scale: 0.7, rotate: -10 }}
           animate={{ scale: 1,   rotate: 0   }}
           transition={{ type: 'spring', stiffness: 220, damping: 14 }}
-          className="text-7xl drop-shadow-[0_8px_20px_rgba(245,158,11,0.45)]"
+          className="text-6xl sm:text-7xl drop-shadow-[0_8px_20px_rgba(245,158,11,0.45)]"
         >🎁</motion.div>
         <div className="text-center">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-ink-faint">Today's bonus</div>
-          <div className="font-display text-4xl tracking-wider text-accent flex items-center gap-2 justify-center mt-1">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Today's bonus</div>
+          <div className="font-display text-3xl sm:text-4xl tracking-wider text-accent flex items-center gap-2 justify-center mt-1 tabular-nums">
             🪙 {REWARD}
           </div>
         </div>
         {canClaim ? (
-          <button type="button" onClick={claim} disabled={busy}
-                  className="btn-primary px-6 w-full disabled:opacity-50">
-            {busy ? 'Claiming…' : 'Claim Now'}
+          <button
+            type="button"
+            onClick={claim}
+            disabled={busy}
+            className="btn-primary text-[12px] tracking-wider px-6 w-full disabled:opacity-50"
+          >
+            {busy ? 'CLAIMING…' : 'CLAIM NOW'}
           </button>
         ) : (
           <div className="w-full text-center">
-            <div className="chip bg-bg-3 border border-line inline-flex">
-              ⏰ Next in {fmtCountdown(remaining)}
+            <div className="text-[9px] uppercase tracking-widest text-ink-faint mb-1">Next in</div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-bg-3/60 border border-line">
+              <span className="text-base">⏰</span>
+              <span className="font-display text-xl tracking-wider tabular-nums text-ink">{fmtCountdown(remaining)}</span>
             </div>
           </div>
         )}
-        <p className="text-xs text-ink-faint text-center max-w-xs">
+        <p className="text-[11px] sm:text-xs text-ink-faint text-center max-w-xs leading-snug">
           Come back every 24h for a free coin bonus.
         </p>
       </div>
