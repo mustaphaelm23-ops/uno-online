@@ -35,23 +35,14 @@
       if(!silent) toast(`${THEMES[id].icon} ${THEMES[id].name}`,'s');
     },
   };
-  function _buildWeather(id){
+  // Disabled per user request — the falling weather particles
+  // (snow / petal / ember / spark / dust) felt visually noisy. The
+  // theme color schemes still apply via `theme-*` body classes; only
+  // the per-particle DOM nodes are skipped. Clears any previously
+  // generated nodes so a hot-reload doesn't leave them stranded.
+  function _buildWeather(_id){
     const host=document.getElementById('lobbyWeather');
-    if(!host) return;
-    host.innerHTML='';
-    const t=THEMES[id];
-    if(!t||!t.particle) return;
-    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-    for(let i=0;i<t.count;i++){
-      const p=document.createElement('div');
-      p.className='wp '+t.particle;
-      const sz=3+Math.random()*6;
-      const dur=(t.particle==='ember'||t.particle==='spark')?(7+Math.random()*8):(8+Math.random()*11);
-      p.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;`+
-        `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`+
-        `--drift:${((Math.random()*2-1)*90).toFixed(0)}px;opacity:${(.3+Math.random()*.55).toFixed(2)};`;
-      host.appendChild(p);
-    }
+    if(host) host.innerHTML='';
   }
   function showThemePicker(){
     const old=document.getElementById('themePicker'); if(old) old.remove();
