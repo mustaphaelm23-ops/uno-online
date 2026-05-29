@@ -8,6 +8,7 @@ import Card from './Card';
 import ChatPanel from './ChatPanel';
 import useEquippedBack from '../../hooks/useEquippedBack';
 import useSpectatorChat from '../../hooks/useSpectatorChat';
+import useSpectatorVote from '../../hooks/useSpectatorVote';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -25,12 +26,20 @@ export default function SpectatorScreen({ state, onLeave }) {
   const { user } = useAuth();
   const toast = useToast();
   const { messages, send } = useSpectatorChat();
+  const { tally, my: votedFor, castVote } = useSpectatorVote();
   const [chatOpen, setChatOpen] = useState(false);
 
   const handleSend = async (text) => {
     const res = await send(text);
     if (res?.success === false) toast.error(res.reason || 'Chat failed');
   };
+
+  const handleVote = async (playerId) => {
+    const res = await castVote(playerId);
+    if (res?.success === false) toast.error(res.reason || 'Vote failed');
+  };
+
+  const totalVotes = Object.values(tally).reduce((s, n) => s + n, 0);
   if (!state) {
     return <div className="h-full grid place-items-center text-ink-soft animate-pulse">Joining as spectator…</div>;
   }
@@ -77,8 +86,45 @@ export default function SpectatorScreen({ state, onLeave }) {
         </div>
       </header>
 
+      {/* Prediction bar — read-only when player count is 0, tap-to-vote
+          otherwise. Each tile shows the vote share so spectators can see
+          consensus form in real time. Server enforces one vote per
+          spectator (last wins). */}
+      <div className="absolute top-16 inset-x-0 z-20 pointer-events-none">
+        <div className="flex flex-wrap justify-center gap-2 px-4 pointer-events-auto">
+          <span className="chip bg-bg-2/80 border border-line text-ink-soft">
+            🎯 Predict winner {totalVotes > 0 && <span className="ml-1 text-ink-faint">· {totalVotes} vote{totalVotes === 1 ? '' : 's'}</span>}
+          </span>
+          {players.map((p) => {
+            const count = tally[p.id] || 0;
+            const isMine = votedFor === p.id;
+            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleVote(p.id)}
+                disabled={p.abandoned}
+                className={`chip border transition
+                  ${isMine ? 'bg-violet text-white border-violet shadow-glow' :
+                            'bg-bg-3/60 border-line hover:border-violet/50'}
+                  ${p.abandoned ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={`Vote for ${p.username}`}
+              >
+                {p.username}
+                {count > 0 && (
+                  <span className={`ml-1.5 ${isMine ? 'text-white/80' : 'text-ink-faint'}`}>
+                    {count}{totalVotes > 0 ? ` · ${pct}%` : ''}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {topOpp && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10">
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 z-10">
           <OpponentPanel player={topOpp} isCurrent={false} back={back} />
         </div>
       )}
