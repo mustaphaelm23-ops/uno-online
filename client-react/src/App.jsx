@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage.jsx';
 import LobbyPage from './pages/LobbyPage.jsx';
 import RoomPage from './pages/RoomPage.jsx';
+import WatchPage from './pages/WatchPage.jsx';
 
 function Protected({ children }) {
   const { user, ready } = useAuth();
@@ -25,7 +26,8 @@ export default function App() {
     <Routes>
       <Route path="/auth"        element={user ? <Navigate to="/" replace /> : <AuthPage />} />
       <Route path="/"            element={<Protected><LobbyPage /></Protected>} />
-      <Route path="/room/:roomId" element={<Protected><RoomPage /></Protected>} />
+      <Route path="/room/:roomId"  element={<Protected><RoomPage /></Protected>} />
+      <Route path="/watch/:roomId" element={<Protected><WatchPage /></Protected>} />
       <Route path="*"            element={ready ? <Navigate to={user ? '/' : '/auth'} replace /> : <BootSplash />} />
     </Routes>
   );

@@ -26,6 +26,7 @@ import LeaderboardModal from '../components/lobby/LeaderboardModal';
 import EventModal from '../components/lobby/EventModal';
 import AchievementsModal from '../components/lobby/AchievementsModal';
 import NotificationsPanel from '../components/lobby/NotificationsPanel';
+import LiveGamesModal from '../components/lobby/LiveGamesModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -68,6 +69,7 @@ export default function LobbyPage() {
   const [eventOpen, setEventOpen]       = useState(false);
   const [achOpen, setAchOpen]           = useState(false);
   const [notifOpen, setNotifOpen]       = useState(false);
+  const [liveOpen, setLiveOpen]         = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -161,7 +163,12 @@ export default function LobbyPage() {
         {/* Center column */}
         <main className="flex-1 min-w-0 flex flex-col gap-4">
           <WelcomeCard user={user} />
-          <PublicRooms rooms={featured.rooms} hotType={featured.hotType} onJoin={joinFeatured} />
+          <PublicRooms
+            rooms={featured.rooms}
+            hotType={featured.hotType}
+            onJoin={joinFeatured}
+            onWatchLive={() => setLiveOpen(true)}
+          />
           <ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} />
           <BottomNav onAction={(id) => {
             if (id === 'leaderboard')  return openLb('ranked');
@@ -228,6 +235,10 @@ export default function LobbyPage() {
       <NotificationsPanel
         open={notifOpen}
         onClose={() => setNotifOpen(false)}
+      />
+      <LiveGamesModal
+        open={liveOpen}
+        onClose={() => setLiveOpen(false)}
       />
     </div>
   );

@@ -28,10 +28,10 @@ function SeatStrip({ seats = [], max = 4 }) {
   );
 }
 
-export default function PublicRooms({ rooms = [], hotType, onJoin }) {
+export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }) {
   return (
     <section className="panel-card p-5 sm:p-6">
-      <header className="flex items-end justify-between mb-5">
+      <header className="flex items-end justify-between mb-5 gap-3">
         <div>
           <div className="flex items-center gap-2 text-accent">
             <span className="text-xl">🏆</span>
@@ -41,6 +41,15 @@ export default function PublicRooms({ rooms = [], hotType, onJoin }) {
             {rooms.length} rooms available
           </div>
         </div>
+        {onWatchLive && (
+          <button
+            type="button"
+            onClick={onWatchLive}
+            className="chip bg-rose/15 border border-rose/40 text-rose hover:bg-rose/25 transition"
+          >
+            📺 Watch Live
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
