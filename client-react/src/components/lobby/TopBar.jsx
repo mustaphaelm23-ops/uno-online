@@ -90,9 +90,15 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onF
       </div>
 
       {/* Username + online pill — desktop only. Phone users see their
-          identity inside the sidebar drawer + settings modal. */}
+          identity inside the sidebar drawer + settings modal. Avatar
+          carries the account-level badge per the mockup. */}
       <div className="hidden lg:flex items-center gap-2 pl-3 border-l border-line">
-        <Avatar src={user?.avatar} name={user?.username} size="sm" online />
+        <Avatar
+          src={user?.avatar}
+          name={user?.username}
+          size="sm"
+          level={user?.accountLevel || 1}
+        />
         <div className="leading-tight">
           <div className="text-sm font-bold">{user?.username}</div>
           <div className="text-[10px] text-emerald flex items-center gap-1">● Online</div>

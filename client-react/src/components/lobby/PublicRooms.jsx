@@ -28,28 +28,39 @@ function SeatStrip({ seats = [], max = 4 }) {
   );
 }
 
-export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }) {
+export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, onRefresh, refreshing }) {
   return (
     <section className="panel-card p-4 sm:p-6">
-      <header className="flex items-end justify-between mb-5 gap-3">
-        <div>
+      <header className="flex items-end justify-between mb-4 sm:mb-5 gap-2 sm:gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-accent">
-            <span className="text-xl">🏆</span>
-            <h2 className="font-display text-xl sm:text-2xl tracking-wider">PUBLIC ROOMS</h2>
+            <span className="text-lg sm:text-xl">🏆</span>
+            <h2 className="font-display text-lg sm:text-2xl tracking-wider truncate">PUBLIC ROOMS</h2>
           </div>
-          <div className="text-[11px] uppercase tracking-widest text-ink-faint mt-1">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-ink-faint mt-1 tabular-nums">
             {rooms.length} rooms available
           </div>
         </div>
-        {onWatchLive && (
-          <button
-            type="button"
-            onClick={onWatchLive}
-            className="chip bg-rose/15 border border-rose/40 text-rose hover:bg-rose/25 transition"
-          >
-            📺 Watch Live
-          </button>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onWatchLive && (
+            <button
+              type="button"
+              onClick={onWatchLive}
+              className="chip bg-rose/15 border border-rose/40 text-rose hover:bg-rose/25 transition"
+            >📺 LIVE</button>
+          )}
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              aria-label="Refresh rooms"
+              className="inline-flex items-center gap-1.5 chip bg-bg-2/80 border border-line hover:border-violet/50 transition"
+            >
+              <span className={`text-base leading-none ${refreshing ? 'animate-spin' : ''}`}>↻</span>
+              <span className="hidden sm:inline">REFRESH</span>
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

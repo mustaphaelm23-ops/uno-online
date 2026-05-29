@@ -117,14 +117,21 @@ export default function LobbyPage() {
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
-  const fetchFeatured = useCallback(async () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const fetchFeatured = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
     try {
       const data = await api.get('/api/rooms/featured');
       setFeatured(data);
     } catch (err) {
       toast.error(err.message || 'Failed to load rooms');
+    } finally {
+      // Hold the spinner for ~400 ms even on instant responses so the
+      // user actually sees the refresh tick — no perceived ghost-click.
+      if (manual) setTimeout(() => setRefreshing(false), 400);
     }
   }, [toast]);
+  const refreshRooms = () => fetchFeatured(true);
 
   useEffect(() => {
     fetchFeatured();
@@ -212,6 +219,8 @@ export default function LobbyPage() {
               hotType={featured.hotType}
               onJoin={joinFeatured}
               onWatchLive={() => setLiveOpen(true)}
+              onRefresh={refreshRooms}
+              refreshing={refreshing}
             />
           </Reveal>
           <Reveal><ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} /></Reveal>

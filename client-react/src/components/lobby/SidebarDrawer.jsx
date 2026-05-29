@@ -39,11 +39,16 @@ export default function SidebarDrawer({ open, onClose, user, onAction, onLogout 
           >
             {/* User pill — same info the desktop TopBar shows on the right */}
             <header className="p-4 border-b border-line flex items-center gap-3">
-              <Avatar src={user?.avatar} name={user?.username} size="md" online />
+              <Avatar
+                src={user?.avatar}
+                name={user?.username}
+                size="md"
+                level={user?.accountLevel || 1}
+              />
               <div className="flex-1 min-w-0">
                 <div className="font-bold truncate">{user?.username || 'Guest'}</div>
                 <div className="text-[10px] text-ink-soft uppercase tracking-widest mt-0.5">
-                  {user?.league?.name || 'Unranked'} · Lv {user?.accountLevel || 1}
+                  <span className="text-emerald">● Online</span> · {user?.league?.name || 'Unranked'}
                 </div>
                 <div className="text-[10px] text-ink-faint mt-0.5">
                   🪙 {fmt(user?.coins)} · 💎 {fmt(user?.diamonds)}

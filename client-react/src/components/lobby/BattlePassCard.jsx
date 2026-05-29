@@ -22,7 +22,19 @@ export default function BattlePassCard({ user, onView }) {
   return (
     <div className={`panel-card p-4 sm:p-5 relative overflow-hidden transition
       ${isNear ? 'border-accent/50 shadow-glow-gold' : ''}`}>
-      <div className="absolute -right-6 -top-6 text-7xl opacity-10 rotate-12 select-none pointer-events-none">🎴</div>
+      {/* Decorative card cluster + level pill, top-right — matches the
+          mockup's mini playing-card stack with a numbered chip. */}
+      <div className="absolute right-3 top-3 select-none pointer-events-none flex items-center gap-1 opacity-70">
+        <div className="flex -space-x-2">
+          <div className="w-7 h-9 rounded-md rotate-[-12deg] bg-gradient-to-br from-rose to-rose/70 border border-white/20 shadow-card grid place-items-center text-[10px] font-display text-white">8</div>
+          <div className="w-7 h-9 rounded-md rotate-[6deg] bg-gradient-to-br from-violet to-violet-deep border border-white/20 shadow-card grid place-items-center text-[10px] font-display text-white">6</div>
+        </div>
+        <div className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-extrabold tabular-nums
+                        bg-gradient-to-br from-accent to-accent-deep text-bg border-2 border-bg shadow-card">
+          {level}
+        </div>
+      </div>
+
       <div className="text-[10px] uppercase tracking-[0.3em] text-ink-faint">Season 1</div>
       <h3 className="font-display text-2xl tracking-wider text-accent mt-0.5 flex items-center gap-2 flex-wrap">
         BATTLE PASS
@@ -35,9 +47,9 @@ export default function BattlePassCard({ user, onView }) {
         <div className="flex justify-between items-center mb-1.5 text-xs text-ink-soft">
           <span className="flex items-center gap-1 tabular-nums">
             ⭐ <span className="font-bold text-ink">{into.toLocaleString()}</span>
-            /{XP_PER_TIER.toLocaleString()}
+            <span className="text-ink-faint">/{XP_PER_TIER.toLocaleString()}</span>
           </span>
-          <span className="chip bg-bg-3 border border-line tabular-nums">LV {level}</span>
+          <span className="text-[10px] uppercase tracking-widest text-ink-faint">XP TO LV {level + 1}</span>
         </div>
         <div className="h-2 rounded-full bg-bg-3 overflow-hidden relative">
           <div

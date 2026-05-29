@@ -38,7 +38,13 @@ export default function WelcomeCard({ user }) {
   return (
     <div className="panel-card p-4 sm:p-6 flex flex-col sm:flex-row items-center sm:items-stretch gap-4 sm:gap-6">
       <div className="flex items-center gap-3 sm:gap-4 sm:flex-1 min-w-0 w-full">
-        <Avatar src={user.avatar} name={user.username} size="lg" ring />
+        <Avatar
+          src={user.avatar}
+          name={user.username}
+          size="lg"
+          ring
+          level={user.accountLevel || 1}
+        />
         <div className="min-w-0 flex-1">
           <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Welcome back</div>
           <div className="font-display text-2xl sm:text-4xl tracking-wider text-accent leading-tight truncate">

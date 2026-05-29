@@ -32,9 +32,18 @@ export default function SpecialOfferCard({ offer, onClaim }) {
                     ${urgent
                       ? 'border-rose/50 bg-gradient-to-br from-rose/20 via-rose/5 to-bg-2 shadow-[0_8px_24px_rgba(244,63,94,0.3)]'
                       : 'border-violet/30 bg-gradient-to-br from-violet/20 via-violet/5 to-bg-2'}`}>
-      <div className="absolute -right-6 -bottom-6 text-7xl opacity-15 rotate-12 select-none pointer-events-none">🎴</div>
-      <div className="text-3xl sm:text-4xl">🎁</div>
-      <div className="flex-1 min-w-0">
+      {/* Card-back thumbnail (mini cosmetic visual on the right edge) —
+          matches the mockup's "EXCLUSIVE CARD BACK" hero artwork. */}
+      <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 select-none pointer-events-none opacity-90">
+        <div className="relative w-10 h-14 sm:w-12 sm:h-16 rounded-md rotate-[10deg] overflow-hidden border border-white/20 shadow-card-lg
+                        bg-gradient-to-br from-rose to-rose/70">
+          <div className="absolute inset-0 grid place-items-center font-display text-amber-300 text-base sm:text-lg -rotate-12 drop-shadow-[0_2px_4px_rgba(0,0,0,.5)]">UNO</div>
+          <div className="absolute inset-1 rounded border border-white/20 pointer-events-none" />
+        </div>
+      </div>
+
+      <div className="text-3xl sm:text-4xl shrink-0">🎁</div>
+      <div className="flex-1 min-w-0 pr-12 sm:pr-14">
         <div className={`font-display text-base sm:text-xl tracking-wider truncate
                         ${urgent ? 'text-rose' : 'text-accent'}`}>
           {title}
@@ -48,7 +57,7 @@ export default function SpecialOfferCard({ offer, onClaim }) {
       </div>
       <button
         type="button"
-        className={`text-[11px] tracking-wider px-3 sm:px-4 py-2 rounded-xl font-extrabold transition shrink-0
+        className={`relative z-10 text-[11px] tracking-wider px-3 sm:px-4 py-2 rounded-xl font-extrabold transition shrink-0
                     ${urgent
                       ? 'bg-gradient-to-br from-rose to-rose text-white shadow-[0_8px_24px_rgba(244,63,94,0.4)] hover:brightness-110'
                       : 'bg-gradient-to-br from-accent to-accent-deep text-bg shadow-glow-gold hover:from-accent-soft hover:to-accent'}`}
