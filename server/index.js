@@ -2174,6 +2174,99 @@ app.post('/api/friends/invite', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Emotes (extra cosmetic reactions) ─────────────────────────────────
+// The in-game ReactionsPanel already ships with 12 free basic emojis;
+// EMOTES are EXTRA expressions players collect and unlock to broaden
+// their reactions catalogue. Same paid / gated unlock paths as card backs.
+// `kind` for gates matches the cardBackProgressFor() helper below.
+const EMOTES = [
+  { id:'mind_blown',  emoji:'🤯', name:'Mind Blown',  rarity:'common',
+    cost:500,  requires:null,
+    desc:'For the wild plays.' },
+  { id:'rocket',      emoji:'🚀', name:'Rocket',      rarity:'common',
+    cost:500,  requires:null,
+    desc:'Blast off.' },
+  { id:'cool_shades', emoji:'🕶️', name:'Too Cool',    rarity:'rare',
+    cost:1500, requires:null,
+    desc:'Played it ice-cold.' },
+  { id:'trophy',      emoji:'🏆', name:'Victor',      rarity:'rare',
+    cost:0,    requires:{ kind:'wins',  value:25 },
+    desc:'Earned with 25 match wins.' },
+  { id:'crown',       emoji:'👑', name:'Royalty',     rarity:'epic',
+    cost:3000, requires:null,
+    desc:'Rule the table.' },
+  { id:'money_bag',   emoji:'💰', name:'Big Stack',   rarity:'epic',
+    cost:0,    requires:{ kind:'coins', value:100000 },
+    desc:'Unlocks at 100,000 coins.' },
+  { id:'fairy',       emoji:'🧚', name:'Magic',       rarity:'epic',
+    cost:0,    requires:{ kind:'bp_premium', value:1 },
+    desc:'Owning the Battle Pass unlocks this.' },
+  { id:'dragon',      emoji:'🐉', name:'Dragon',      rarity:'legendary',
+    cost:0,    requires:{ kind:'wins',  value:100 },
+    desc:'Earned with 100 match wins.' },
+  { id:'gem',         emoji:'💎', name:'Diamond',     rarity:'legendary',
+    cost:0,    requires:{ kind:'elo',   value:1500 },
+    desc:'Earned at 1500 rating.' },
+  { id:'star_struck', emoji:'🤩', name:'Star-Struck', rarity:'legendary',
+    cost:0,    requires:{ kind:'level', value:25 },
+    desc:'Earned at account level 25.' },
+];
+
+function emoteProgressFor(user, req) {
+  if (!req) return { current: 1, target: 1, met: true };
+  if (req.kind === 'wins')       return progressFor(user.stats?.gamesWon || 0, req.value);
+  if (req.kind === 'elo')        return progressFor(user.elo || 1000, req.value);
+  if (req.kind === 'coins')      return progressFor(user.coins || 0, req.value);
+  if (req.kind === 'level')      return progressFor(accountLevelProgress(user.accountXP || 0).level, req.value);
+  if (req.kind === 'bp_premium') return progressFor(user.bp?.premium ? 1 : 0, req.value);
+  return { current: 0, target: req.value || 1, met: false };
+}
+function progressFor(cur, target) {
+  return { current: cur, target, met: cur >= target };
+}
+
+function ensureEmotes(user) {
+  if (!Array.isArray(user.ownedEmotes)) user.ownedEmotes = [];
+  return user;
+}
+
+app.get('/api/emotes', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  ensureEmotes(user);
+  const items = EMOTES.map(e => {
+    const progress = emoteProgressFor(user, e.requires);
+    return {
+      id: e.id, emoji: e.emoji, name: e.name, rarity: e.rarity,
+      desc: e.desc, cost: e.cost, requires: e.requires,
+      progress,
+      owned: user.ownedEmotes.includes(e.id),
+    };
+  });
+  res.json({ items, owned: user.ownedEmotes });
+});
+
+app.post('/api/emotes/unlock', authMiddleware, (req, res) => {
+  const user = usersDB.get(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  ensureEmotes(user);
+  const id = String(req.body?.id || '');
+  const e  = EMOTES.find(x => x.id === id);
+  if (!e) return res.status(400).json({ error: 'Unknown emote' });
+  if (user.ownedEmotes.includes(id)) return res.status(400).json({ error: 'Already owned' });
+  if (e.requires) {
+    const p = emoteProgressFor(user, e.requires);
+    if (!p.met) return res.status(400).json({ error: 'Requirement not met', progress: p });
+  } else if (e.cost > 0) {
+    if ((user.coins || 0) < e.cost) return res.status(400).json({ error: `Need ${e.cost.toLocaleString()} coins` });
+    user.coins -= e.cost;
+    logReward(user, '😎', `Emote — ${e.name}`, -e.cost);
+  }
+  user.ownedEmotes.push(e.id);
+  saveUsers();
+  res.json({ success: true, coins: user.coins, ownedEmotes: user.ownedEmotes, id: e.id });
+});
+
 // ── Card-back Collection ──────────────────────────────────────────────
 // Cosmetic catalogue. Each entry has a visual config (palette + accent +
 // label) so the client can render the back deterministically from the id

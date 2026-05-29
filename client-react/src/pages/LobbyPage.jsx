@@ -28,6 +28,7 @@ import AchievementsModal from '../components/lobby/AchievementsModal';
 import NotificationsPanel from '../components/lobby/NotificationsPanel';
 import LiveGamesModal from '../components/lobby/LiveGamesModal';
 import CollectionModal from '../components/lobby/CollectionModal';
+import EmotesModal from '../components/lobby/EmotesModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -72,6 +73,7 @@ export default function LobbyPage() {
   const [notifOpen, setNotifOpen]       = useState(false);
   const [liveOpen, setLiveOpen]         = useState(false);
   const [collOpen, setCollOpen]         = useState(false);
+  const [emotesOpen, setEmotesOpen]     = useState(false);
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -177,6 +179,7 @@ export default function LobbyPage() {
             if (id === 'missions')     return setEventOpen(true);
             if (id === 'achievements') return setAchOpen(true);
             if (id === 'collection')   return setCollOpen(true);
+            if (id === 'emotes')       return setEmotesOpen(true);
             toast.info(`${id} — follow-up commit`);
           }} />
         </main>
@@ -246,6 +249,10 @@ export default function LobbyPage() {
       <CollectionModal
         open={collOpen}
         onClose={() => setCollOpen(false)}
+      />
+      <EmotesModal
+        open={emotesOpen}
+        onClose={() => setEmotesOpen(false)}
       />
     </div>
   );
