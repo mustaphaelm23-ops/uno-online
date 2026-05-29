@@ -64,7 +64,7 @@ export default function NotificationsPanel({ open, onClose }) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
             {items.length === 0 ? (
               <div className="text-ink-faint text-sm py-10 text-center leading-relaxed">
                 No notifications yet.<br/>
@@ -76,14 +76,15 @@ export default function NotificationsPanel({ open, onClose }) {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.18 }}
-                className={`flex items-start gap-3 p-3 rounded-xl bg-bg-3/40 border ${TYPE_TINT[it.type] || 'border-line'}`}
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl bg-bg-3/40 border ${TYPE_TINT[it.type] || 'border-line'} hover:bg-bg-3/60 transition`}
               >
-                <div className="w-9 h-9 grid place-items-center rounded-lg bg-bg-2 border border-line text-base shrink-0">
+                <div className={`w-9 h-9 grid place-items-center rounded-lg text-base shrink-0
+                  ${TYPE_TINT[it.type]?.replace('border-', 'bg-').replace('/40', '/15').replace('/50', '/15') || 'bg-bg-2 border border-line'}`}>
                   {TYPE_ICON[it.type] || '🔔'}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs leading-snug">{it.text}</div>
-                  <div className="text-[10px] text-ink-faint mt-1">{fmtAgo(it.at)}</div>
+                <div className="flex-1 min-w-0 leading-tight">
+                  <div className="text-[12px] leading-snug">{it.text}</div>
+                  <div className="text-[10px] text-ink-faint mt-1 uppercase tracking-widest">{fmtAgo(it.at)}</div>
                 </div>
               </motion.div>
             ))}

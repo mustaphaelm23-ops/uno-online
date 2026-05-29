@@ -32,16 +32,16 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="h-full grid place-items-center px-4 py-10">
+    <div className="min-h-full grid place-items-center px-3 sm:px-4 py-6 sm:py-10">
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md panel-card p-8"
+        className="w-full max-w-md panel-card p-5 sm:p-8"
       >
-        <div className="flex flex-col items-center gap-2 mb-6">
-          <div className="font-display text-5xl tracking-wider text-accent drop-shadow-[0_4px_24px_rgba(245,158,11,0.4)]">UNO</div>
-          <div className="text-ink-soft text-xs uppercase tracking-[0.3em]">Online Arena</div>
+        <div className="flex flex-col items-center gap-2 mb-5 sm:mb-6">
+          <div className="font-display text-4xl sm:text-5xl tracking-wider text-accent drop-shadow-[0_4px_24px_rgba(245,158,11,0.4)]">UNO</div>
+          <div className="text-ink-soft text-[10px] sm:text-xs uppercase tracking-[0.3em]">Online Arena</div>
         </div>
 
         <div className="flex gap-1 mb-6 p-1 bg-bg/60 rounded-xl border border-line">

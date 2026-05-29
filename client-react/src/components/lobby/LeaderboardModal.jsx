@@ -27,11 +27,27 @@ const RANK_ACCENT = {
 
 function RankBadge({ rank }) {
   const cls = RANK_ACCENT[rank] || 'border-line text-ink-faint';
+  // Top 3 get a podium-style filled background so they stand out from
+  // the rest of the leaderboard at a glance.
+  const filled = rank <= 3
+    ? rank === 1 ? 'bg-accent/15'
+      : rank === 2 ? 'bg-ink-soft/10'
+                   : 'bg-orange-400/15'
+    : '';
   return (
-    <div className={`w-8 h-8 rounded-full border grid place-items-center font-extrabold text-sm shrink-0 ${cls}`}>
+    <div className={`w-7 h-7 rounded-full border grid place-items-center font-extrabold text-xs tabular-nums shrink-0 ${cls} ${filled}`}>
       {rank}
     </div>
   );
+}
+
+// Shared row scaffold so Ranked and Rich rows have identical visual
+// rhythm — only the right-side metric column changes.
+function rowCls({ rank, isMe }) {
+  if (isMe) return 'bg-violet/20 border-violet shadow-glow';
+  if (rank === 1) return 'bg-gradient-to-r from-accent/15 to-transparent border-accent/40 shadow-glow-gold';
+  if (rank <= 3)  return 'bg-bg-3/60 border-line';
+  return 'bg-bg-2/40 border-line';
 }
 
 function RankedRow({ row, isMe, idx }) {
@@ -40,24 +56,21 @@ function RankedRow({ row, isMe, idx }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.015 }}
-      className={`flex items-center gap-3 p-2.5 rounded-xl border
-        ${isMe ? 'bg-violet/20 border-violet shadow-glow'
-              : row.rank <= 3 ? 'bg-bg-3/60 border-line'
-                              : 'bg-bg-2/40 border-line'}`}
+      className={`flex items-center gap-2.5 p-2 rounded-xl border ${rowCls({ rank: row.rank, isMe })}`}
     >
       <RankBadge rank={row.rank} />
       <Avatar src={row.avatar} name={row.username} size="sm" />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold truncate flex items-center gap-2">
-          {row.username}
-          {isMe && <span className="chip bg-violet text-white text-[9px]">YOU</span>}
+      <div className="flex-1 min-w-0 leading-tight">
+        <div className="text-[13px] font-bold truncate flex items-center gap-2">
+          <span className="truncate">{row.username}</span>
+          {isMe && <span className="rounded-md bg-violet text-white text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 shrink-0">YOU</span>}
         </div>
-        <div className="text-[10px] uppercase tracking-widest text-ink-faint">
-          {row.league || '—'} {row.badge ? `· ${row.badge}` : ''}
+        <div className="text-[10px] uppercase tracking-widest text-ink-faint truncate">
+          {row.league || '—'}{row.badge ? ` · ${row.badge}` : ''}
         </div>
       </div>
-      <div className="text-right">
-        <div className="font-extrabold text-violet-soft">{fmt(row.elo)}</div>
+      <div className="text-right shrink-0 leading-tight">
+        <div className="font-extrabold text-violet-soft tabular-nums">{fmt(row.elo)}</div>
         <div className="text-[9px] text-ink-faint uppercase tracking-widest">Rating</div>
       </div>
     </motion.li>
@@ -70,24 +83,21 @@ function RichRow({ row, isMe, idx }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.015 }}
-      className={`flex items-center gap-3 p-2.5 rounded-xl border
-        ${isMe ? 'bg-violet/20 border-violet shadow-glow'
-              : row.rank <= 3 ? 'bg-bg-3/60 border-line'
-                              : 'bg-bg-2/40 border-line'}`}
+      className={`flex items-center gap-2.5 p-2 rounded-xl border ${rowCls({ rank: row.rank, isMe })}`}
     >
       <RankBadge rank={row.rank} />
       <Avatar src={row.avatar} name={row.username} size="sm" />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-bold truncate flex items-center gap-2">
-          {row.username}
-          {isMe && <span className="chip bg-violet text-white text-[9px]">YOU</span>}
+      <div className="flex-1 min-w-0 leading-tight">
+        <div className="text-[13px] font-bold truncate flex items-center gap-2">
+          <span className="truncate">{row.username}</span>
+          {isMe && <span className="rounded-md bg-violet text-white text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 shrink-0">YOU</span>}
         </div>
-        <div className="text-[10px] uppercase tracking-widest text-ink-faint">
-          {fmt(row.gamesWon)}W / {fmt(row.gamesPlayed)} played
+        <div className="text-[10px] uppercase tracking-widest text-ink-faint truncate">
+          {fmt(row.gamesWon)}W · {fmt(row.gamesPlayed)} played
         </div>
       </div>
-      <div className="text-right">
-        <div className="font-extrabold text-accent flex items-center gap-1 justify-end">
+      <div className="text-right shrink-0 leading-tight">
+        <div className="font-extrabold text-accent flex items-center gap-1 justify-end tabular-nums">
           🪙 {fmt(row.coins)}
         </div>
         <div className="text-[9px] text-ink-faint uppercase tracking-widest">Coins</div>
