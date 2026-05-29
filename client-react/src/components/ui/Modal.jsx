@@ -23,7 +23,7 @@ export default function Modal({ open, onClose, title, children, width = 'md', fo
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[150] grid place-items-center px-4"
+          className="fixed inset-0 z-[150] grid place-items-center px-2 sm:px-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           onClick={onClose}

@@ -16,9 +16,16 @@ const ITEMS = [
   { id: 'shop',    label: 'Shop',         sub: 'Buy coins & items',      icon: '🛍️' },
 ];
 
-export default function Sidebar({ onAction }) {
+// `inDrawer` flips the visibility / sizing so the same component works
+// both as the desktop left-rail (sticky, fixed width, hidden under lg)
+// and inside the mobile SidebarDrawer (full-width, always visible since
+// the drawer handles its own visibility).
+export default function Sidebar({ onAction, inDrawer = false }) {
+  const wrapperCls = inDrawer
+    ? 'flex flex-col gap-2 w-full'
+    : 'hidden lg:flex flex-col gap-2 w-64 shrink-0';
   return (
-    <aside className="hidden lg:flex flex-col gap-2 w-64 shrink-0">
+    <aside className={wrapperCls}>
       {ITEMS.map((item) => (
         <motion.button
           key={item.id}

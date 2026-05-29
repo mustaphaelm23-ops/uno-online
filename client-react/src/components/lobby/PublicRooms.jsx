@@ -30,12 +30,12 @@ function SeatStrip({ seats = [], max = 4 }) {
 
 export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }) {
   return (
-    <section className="panel-card p-5 sm:p-6">
+    <section className="panel-card p-4 sm:p-6">
       <header className="flex items-end justify-between mb-5 gap-3">
         <div>
           <div className="flex items-center gap-2 text-accent">
             <span className="text-xl">🏆</span>
-            <h2 className="font-display text-2xl tracking-wider">PUBLIC ROOMS</h2>
+            <h2 className="font-display text-xl sm:text-2xl tracking-wider">PUBLIC ROOMS</h2>
           </div>
           <div className="text-[11px] uppercase tracking-widest text-ink-faint mt-1">
             {rooms.length} rooms available
@@ -52,7 +52,7 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }
         )}
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {rooms.map((r, idx) => {
           const t = THEME[r.type] || THEME.CLASSIC;
           const isHot = r.type === hotType;
@@ -67,7 +67,7 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className={`relative rounded-2xl p-5 text-left border border-line bg-gradient-to-br ${t.bg}
+              className={`relative rounded-2xl p-3 sm:p-5 text-left border border-line bg-gradient-to-br ${t.bg}
                           hover:ring-1 ${t.ring} ${t.glow} transition-all`}
             >
               {isRanked && (
@@ -77,15 +77,17 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive }
                 <span className="absolute -top-2 left-4 chip bg-gradient-to-br from-rose to-orange-500 text-white">HOT</span>
               )}
               <div className="text-center">
-                <div className={`font-display text-xl tracking-wider ${t.accent}`}>{r.label.replace(/ Room$/i, ' ROOM').toUpperCase()}</div>
-                <div className="text-[11px] uppercase tracking-widest text-ink-faint mt-0.5">
+                <div className={`font-display text-base sm:text-xl tracking-wider ${t.accent} truncate`}>
+                  {r.label.replace(/ Room$/i, ' ROOM').toUpperCase()}
+                </div>
+                <div className="text-[10px] sm:text-[11px] uppercase tracking-widest text-ink-faint mt-0.5">
                   {r.players}/{r.maxPlayers} Players
                 </div>
               </div>
-              <div className="my-5">
+              <div className="my-3 sm:my-5">
                 <SeatStrip seats={r.seats} max={r.maxPlayers} />
               </div>
-              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs uppercase tracking-widest text-ink-soft">
+              <div className="border-t border-line/60 pt-2 sm:pt-3 flex items-center justify-between text-[10px] sm:text-xs uppercase tracking-widest text-ink-soft">
                 <span>Entry</span>
                 <span className="flex items-center gap-1 text-accent font-bold">🪙 {r.entryFee}</span>
               </div>

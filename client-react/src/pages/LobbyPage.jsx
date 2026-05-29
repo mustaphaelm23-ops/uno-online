@@ -10,6 +10,7 @@ import { getSocket } from '../api/socket';
 // to be top-level, so it stays here.
 import LazyWhenOpened from '../components/ui/LazyWhenOpened';
 import Sidebar from '../components/lobby/Sidebar';
+import SidebarDrawer from '../components/lobby/SidebarDrawer';
 import TopBar from '../components/lobby/TopBar';
 import WelcomeCard from '../components/lobby/WelcomeCard';
 import PublicRooms from '../components/lobby/PublicRooms';
@@ -83,6 +84,19 @@ export default function LobbyPage() {
   const [liveOpen, setLiveOpen]         = useState(false);
   const [collOpen, setCollOpen]         = useState(false);
   const [emotesOpen, setEmotesOpen]     = useState(false);
+  const [drawerOpen, setDrawerOpen]     = useState(false);
+
+  // Shared sidebar action handler — used by both the inline desktop
+  // Sidebar and the mobile SidebarDrawer so the two stay in sync.
+  const onSidebar = (id) => {
+    if (id === 'play')    return;
+    if (id === 'join')    return setJoinOpen(true);
+    if (id === 'quick')   return quickMatch();
+    if (id === 'shop')    return openShop('packages');
+    if (id === 'daily')   return setDailyOpen(true);
+    if (id === 'ranked')  return openLb('ranked');
+    return toast.info(`${id} ships in a follow-up commit`);
+  };
 
   const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
@@ -148,7 +162,7 @@ export default function LobbyPage() {
   };
 
   return (
-    <div className="min-h-full max-w-[1480px] mx-auto px-3 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">
+    <div className="min-h-full max-w-[1480px] mx-auto px-2 sm:px-6 py-3 sm:py-5 flex flex-col gap-3 sm:gap-4">
       <TopBar
         user={user}
         onShop={() => openShop('packages')}
@@ -157,21 +171,14 @@ export default function LobbyPage() {
         onChat={() => openSocial('dms')}
         onFriends={() => openSocial('friends')}
         onNotifications={() => setNotifOpen(true)}
+        onMenu={() => setDrawerOpen(true)}
       />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-        className="flex gap-4 lg:gap-5 items-start"
+        className="flex gap-3 sm:gap-4 lg:gap-5 items-start"
       >
-        <Sidebar onAction={(id) => {
-          if (id === 'play')    return;
-          if (id === 'join')    return setJoinOpen(true);
-          if (id === 'quick')   return quickMatch();
-          if (id === 'shop')    return openShop('packages');
-          if (id === 'daily')   return setDailyOpen(true);
-          if (id === 'ranked')  return openLb('ranked');
-          return toast.info(`${id} ships in a follow-up commit`);
-        }} />
+        <Sidebar onAction={onSidebar} />
 
         {/* Center column */}
         <main className="flex-1 min-w-0 flex flex-col gap-4">
@@ -183,6 +190,14 @@ export default function LobbyPage() {
             onWatchLive={() => setLiveOpen(true)}
           />
           <ActionTiles onCreate={() => setCreateOpen(true)} onQuickMatch={quickMatch} />
+
+          {/* Mobile-only surface for right-rail cards. On lg+ the right rail
+              renders the same components and these duplicates are hidden. */}
+          <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <BattlePassCard user={user} onView={() => setBpOpen(true)} />
+            <SpecialOfferCard onClaim={() => openShop('offer')} />
+          </div>
+
           <BottomNav onAction={(id) => {
             if (id === 'leaderboard')  return openLb('ranked');
             if (id === 'missions')     return setEventOpen(true);
@@ -201,6 +216,15 @@ export default function LobbyPage() {
           <SpecialOfferCard onClaim={() => openShop('offer')} />
         </div>
       </motion.div>
+
+      {/* Mobile sidebar drawer — eager (small, mobile-essential). */}
+      <SidebarDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        user={user}
+        onAction={onSidebar}
+        onLogout={logout}
+      />
 
       {/* Code-split modal layer. Each surface only loads its chunk on
           first open; after that it stays mounted so exit animations play

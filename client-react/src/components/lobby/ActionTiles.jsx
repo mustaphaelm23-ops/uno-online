@@ -14,23 +14,23 @@ function Tile({ onClick, accent, icon, title, subtitle }) {
       whileHover={{ y: -3 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`relative overflow-hidden flex items-center gap-4 p-5 rounded-2xl border
+      className={`relative overflow-hidden flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl border
                   bg-gradient-to-br ${palette} transition-all w-full text-left`}
     >
-      <div className="text-5xl drop-shadow-[0_4px_12px_rgba(255,255,255,0.25)]">{icon}</div>
+      <div className="text-4xl sm:text-5xl drop-shadow-[0_4px_12px_rgba(255,255,255,0.25)]">{icon}</div>
       <div className="flex-1 min-w-0">
-        <div className="font-display text-xl tracking-wider text-ink">{title}</div>
-        <div className="text-xs text-ink-soft mt-1">{subtitle}</div>
+        <div className="font-display text-lg sm:text-xl tracking-wider text-ink">{title}</div>
+        <div className="text-[11px] sm:text-xs text-ink-soft mt-0.5 sm:mt-1 leading-snug">{subtitle}</div>
       </div>
-      <div className={`w-9 h-9 grid place-items-center rounded-full
-                       ${accent === 'violet' ? 'bg-violet' : 'bg-sky'} text-white text-lg`}>→</div>
+      <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 grid place-items-center rounded-full
+                       ${accent === 'violet' ? 'bg-violet' : 'bg-sky'} text-white text-base sm:text-lg`}>→</div>
     </motion.button>
   );
 }
 
 export default function ActionTiles({ onCreate, onQuickMatch }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
       <Tile
         onClick={onCreate}
         accent="violet"
