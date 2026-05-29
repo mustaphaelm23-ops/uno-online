@@ -38,6 +38,15 @@ export default function useVoiceChat() {
 
   const localStreamRef = useRef(null);
   const pcsRef         = useRef(new Map());      // userId → RTCPeerConnection
+  // Speaking-detect state: AudioContext + AnalyserNode + the rAF/interval
+  // handle so we can fully tear down on leave. lastEmittedRef debounces
+  // the voice:speaking emission so we don't spam the wire while talking.
+  const audioCtxRef    = useRef(null);
+  const analyzerRef    = useRef(null);
+  const detectHandle   = useRef(null);
+  const lastEmittedRef = useRef(false);          // most recent speaking bool we emitted
+  const speakingSinceRef  = useRef(0);           // ms of first frame above threshold
+  const silentSinceRef    = useRef(0);           // ms of first frame below threshold
 
   // ── helpers ──
   const closePc = useCallback((peerId) => {
@@ -87,6 +96,74 @@ export default function useVoiceChat() {
     return pc;
   }, [closePc]);
 
+  // ── speaking auto-detect (Web Audio analyzer on local mic) ──
+  // Samples every ~120 ms. RMS over the time-domain buffer; threshold tuned
+  // so normal speech reliably crosses while quiet rooms don't. Requires
+  // >=180 ms above to flip "speaking" on and >=500 ms of silence to flip
+  // back off (avoids flicker at sentence pauses).
+  const VOICE_THRESHOLD     = 0.02;
+  const SPEAKING_ON_MS      = 180;
+  const SPEAKING_OFF_MS     = 500;
+  const SAMPLE_INTERVAL_MS  = 120;
+
+  const startSpeakingDetect = useCallback((stream, sk) => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      src.connect(analyser);
+      audioCtxRef.current = ctx;
+      analyzerRef.current = analyser;
+
+      const buf = new Float32Array(analyser.fftSize);
+      detectHandle.current = setInterval(() => {
+        // If muted, never report speaking — the peers wouldn't hear it
+        // either since the track is disabled.
+        if (lastEmittedRef.current && stream.getAudioTracks().some((t) => !t.enabled)) {
+          sk?.emit('voice:speaking', { speaking: false });
+          lastEmittedRef.current = false;
+          speakingSinceRef.current = 0;
+          silentSinceRef.current   = 0;
+          return;
+        }
+        if (!analyzerRef.current) return;
+        analyzerRef.current.getFloatTimeDomainData(buf);
+        // RMS volume — cheap, robust to noise floor.
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        const rms = Math.sqrt(sum / buf.length);
+        const now = Date.now();
+        if (rms > VOICE_THRESHOLD) {
+          if (!speakingSinceRef.current) speakingSinceRef.current = now;
+          silentSinceRef.current = 0;
+          if (!lastEmittedRef.current && (now - speakingSinceRef.current) >= SPEAKING_ON_MS) {
+            sk?.emit('voice:speaking', { speaking: true });
+            lastEmittedRef.current = true;
+          }
+        } else {
+          if (!silentSinceRef.current) silentSinceRef.current = now;
+          speakingSinceRef.current = 0;
+          if (lastEmittedRef.current && (now - silentSinceRef.current) >= SPEAKING_OFF_MS) {
+            sk?.emit('voice:speaking', { speaking: false });
+            lastEmittedRef.current = false;
+          }
+        }
+      }, SAMPLE_INTERVAL_MS);
+    } catch { /* analyzer setup failed — speak indicator stays dark, voice still works */ }
+  }, []);
+
+  const stopSpeakingDetect = useCallback(() => {
+    if (detectHandle.current) { clearInterval(detectHandle.current); detectHandle.current = null; }
+    if (analyzerRef.current)  { try { analyzerRef.current.disconnect(); } catch {} analyzerRef.current = null; }
+    if (audioCtxRef.current)  { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; }
+    lastEmittedRef.current   = false;
+    speakingSinceRef.current = 0;
+    silentSinceRef.current   = 0;
+  }, []);
+
   // ── public actions ──
   const join = useCallback(async () => {
     if (inVoice) return;
@@ -102,11 +179,13 @@ export default function useVoiceChat() {
     setMuted(false);
     sk.emit('voice:join');
     setInVoice(true);
-  }, [inVoice]);
+    startSpeakingDetect(stream, sk);
+  }, [inVoice, startSpeakingDetect]);
 
   const leave = useCallback(() => {
     const sk = getSocket();
     if (sk && inVoice) sk.emit('voice:leave');
+    stopSpeakingDetect();
     // Close all peer connections + stop the local mic.
     for (const peerId of [...pcsRef.current.keys()]) closePc(peerId);
     if (localStreamRef.current) {
@@ -116,7 +195,7 @@ export default function useVoiceChat() {
     setPeers(new Map());
     setSpeakingPeers(new Set());
     setInVoice(false);
-  }, [inVoice, closePc]);
+  }, [inVoice, closePc, stopSpeakingDetect]);
 
   const toggleMute = useCallback(() => {
     const s = localStreamRef.current;
