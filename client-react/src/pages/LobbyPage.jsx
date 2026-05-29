@@ -16,6 +16,7 @@ import SpecialOfferCard from '../components/lobby/SpecialOfferCard';
 import BottomNav from '../components/lobby/BottomNav';
 import ActionTiles from '../components/lobby/ActionTiles';
 import CreateRoomModal from '../components/lobby/CreateRoomModal';
+import ShopModal from '../components/lobby/ShopModal';
 
 // LobbyPage assembles the visible mockup: sidebar nav on the left, top bar,
 // welcome card + featured rooms + action tiles + bottom nav in the center
@@ -43,6 +44,10 @@ export default function LobbyPage() {
   const [featured, setFeatured] = useState({ rooms: [], hotType: null, onlineCount: 0 });
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [shopOpen, setShopOpen]     = useState(false);
+  const [shopTab, setShopTab]       = useState('packages');
+
+  const openShop = (tab = 'packages') => { setShopTab(tab); setShopOpen(true); };
 
   const fetchFeatured = useCallback(async () => {
     try {
@@ -109,7 +114,7 @@ export default function LobbyPage() {
     <div className="min-h-full max-w-[1480px] mx-auto px-3 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">
       <TopBar
         user={user}
-        onShop={() => toast.info('Shop ships in a follow-up commit')}
+        onShop={() => openShop('packages')}
         onSettings={() => toast.info('Settings ships in a follow-up commit')}
         onLogout={logout}
         onChat={() => toast.info('Chat overlay ships in a follow-up commit')}
@@ -123,7 +128,7 @@ export default function LobbyPage() {
           if (id === 'play')    return;
           if (id === 'join')    return toast.info('Join by code — follow-up commit');
           if (id === 'quick')   return quickMatch();
-          if (id === 'shop')    return toast.info('Shop — follow-up commit');
+          if (id === 'shop')    return openShop('packages');
           return toast.info(`${id} ships in a follow-up commit`);
         }} />
 
@@ -140,7 +145,7 @@ export default function LobbyPage() {
           <BattlePassCard user={user} onView={() => toast.info('BP rewards — follow-up commit')} />
           <FriendsRail activeRoomId={activeRoomId} />
           <WorldChat />
-          <SpecialOfferCard onClaim={() => toast.info('Offer claim — follow-up commit')} />
+          <SpecialOfferCard onClaim={() => openShop('offer')} />
         </div>
       </motion.div>
 
@@ -148,6 +153,11 @@ export default function LobbyPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={onCreated}
+      />
+      <ShopModal
+        open={shopOpen}
+        onClose={() => setShopOpen(false)}
+        initialTab={shopTab}
       />
     </div>
   );
