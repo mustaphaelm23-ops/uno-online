@@ -243,8 +243,10 @@ export default function GameScreen({ state, onLeave }) {
         </div>
       </div>
 
-      {/* Bottom: hand + action bar */}
-      <div className="absolute bottom-0 inset-x-0 z-10 p-3 sm:p-5 flex items-end gap-3">
+      {/* Bottom: hand + action bar. On phones we stack the bars to the
+          right but smaller; on tablet+ the vertical stack lives in its
+          own column with more breathing room. */}
+      <div className="absolute bottom-0 inset-x-0 z-10 p-2 sm:p-5 flex items-end gap-2 sm:gap-3">
         <div className="flex-1 min-w-0 relative">
           {me && (
             <div className="flex items-center justify-center gap-2 mb-1.5 relative">
@@ -273,7 +275,7 @@ export default function GameScreen({ state, onLeave }) {
             onPlayCard={handlePlay}
           />
         </div>
-        <div className="flex flex-col gap-3 items-end">
+        <div className="flex flex-col gap-1.5 sm:gap-3 items-end shrink-0 scale-[0.85] sm:scale-100 origin-bottom-right">
           <ActionBar
             myTurn={myTurn}
             canUno={canUno}

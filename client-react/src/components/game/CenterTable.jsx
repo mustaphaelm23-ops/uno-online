@@ -10,7 +10,7 @@ import Card from './Card';
 export default function CenterTable({ topCard, drawPileSize, direction, pot, onDraw, canDraw, back }) {
   const cw = direction !== -1;
   return (
-    <div className="relative w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] grid place-items-center">
+    <div className="relative w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] lg:w-[400px] lg:h-[400px] grid place-items-center">
       {/* Glow ring */}
       <div className="absolute inset-0 rounded-full"
            style={{
@@ -40,7 +40,7 @@ export default function CenterTable({ topCard, drawPileSize, direction, pot, onD
       )}
 
       {/* Cards row: draw pile + discard pile */}
-      <div className="relative flex items-center gap-6">
+      <div className="relative flex items-center gap-3 sm:gap-6">
         <button
           type="button"
           onClick={canDraw ? onDraw : undefined}

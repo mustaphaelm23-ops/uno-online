@@ -21,7 +21,8 @@ export default function OpponentPanel({ player, isCurrent, position = 'top', onC
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`relative panel-card px-3 py-2 flex items-center gap-2.5 min-w-[140px]
+      className={`relative panel-card px-2 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2
+                  min-w-[110px] sm:min-w-[140px]
                   ${isCurrent ? 'ring-2 ring-accent shadow-glow-gold' : ''}
                   ${speaking ? 'ring-2 ring-emerald animate-pulse' : ''}
                   ${player.abandoned ? 'opacity-50 grayscale' : ''}`}
