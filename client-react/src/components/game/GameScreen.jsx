@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,6 +15,7 @@ import SocialBar from './SocialBar';
 import ChatPanel from './ChatPanel';
 import SpeechBubble from './SpeechBubble';
 import ReactionFly from './ReactionFly';
+import FlyingCard from './FlyingCard';
 
 // In-game assembly. Reads from a `state` snapshot (per-player game:state
 // from the server) and routes player actions back via gameApi. Owns the
@@ -29,6 +30,14 @@ export default function GameScreen({ state, onLeave }) {
   const [chatOpen, setChatOpen] = useState(false);
   const { messages, bubbles, reactions, echoReaction, echoBubble } = useRoomSocial();
 
+  // Card-fly state — when state.topCard.id changes (someone played), we
+  // dispatch a transient FlyingCard animation from the source player's
+  // panel to the discard pile. Source = the player whose turn it WAS
+  // before the change (currentTurn rolls forward after each play).
+  const prevTopRef     = useRef(null);
+  const prevTurnRef    = useRef(null);
+  const [flyingCard, setFlyingCard] = useState(null);
+
   const meId = user?.id;
   const players = state?.players || [];
   const myIdx   = players.findIndex((p) => p.id === meId);
@@ -40,6 +49,40 @@ export default function GameScreen({ state, onLeave }) {
 
   const myTurn      = state?.currentTurn === meId;
   const turnPhase   = state?.turnPhase;
+
+  // Detect plays and infer the source for the fly animation. We compare
+  // against the PREVIOUS topCard.id to know a card was played; the
+  // PREVIOUS currentTurn tells us by whom. Skipping the first state
+  // (no previous) and any state where the topCard didn't change.
+  useEffect(() => {
+    const topId = state?.topCard?.id;
+    if (!topId) return;
+    if (prevTopRef.current && prevTopRef.current !== topId) {
+      const sourceId = prevTurnRef.current;
+      const idx = players.findIndex((p) => p.id === sourceId);
+      let from = 'top';
+      if (idx >= 0) {
+        if (sourceId === meId)               from = 'me';
+        else {
+          // Reuse the same rotated-opponent ordering used for layout.
+          const rotated = [...players.slice(myIdx + 1), ...players.slice(0, myIdx)];
+          const oIdx = rotated.findIndex((p) => p.id === sourceId);
+          if (rotated.length === 1)            from = 'top';
+          else if (rotated.length === 2)       from = oIdx === 0 ? 'left' : 'top';
+          else if (rotated.length >= 3)        from = ['left', 'top', 'right'][oIdx] || 'top';
+        }
+      }
+      const flyKey = `${topId}_${Date.now()}`;
+      setFlyingCard({ key: flyKey, from, card: state.topCard });
+      // Auto-clear after the animation window so it doesn't pile up.
+      setTimeout(() => {
+        setFlyingCard((cur) => (cur?.key === flyKey ? null : cur));
+      }, 700);
+    }
+    prevTopRef.current  = topId;
+    prevTurnRef.current = state?.currentTurn;
+  }, [state?.topCard?.id, state?.currentTurn, players, myIdx, meId]);
+
   const canDraw     = myTurn && turnPhase !== 'after_draw';
   const canPass     = myTurn && turnPhase === 'after_draw';
   const canUno      = myTurn && me?.handSize === 2;
@@ -171,14 +214,21 @@ export default function GameScreen({ state, onLeave }) {
 
       {/* Center */}
       <div className="absolute inset-0 grid place-items-center">
-        <CenterTable
-          topCard={state.topCard}
-          drawPileSize={state.drawPileSize}
-          direction={state.direction}
-          pot={state.pot}
-          onDraw={handleDraw}
-          canDraw={canDraw}
-        />
+        <div className="relative">
+          <CenterTable
+            topCard={state.topCard}
+            drawPileSize={state.drawPileSize}
+            direction={state.direction}
+            pot={state.pot}
+            onDraw={handleDraw}
+            canDraw={canDraw}
+          />
+          <AnimatePresence>
+            {flyingCard && (
+              <FlyingCard key={flyingCard.key} from={flyingCard.from} card={flyingCard.card} />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Bottom: hand + action bar */}
