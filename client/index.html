@@ -310,29 +310,6 @@
           <button class="btnI" onclick="loadRooms();this.querySelector('span').style.animation='none';void this.offsetWidth;this.querySelector('span').style.animation='';" title="Refresh rooms"><span>🔄</span></button>
         </div>
         <div class="rgrid" id="rgrid"></div>
-
-        <!-- Hero CTA pair: directly under the 4 featured room cards.
-             Routes to the existing doCreate() / doQuickMatch() handlers
-             from the left nav so no JS rewiring needed. -->
-        <div class="cta-row">
-          <button class="cta-tile cta-tile--violet" onclick="doCreate()">
-            <span class="cta-icon">👤</span>
-            <span class="cta-text">
-              <span class="cta-title" data-i18n="createRoom">CREATE ROOM</span>
-              <span class="cta-sub" data-i18n="createRoomSub2">Create your own room and invite friends</span>
-            </span>
-            <span class="cta-arrow">→</span>
-          </button>
-          <button class="cta-tile cta-tile--sky" onclick="doQuickMatch()">
-            <span class="cta-arrow">→</span>
-            <span class="cta-text cta-text--right">
-              <span class="cta-title" data-i18n="quickMatch">QUICK MATCH</span>
-              <span class="cta-sub" data-i18n="quickMatchSub2">Play with random players</span>
-            </span>
-            <span class="cta-icon">⚡</span>
-          </button>
-        </div>
-
         <div id="liveSection" style="display:none;margin-top:28px">
           <div class="public-title" style="font-size:24px;margin-bottom:6px" data-i18n="liveGames">📺 Live Games</div>
           <div class="public-info" id="liveinfo" style="margin-bottom:14px">Watch in progress matches</div>
