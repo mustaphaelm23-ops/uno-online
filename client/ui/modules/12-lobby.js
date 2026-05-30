@@ -15,26 +15,7 @@
     showScreen('lobby-screen');
     buildLobby3D(); initLobbyFx();
     if(S.user){
-      // Header user pill — name + avatar + level badge. Avatar may be an
-      // emoji glyph (most common) or a short image URL; the latter goes
-      // as a background-image on the avatar span. Initial fallback is
-      // the first letter of the username when no avatar is set.
-      const u = S.user;
-      document.getElementById('huserName').textContent = u.username || 'Player';
-      document.getElementById('huserLvl').textContent  = u.accountLevel || 1;
-      const face = document.getElementById('huserFace');
-      const av   = document.getElementById('huserAvatar');
-      const aval = (u.avatar||'').trim();
-      if(aval && /^(data:|https?:|\/)/i.test(aval)){
-        av.style.backgroundImage = `url("${aval.replace(/"/g,'\\"')}")`;
-        face.textContent = '';
-      } else if(aval){
-        av.style.backgroundImage = '';
-        face.textContent = aval;
-      } else {
-        av.style.backgroundImage = '';
-        face.textContent = (u.username||'?').charAt(0).toUpperCase();
-      }
+      document.getElementById('huser').textContent=S.user.username;
       _animateCount('hcoins',S.user.coins||0);
       _animateCount('scoins',S.user.coins||0);
       _animateCount('hdiamonds',S.user.diamonds||0);          // P4-D.3 — premium currency display
