@@ -1457,13 +1457,98 @@
   }
   .coin-pill-hdr svg,.coin-pill-hdr span{position:relative;z-index:1}
 
-  /* Header username pill */
-  #huser{
-    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-    border-radius:18px;padding:5px 12px;backdrop-filter:blur(6px);
-    transition:all .25s;
+  /* ═══ HEADER PROFILE CHIP (top-right) ═══
+     Matches the mockup's "avatar + name + Online + 23 + ▾" pill in the
+     top-right corner of the lobby. Same #huser id + same onclick=
+     "showProfile()" so existing wiring stays intact; this replaces the
+     old plain-text pill with a richer composition. */
+  #huser.hdr-profile{
+    display:flex;align-items:center;gap:10px;
+    padding:4px 14px 4px 4px;
+    border-radius:999px;
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(8px);
+    cursor:pointer;
+    color:#fff;
+    font-family:inherit;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    transition:all .22s ease;
   }
-  #huser:hover{border-color:var(--accent);background:rgba(245,158,11,.1);transform:translateY(-1px);}
+  #huser.hdr-profile:hover{
+    border-color:rgba(245,158,11,.55);
+    background:linear-gradient(180deg,rgba(245,158,11,.14),rgba(245,158,11,.05));
+    transform:translateY(-1px);
+    box-shadow:0 6px 18px rgba(245,158,11,.30);
+  }
+  /* Avatar: 40 px circle with a subtle white inner ring. JS sets a
+     background-image when the user has an image URL; otherwise the
+     centered .hdr-profile-face span renders the emoji or initial letter. */
+  .hdr-profile-avatar{
+    position:relative;
+    width:40px;height:40px;border-radius:50%;
+    background:linear-gradient(135deg,#7C3AED,#4C1D95);
+    background-size:cover;background-position:center;
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15), 0 2px 8px rgba(0,0,0,.45);
+    display:grid;place-items:center;
+    flex:0 0 auto;
+  }
+  .hdr-profile-face{
+    font-weight:900;font-size:20px;color:#fff;line-height:1;
+    text-shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+  /* Gold level pip — overlays the bottom-right of the avatar like the
+     mockup's "23" badge. Bordered with the lobby bg so it cuts cleanly
+     against the avatar edge. */
+  .hdr-profile-lvl{
+    position:absolute;right:-4px;bottom:-4px;
+    min-width:20px;height:20px;padding:0 5px;
+    border-radius:999px;
+    background:linear-gradient(135deg,#FDE047,#B45309);
+    color:#3F1D00;
+    font-size:11px;font-weight:900;font-family:'Outfit',system-ui,sans-serif;
+    border:2px solid var(--bg, #0a0e27);
+    display:grid;place-items:center;
+    line-height:1;
+    box-shadow:0 2px 6px rgba(0,0,0,.6);
+  }
+  .hdr-profile-meta{
+    display:flex;flex-direction:column;
+    align-items:flex-start;
+    min-width:0;
+    line-height:1.15;
+  }
+  .hdr-profile-name{
+    font-weight:800;font-size:13px;color:#fff;
+    max-width:140px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    line-height:1.1;
+  }
+  .hdr-profile-status{
+    display:flex;align-items:center;gap:5px;
+    font-size:10px;font-weight:700;
+    color:#34D399;
+    margin-top:2px;
+    line-height:1;
+  }
+  .hdr-profile-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#34D399;
+    box-shadow:0 0 6px rgba(52,211,153,.7);
+  }
+  .hdr-profile-chev{
+    font-size:18px;font-weight:700;
+    color:rgba(255,255,255,.45);
+    line-height:1;margin-left:2px;
+    transition:color .2s;
+  }
+  #huser.hdr-profile:hover .hdr-profile-chev{color:rgba(245,158,11,.9);}
+  /* Phone: keep just the avatar + level pip; drop name/status/chevron */
+  @media (max-width:520px){
+    .hdr-profile-meta,.hdr-profile-chev{display:none;}
+    #huser.hdr-profile{padding:3px;}
+  }
 
   /* Header buttons polish */
   .lhdr .btnS{
