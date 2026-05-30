@@ -111,22 +111,7 @@
           <span id="hdiamonds">0</span>
           <button class="hdr-pill-plus" onclick="doShop('diamonds')" title="Buy diamonds" aria-label="Buy diamonds">+</button>
         </div>
-        <!-- Header profile chip — avatar + level badge + name + Online +
-             dropdown chevron, top-right of the lobby header. Mirrors the
-             "mustapha1 / Online / 23" profile pill in the mockup. -->
-        <button id="huser" class="hdr-profile" onclick="showProfile()" title="View Profile">
-          <span class="hdr-profile-avatar" id="huserAvatar">
-            <span class="hdr-profile-face" id="huserFace">?</span>
-            <span class="hdr-profile-lvl" id="huserLvl">1</span>
-          </span>
-          <span class="hdr-profile-meta">
-            <span class="hdr-profile-name" id="huserName">Player</span>
-            <span class="hdr-profile-status">
-              <span class="hdr-profile-dot"></span>Online
-            </span>
-          </span>
-          <span class="hdr-profile-chev">›</span>
-        </button>
+        <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
         <div class="lobby-menu-wrap" style="position:relative">
           <button class="btnS" onclick="toggleFriendsPanel()" id="friendsLobbyBtn" style="position:relative">👥<span class="friends-notif" id="friendsNotifLobby" style="position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;"></span></button>
         <button class="btnS" onclick="document.getElementById('lobbyMenu').classList.toggle('show')">⚙</button>

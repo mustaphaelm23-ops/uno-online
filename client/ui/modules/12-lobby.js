@@ -15,24 +15,7 @@
     showScreen('lobby-screen');
     buildLobby3D(); initLobbyFx();
     if(S.user){
-      // Top-right profile pill: name + level + avatar (emoji or image URL).
-      // The wrapping button is still #huser so showProfile() onclick fires.
-      const _u = S.user;
-      document.getElementById('huserName').textContent = _u.username || 'Player';
-      document.getElementById('huserLvl').textContent  = _u.accountLevel || 1;
-      const _face = document.getElementById('huserFace');
-      const _av   = document.getElementById('huserAvatar');
-      const _aval = (_u.avatar||'').trim();
-      if(_aval && /^(data:|https?:|\/)/i.test(_aval)){
-        _av.style.backgroundImage = `url("${_aval.replace(/"/g,'\\"')}")`;
-        _face.textContent = '';
-      } else if(_aval){
-        _av.style.backgroundImage = '';
-        _face.textContent = _aval;
-      } else {
-        _av.style.backgroundImage = '';
-        _face.textContent = (_u.username||'?').charAt(0).toUpperCase();
-      }
+      document.getElementById('huser').textContent=S.user.username;
       _animateCount('hcoins',S.user.coins||0);
       _animateCount('scoins',S.user.coins||0);
       _animateCount('hdiamonds',S.user.diamonds||0);          // P4-D.3 — premium currency display
