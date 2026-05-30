@@ -110,7 +110,10 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onF
           level={user?.accountLevel || 1}
         />
         <div className="leading-tight">
-          <div className="text-sm font-bold">{user?.username}</div>
+          <div className="text-sm font-bold flex items-center gap-1">
+            {user?.username}
+            <span className="text-ink-faint text-xs">▾</span>
+          </div>
           <div className="text-[10px] text-emerald flex items-center gap-1">● Online</div>
         </div>
         <button

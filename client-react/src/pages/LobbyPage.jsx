@@ -11,6 +11,7 @@ import { getSocket } from '../api/socket';
 import LazyWhenOpened from '../components/ui/LazyWhenOpened';
 import Sidebar from '../components/lobby/Sidebar';
 import SidebarDrawer from '../components/lobby/SidebarDrawer';
+import LobbyBackground from '../components/lobby/LobbyBackground';
 import TopBar from '../components/lobby/TopBar';
 import WelcomeCard from '../components/lobby/WelcomeCard';
 import PublicRooms from '../components/lobby/PublicRooms';
@@ -186,7 +187,8 @@ export default function LobbyPage() {
   };
 
   return (
-    <div className="min-h-full max-w-[1480px] mx-auto px-2 sm:px-6 py-3 sm:py-5 flex flex-col gap-3 sm:gap-4">
+    <div className="relative min-h-full max-w-[1480px] mx-auto px-2 sm:px-6 py-3 sm:py-5 flex flex-col gap-3 sm:gap-4">
+      <LobbyBackground />
       <TopBar
         user={user}
         onShop={() => openShop('packages')}

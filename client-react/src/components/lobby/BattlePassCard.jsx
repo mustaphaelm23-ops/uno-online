@@ -80,7 +80,18 @@ export default function BattlePassCard({ user, onView }) {
         )}
       </div>
 
-      <button type="button" onClick={onView} className="btn-ghost w-full mt-4 text-[11px] tracking-wider">
+      <button
+        type="button"
+        onClick={onView}
+        className="relative w-full mt-4 py-2.5 rounded-xl text-[11px] tracking-wider font-extrabold
+                   bg-gradient-to-b from-accent to-accent-deep text-bg
+                   border border-amber-300/50 shadow-glow-gold
+                   hover:from-accent-soft hover:to-accent transition
+                   overflow-hidden"
+      >
+        {/* Subtle top highlight strip — the "shine" the mockup's gold
+            button has across its upper edge. */}
+        <span className="absolute inset-x-2 top-0 h-px bg-white/40 pointer-events-none" />
         VIEW REWARDS
       </button>
     </div>

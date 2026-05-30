@@ -46,9 +46,9 @@ export default function Sidebar({ onAction, inDrawer = false }) {
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onAction?.(item.id)}
-            className={`group relative text-left flex items-center gap-3 rounded-xl p-2.5 lg:p-3 border transition
+            className={`group relative text-left flex items-center gap-3 rounded-xl p-2.5 lg:p-3 border-2 transition
               ${isActive
-                ? 'bg-gradient-to-br from-bg-3 via-bg-2 to-bg-2 border-accent/60 shadow-glow-gold ring-1 ring-accent/20'
+                ? 'bg-gradient-to-br from-accent/15 via-bg-3 to-bg-2 border-accent shadow-[0_0_32px_rgba(245,158,11,0.45),inset_0_0_20px_rgba(245,158,11,0.10)] ring-2 ring-accent/30'
                 : 'bg-bg-2/60 border-line hover:border-violet/40 hover:bg-bg-3/60'}`}
           >
             {/* Active item gets a subtle gold inner highlight along the top */}
