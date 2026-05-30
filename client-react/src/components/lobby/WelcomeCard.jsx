@@ -48,13 +48,19 @@ export default function WelcomeCard({ user }) {
                       bg-violet/15 blur-3xl pointer-events-none" aria-hidden />
 
       <div className="relative flex items-center gap-3 sm:gap-4 sm:flex-1 min-w-0 w-full">
-        <Avatar
-          src={user.avatar}
-          name={user.username}
-          size="lg"
-          ring
-          level={user.accountLevel || 1}
-        />
+        {/* Gradient ring frame around the avatar — matches the mockup's
+            premium gold/violet halo around the user's portrait. */}
+        <div className="relative shrink-0 p-[3px] rounded-full bg-gradient-to-br from-accent via-amber-400 to-accent-deep
+                        shadow-[0_0_24px_rgba(245,158,11,0.45)]">
+          <div className="rounded-full bg-bg-2 p-[2px]">
+            <Avatar
+              src={user.avatar}
+              name={user.username}
+              size="lg"
+              level={user.accountLevel || 1}
+            />
+          </div>
+        </div>
         <div className="min-w-0 flex-1">
           <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-ink-faint">Welcome back</div>
           <div className="font-display text-2xl sm:text-4xl tracking-wider text-accent leading-tight truncate

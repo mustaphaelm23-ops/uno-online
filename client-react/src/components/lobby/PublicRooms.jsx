@@ -107,7 +107,10 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
               type="button"
               onClick={onRefresh}
               aria-label="Refresh rooms"
-              className="inline-flex items-center gap-1.5 chip bg-bg-2/80 border border-line hover:border-violet/50 transition"
+              className={`inline-flex items-center gap-1.5 chip border transition
+                          ${refreshing
+                            ? 'bg-accent/15 border-accent/50 text-accent'
+                            : 'bg-bg-2/80 border-line hover:border-accent/50 hover:text-accent'}`}
             >
               <span className={`text-base leading-none ${refreshing ? 'animate-spin' : ''}`}>↻</span>
               <span className="hidden sm:inline">REFRESH</span>
@@ -118,14 +121,19 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
 
       {/* Carousel on phone (snap-scroll + chevron nav) — grid on lg+. */}
       <div className="relative">
-        {/* Left chevron: hidden on lg+ where the grid fits everything. */}
+        {/* Left chevron: hidden on lg+ where the grid fits everything.
+            Styled as a gold-tinted pill per the mockup's chevron arrows. */}
         <button
           type="button"
           onClick={() => scroll(-1)}
           aria-label="Previous rooms"
           className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10
-                     w-9 h-9 grid place-items-center rounded-full bg-bg-2/90 border border-line
-                     text-ink hover:border-accent/60 hover:text-accent shadow-card backdrop-blur-sm"
+                     w-10 h-10 grid place-items-center rounded-full
+                     bg-gradient-to-br from-bg-2 to-bg-3
+                     border-2 border-accent/40 ring-1 ring-accent/20
+                     text-accent text-xl font-extrabold
+                     shadow-[0_4px_16px_rgba(245,158,11,0.35)]
+                     hover:border-accent hover:bg-accent/10 transition backdrop-blur-sm"
         >‹</button>
 
         <div
@@ -190,8 +198,12 @@ export default function PublicRooms({ rooms = [], hotType, onJoin, onWatchLive, 
           onClick={() => scroll(1)}
           aria-label="Next rooms"
           className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-10
-                     w-9 h-9 grid place-items-center rounded-full bg-bg-2/90 border border-line
-                     text-ink hover:border-accent/60 hover:text-accent shadow-card backdrop-blur-sm"
+                     w-10 h-10 grid place-items-center rounded-full
+                     bg-gradient-to-br from-bg-2 to-bg-3
+                     border-2 border-accent/40 ring-1 ring-accent/20
+                     text-accent text-xl font-extrabold
+                     shadow-[0_4px_16px_rgba(245,158,11,0.35)]
+                     hover:border-accent hover:bg-accent/10 transition backdrop-blur-sm"
         >›</button>
       </div>
     </section>

@@ -63,12 +63,16 @@ export default function SpecialOfferCard({ offer, onClaim }) {
       </div>
       <button
         type="button"
-        className={`relative z-10 text-[11px] tracking-wider px-3 sm:px-4 py-2 rounded-xl font-extrabold transition shrink-0
+        className={`relative z-10 text-[11px] tracking-wider px-4 sm:px-5 py-2.5 rounded-xl font-extrabold transition shrink-0
+                    border overflow-hidden
                     ${urgent
-                      ? 'bg-gradient-to-br from-rose to-rose text-white shadow-[0_8px_24px_rgba(244,63,94,0.4)] hover:brightness-110'
-                      : 'bg-gradient-to-br from-accent to-accent-deep text-bg shadow-glow-gold hover:from-accent-soft hover:to-accent'}`}
+                      ? 'bg-gradient-to-b from-rose to-rose-deep text-white border-rose-300/50 shadow-[0_8px_24px_rgba(244,63,94,0.4)] hover:brightness-110'
+                      : 'bg-gradient-to-b from-accent to-accent-deep text-bg border-amber-300/50 shadow-glow-gold hover:from-accent-soft hover:to-accent'}`}
         onClick={onClaim}
       >
+        {/* Top highlight strip matches the BP gold button — gives both
+            CTAs the same gold-shine signature across the lobby. */}
+        <span className="absolute inset-x-2 top-0 h-px bg-white/40 pointer-events-none" />
         VIEW OFFER
       </button>
     </div>
