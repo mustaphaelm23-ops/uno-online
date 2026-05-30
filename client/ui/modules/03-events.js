@@ -49,15 +49,49 @@
       setTimeout(()=>this._maybeIntro(d),900);           // entry cinematic after lobby settles
     },
 
-    /* ── temporary particles / floating lobby props ──
-       Disabled per user request. The confetti / pumpkin / lantern /
-       firework decorations felt visually busy. The event color tint +
-       banner still apply via class swap, only the particle DOM is skipped.
-       Clears any previously generated nodes so a hot-reload doesn't leave
-       stranded particles behind. */
-    _buildProps(_prop){
+    /* ── temporary particles / floating lobby props ── */
+    _buildProps(prop){
       const host=document.getElementById('eventLayer');
-      if(host) host.innerHTML='';
+      if(!host) return;
+      if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+      const coarse=matchMedia('(pointer:coarse)').matches;
+      if(prop==='confetti'){
+        const cols=['#FFD23F','#FF8A00','#FFF1B8','#FFB454','#FF5577'];
+        const n=coarse?22:40;
+        for(let i=0;i<n;i++){
+          const p=document.createElement('div');
+          p.className='ev-confetti';
+          const dur=5+Math.random()*6;
+          p.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;background:${cols[i%cols.length]};`+
+            `width:${(5+Math.random()*5).toFixed(0)}px;height:${(8+Math.random()*8).toFixed(0)}px;`+
+            `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`+
+            `--sway:${((Math.random()*2-1)*70).toFixed(0)}px;`;
+          host.appendChild(p);
+        }
+      }else if(prop==='pumpkin'||prop==='lantern'){
+        const emoji=prop==='pumpkin'?'🎃':'🏮';
+        const n=coarse?8:14;
+        for(let i=0;i<n;i++){
+          const p=document.createElement('div');
+          p.className='ev-prop '+(prop==='lantern'?'rise':'float');
+          p.textContent=emoji;
+          const dur=11+Math.random()*10;
+          p.style.cssText=`left:${(Math.random()*96+2).toFixed(1)}%;font-size:${(20+Math.random()*22).toFixed(0)}px;`+
+            `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`+
+            `--sway:${((Math.random()*2-1)*60).toFixed(0)}px;opacity:${(.5+Math.random()*.4).toFixed(2)};`;
+          host.appendChild(p);
+        }
+      }else if(prop==='firework'){
+        const n=coarse?4:7;
+        for(let i=0;i<n;i++){
+          const p=document.createElement('div');
+          p.className='ev-fw';
+          const dur=2.6+Math.random()*2.2;
+          p.style.cssText=`left:${(Math.random()*84+8).toFixed(1)}%;top:${(Math.random()*46+8).toFixed(1)}%;`+
+            `animation-duration:${dur.toFixed(1)}s;animation-delay:${(-Math.random()*dur).toFixed(1)}s;`;
+          host.appendChild(p);
+        }
+      }
     },
 
     /* ── animated lobby banner (impossible to miss) ── */
@@ -135,10 +169,22 @@
       ov.addEventListener('click',close);
       setTimeout(()=>{ if(document.body.contains(ov)) close(); },rm?2400:4400);
     },
-    // Disabled per user request — was a 30-spark celebratory burst
-    // behind the event-intro logo. The intro overlay itself still shows
-    // (logo + name + tagline + tap to enter), just without the sparks.
-    _introBurst(_host){},
+    _introBurst(host){
+      if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+      const burst=host.querySelector('.ev-intro-burst');
+      if(!burst) return;
+      const cols=['#FFD23F','#FF8A00','#FFF1B8','#7DF9FF','#FF5577'];
+      for(let i=0;i<30;i++){
+        const s=document.createElement('div');
+        s.className='ev-spark';
+        const ang=Math.random()*Math.PI*2, dist=90+Math.random()*240;
+        s.style.cssText=`background:${cols[i%cols.length]};`+
+          `--tx:${(Math.cos(ang)*dist).toFixed(0)}px;--ty:${(Math.sin(ang)*dist).toFixed(0)}px;`+
+          `animation-delay:${(Math.random()*.22).toFixed(2)}s;`;
+        burst.appendChild(s);
+      }
+      setTimeout(()=>{ burst.innerHTML=''; },1900);
+    },
 
     /* ── event missions panel ── */
     async openMissions(){
@@ -218,9 +264,21 @@
         this._renderModal();
       }catch(e){ toast(e.message||'Could not claim','e'); }
     },
-    // Disabled per user request — was a 24-particle confetti burst on
-    // mission claim. The reward still credits + the toast still fires.
-    _claimBurst(){},
+    _claimBurst(){
+      const host=document.getElementById('eventLayer');
+      if(!host||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+      const cols=['#FFD23F','#FF8A00','#FFF1B8','#FFB454'];
+      for(let i=0;i<24;i++){
+        const p=document.createElement('div');
+        p.className='ev-confetti burst';
+        const dur=2+Math.random()*1.6;
+        p.style.cssText=`left:${(40+Math.random()*20).toFixed(1)}%;top:36%;background:${cols[i%cols.length]};`+
+          `width:7px;height:11px;animation-duration:${dur.toFixed(1)}s;`+
+          `--sway:${((Math.random()*2-1)*170).toFixed(0)}px;`;
+        host.appendChild(p);
+        setTimeout(()=>p.remove(),dur*1000+250);
+      }
+    },
 
     /* ── event rooms ── */
     // The featured (spotlit) room rotates every 15s; loadRooms re-renders every 5s.

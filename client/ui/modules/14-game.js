@@ -304,10 +304,22 @@
       onUpdate:()=>{ el.textContent=sign+Math.round(o.v).toLocaleString()+' 🪙'; },
       onComplete:()=>{ el.textContent=sign+abs.toLocaleString()+' 🪙'; }});
   }
-  // 18-coin victory burst — disabled per user request. The win amount
-  // still counts up on the screen (via _winCoinCount); only the radial
-  // 🪙 spray is skipped.
-  function _coinBurst(_originEl){}
+  function _coinBurst(originEl){
+    const g=window.gsap;
+    const r=originEl.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    for(let i=0;i<18;i++){
+      const c=document.createElement('div');
+      c.className='win-coin-particle'; c.textContent='🪙';
+      c.style.left=cx+'px'; c.style.top=cy+'px';
+      document.body.appendChild(c);
+      const ang=Math.random()*Math.PI*2, dist=130+Math.random()*240;
+      g.to(c,{x:Math.cos(ang)*dist,y:Math.sin(ang)*dist-60-Math.random()*120,
+        rotation:(Math.random()-.5)*620,scale:.5+Math.random()*1.1,
+        duration:.95+Math.random()*.5,ease:'power3.out'});
+      g.to(c,{opacity:0,duration:.45,delay:.6+Math.random()*.3,onComplete:()=>c.remove()});
+    }
+  }
 
   /* ═══ CLUTCH MOMENTS ═══
      Triggered when any player goes from 2+ cards to 1 card. We watch
@@ -372,10 +384,30 @@
     }
   }
 
-  // Victory confetti shower — disabled per user request. The 200-piece
-  // 6-second canvas animation felt overwhelming. The win toast + SFX +
-  // payout/podium UI still fire; only the falling confetti is skipped.
-  function confetti(){}
+  function confetti(){
+    const cols=['#E8324A','#F59E0B','#16A34A','#2563EB','#7C3AED','#EC4899','#06B6D4','#fff'];
+    const cvs=document.createElement('canvas');
+    cvs.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:160';
+    document.body.appendChild(cvs);cvs.width=innerWidth;cvs.height=innerHeight;
+    const ctx=cvs.getContext('2d');
+    const ps=Array.from({length:200},()=>{
+      const type=Math.random();
+      return{x:Math.random()*cvs.width,y:-30-Math.random()*200,
+        w:type<.3?3:8+Math.random()*12,h:type<.3?12:4+Math.random()*8,
+        c:cols[~~(Math.random()*cols.length)],
+        r:Math.random()*Math.PI*2,rs:(Math.random()-.5)*.2,
+        sp:1.5+Math.random()*4,dr:(Math.random()-.5)*2.5,
+        swing:Math.random()*Math.PI*2,swingSpeed:.02+Math.random()*.03};
+    });
+    const t0=Date.now();
+    (function draw(){ctx.clearRect(0,0,cvs.width,cvs.height);ps.forEach(p=>{
+      p.y+=p.sp;p.x+=p.dr+Math.sin(p.swing)*1.5;p.swing+=p.swingSpeed;p.r+=p.rs;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);
+      ctx.globalAlpha=Math.min(1,Math.max(0,1-(p.y/cvs.height)));
+      ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });if(Date.now()-t0<6000)requestAnimationFrame(draw);else cvs.remove();})();
+  }
 
   /* ═══ GAME PARTICLES ═══ */
   function initGameParticles(){
