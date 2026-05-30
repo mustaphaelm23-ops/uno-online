@@ -686,7 +686,17 @@ app.use(express.json({ limit: '5mb' }));
 // Serve client files
 const path = require('path');
 const fs = require('fs');
-const _indexPath = path.join(__dirname, '../client/index.html');
+// Pick whichever index.html corresponds to the active client (React build
+// if present, else vanilla). The same path is reused by the SPA fallback
+// at the bottom of this file so a React Router sub-path serves the same
+// shell. Resolved lazily because the React dist may be built after server
+// startup in dev workflows.
+function _resolveIndexHtmlPath() {
+  const reactIdx = path.join(__dirname, '../client-react/dist/index.html');
+  if (fs.existsSync(reactIdx)) return reactIdx;
+  return path.join(__dirname, '../client/index.html');
+}
+const _indexPath = _resolveIndexHtmlPath();
 let _indexHtmlCache = null;
 
 // Dynamically render index.html so Open Graph meta tags (og:image, og:url)
@@ -709,16 +719,41 @@ app.get(['/', '/index.html'], (req, res, next) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, '../client'), {
+// ── Static client serving ────────────────────────────────────────────
+// Prefer the React production build under client-react/dist if it
+// exists (built via `npm run build` in client-react/). Falls back to
+// the vanilla client/ directory if the React app hasn't been built,
+// so a fresh clone still serves SOMETHING at /.
+//
+// React Router needs an SPA fallback — every GET that isn't an /api,
+// /socket.io, or a file in dist should return index.html so the client
+// router can handle the path. Implemented as a final res.sendFile
+// after all routes are mounted (see the end of this file).
+const reactDistPath = path.join(__dirname, '../client-react/dist');
+const vanillaPath   = path.join(__dirname, '../client');
+const hasReactBuild = fs.existsSync(path.join(reactDistPath, 'index.html'));
+const staticPath    = hasReactBuild ? reactDistPath : vanillaPath;
+const staticLabel   = hasReactBuild ? 'client-react/dist' : 'client/ (vanilla)';
+
+console.log(`[Static] Serving from ${staticLabel}`);
+
+app.use(express.static(staticPath, {
   setHeaders(res, filePath) {
     // Service worker and manifest must always revalidate so updates roll out
     if (filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
+    // Hashed asset files (Vite emits *-[hash].js / .css) can be cached forever
+    if (/-[A-Za-z0-9_-]{8,}\.(js|css)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
     // Bypass ngrok's "Visit Site" warning page so link previews work
     res.setHeader('ngrok-skip-browser-warning', 'true');
   },
 }));
+// Expose the resolved path so the SPA fallback at the end of this file
+// knows which index.html to serve.
+app.locals._spaFallbackPath = hasReactBuild ? path.join(reactDistPath, 'index.html') : null;
 
 // ─────────────────────────────────────────
 // JWT AUTH
@@ -4088,6 +4123,21 @@ function purgeImageAvatars() {
   }
   if (purged) { saveUsers(); console.log(`[Avatar] Cleared ${purged} custom image avatar(s)`); }
 }
+
+// ── SPA fallback (React Router) ──────────────────────────────────────
+// Any GET that didn't match a static file / API / socket.io route
+// returns the React app's index.html so client-side routing handles it.
+// Only active when client-react/dist exists (vanilla client doesn't
+// need this — it's a single index.html).
+app.get('*', (req, res, next) => {
+  if (!app.locals._spaFallbackPath) return next();
+  // Don't catch API / socket.io paths (those should 404 if no handler matched)
+  if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) return next();
+  // Don't catch file requests (handled by express.static above; if it
+  // missed we let the 404 bubble through rather than mask a typo with HTML)
+  if (/\.[a-z0-9]+$/i.test(req.path)) return next();
+  res.sendFile(app.locals._spaFallbackPath);
+});
 
 loadUsers().then(async () => {
   await loadWorldChat();                              // rolling 200-msg history populated before server.listen
