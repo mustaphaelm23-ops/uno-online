@@ -1,0 +1,29 @@
+# Caddy reverse proxy — gives the game automatic HTTPS (free certs,
+# auto-renewed). Replace cardora.example.com with your real domain.
+#
+#   sudo apt install caddy
+#   sudo cp Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# That's the whole HTTPS setup — no certbot, no nginx config.
+
+cardora.example.com {
+	encode zstd gzip
+
+	# WebSocket + HTTP both go to the Node process on :8080.
+	reverse_proxy localhost:8080 {
+		header_up X-Real-IP {remote_host}
+		# Long timeouts: socket.io connections stay open for a whole match.
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+
+	log {
+		output file /var/log/caddy/cardora.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

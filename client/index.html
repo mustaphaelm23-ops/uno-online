@@ -1,32 +1,44 @@
   <!DOCTYPE html>
+  <!--
+    RONDAONE — Copyright © 2026 Mustapha. All rights reserved.
+    Proprietary and confidential. See the LICENSE file at the project root.
+    Viewing this code in a browser grants NO right to copy, reuse, or
+    redistribute any part of RONDAONE. Unauthorized use is prohibited.
+  -->
   <html lang="en">
   <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
-  <title>UNO Online</title>
-  <meta name="description" content="Play UNO online with friends in real time."/>
+  <!-- ── Backend URL ─────────────────────────────────────────────────────
+       Normal web: leave EMPTY → the app talks to the origin it was served from.
+       Native build (Capacitor for App Store / Play Store): set this to your
+       deployed server's public HTTPS URL, e.g. "https://atlas-arena.onrender.com".
+       The packaged app has no server of its own, so it MUST point here. -->
+  <script>window.ATLAS_SERVER_URL = "";</script>
+  <title>RONDAONE — Cardora · Ronda · Chess · Dama</title>
+  <meta name="description" content="RONDAONE — play Cardora, Ronda, Chess and Dama online with friends in real time."/>
   <meta name="theme-color" content="#E8324A"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="UNO"/>
+  <meta name="apple-mobile-web-app-title" content="RONDAONE"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <link rel="manifest" href="/manifest.json"/>
   <link rel="icon" href="/icon.svg" type="image/svg+xml"/>
   <link rel="apple-touch-icon" href="/icon.svg"/>
   <!-- Open Graph / link previews — __OG_BASE__ is replaced server-side -->
   <meta property="og:type" content="website"/>
-  <meta property="og:site_name" content="UNO Online"/>
-  <meta property="og:title" content="UNO Online — Play with Friends"/>
-  <meta property="og:description" content="Join a real-time UNO match with your friends. Voice chat, ranked, tournaments."/>
+  <meta property="og:site_name" content="RONDAONE"/>
+  <meta property="og:title" content="RONDAONE — Cardora · Ronda · Chess · Dama"/>
+  <meta property="og:description" content="Real-time Cardora, Ronda, Chess and Dama with voice chat, ranked + tournaments."/>
   <meta property="og:image" content="__OG_BASE__/lobby-bg.png"/>
   <meta property="og:image:width" content="1488"/>
   <meta property="og:image:height" content="988"/>
   <meta property="og:url" content="__OG_BASE__/"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="UNO Online — Play with Friends"/>
-  <meta name="twitter:description" content="Join a real-time UNO match with your friends. Voice chat, ranked, tournaments."/>
+  <meta name="twitter:title" content="RONDAONE — Cardora · Ronda · Chess · Dama"/>
+  <meta name="twitter:description" content="Real-time Cardora, Ronda, Chess and Dama with voice chat, ranked + tournaments."/>
   <meta name="twitter:image" content="__OG_BASE__/lobby-bg.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Cinzel:wght@600;700;800;900&family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles/animations.css"/>
   <link rel="stylesheet" href="styles/main.css"/>
   </head>
@@ -40,7 +52,7 @@
       <span class="auth-lang-tag" id="authLangTag">EN</span>
     </button>
     <div class="auth-box">
-      <div class="logo">UNO</div>
+      <div class="logo">Cardora</div>
       <div class="sub" data-i18n="onlineMP">Online Multiplayer</div>
 
       <!-- ─── Login / Register ─── -->
@@ -86,129 +98,154 @@
     <div class="event-tint" id="eventTint" aria-hidden="true"></div>
     <div class="lobby-3d" id="lobby3d" aria-hidden="true"></div>
     <div class="lobby-fx" aria-hidden="true"></div>
-    <div class="lobby-weather" id="lobbyWeather" aria-hidden="true"></div>
+    <!-- Falling weather particles removed per user request. The element is
+         kept as a placeholder with display:none so theme code (02-themes.js)
+         that targets #lobbyWeather doesn't error out. -->
+    <div class="lobby-weather" id="lobbyWeather" style="display:none" aria-hidden="true"></div>
     <div class="event-layer" id="eventLayer" aria-hidden="true"></div>
+    <!-- Lobby decoration card-scatter REMOVED per user request — the
+         atmospheric UNO + numeric cards behind the header / sidebar
+         were leaving visible gaps between panels. -->
+
     <div class="lhdr">
-      <div class="llogo">UNO</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <!-- Coins pill (header). "+" opens shop. -->
-        <div class="hdr-pill hdr-pill-coin" title="Coins">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" fill="#FFFBEB" stroke="#92400E" stroke-width="1.5"/>
-            <circle cx="12" cy="12" r="7" fill="#FCD34D"/>
-            <text x="12" y="16" text-anchor="middle" fill="#78350F" font-size="11" font-weight="900" font-family="Arial">$</text>
+      <!-- ─── Profile chip — top-left corner. Premium "casino app" look:
+           ringed avatar + level badge below it + name with optional VIP
+           badge + trophy/wins counter underneath. Click → profile sheet. -->
+      <button class="huPill huPill-left" id="huserPill" onclick="showProfile()" title="My profile">
+        <span class="huPill-avwrap">
+          <span class="huPill-avatar" id="huserAvatar"></span>
+          <span class="huPill-lvl" id="huserLvl">1</span>
+        </span>
+        <span class="huPill-text">
+          <span class="huPill-name-row">
+            <span class="huPill-name" id="huser"></span>
+            <span class="huPill-vip" id="huserVip" style="display:none">VIP 1</span>
+          </span>
+          <span class="huPill-trophies">
+            <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FBBF24" stroke="#7C2D12" stroke-width="1" stroke-linejoin="round" d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 17.3 5.8 20.9l1.6-6.8L2.2 9.5l6.9-.6z"/></svg>
+            <b id="huserTrophies">Lv 1</b>
+          </span>
+        </span>
+        <img class="huPill-rank" id="huserRank" alt="Rank" draggable="false" style="display:none">
+        <span class="huPill-chev" aria-hidden="true">›</span>
+      </button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
+        <!-- Coins pill (header). Realistic 3D embossed gold coin SVG.
+             Click anywhere on the pill → shop (coins). -->
+        <div class="hdr-pill hdr-pill-coin" title="Get more coins" onclick="doShop('coins')" style="cursor:pointer">
+          <svg class="hdr-coin-svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <defs>
+              <radialGradient id="coinFace" cx="35%" cy="30%" r="80%">
+                <stop offset="0%" stop-color="#FFFBEB"/>
+                <stop offset="35%" stop-color="#FDE68A"/>
+                <stop offset="70%" stop-color="#F59E0B"/>
+                <stop offset="100%" stop-color="#92400E"/>
+              </radialGradient>
+              <linearGradient id="coinRim" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#451A03"/>
+                <stop offset="100%" stop-color="#1A0A03"/>
+              </linearGradient>
+            </defs>
+            <circle cx="12" cy="12" r="11.2" fill="url(#coinRim)"/>
+            <circle cx="12" cy="12" r="9.5" fill="url(#coinFace)" stroke="#7C2D12" stroke-width="0.4"/>
+            <circle cx="12" cy="12" r="7.8" fill="none" stroke="#92400E" stroke-width="0.4" opacity="0.6"/>
+            <text x="12" y="16.2" text-anchor="middle" fill="#451A03" font-size="11" font-weight="900" font-family="Arial Black, sans-serif">$</text>
+            <path d="M7 5.5 Q10 4 13 5" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" stroke-linecap="round"/>
           </svg>
           <span id="hcoins">0</span>
-          <button class="hdr-pill-plus" onclick="doShop('coins')" title="Buy coins" aria-label="Buy coins">+</button>
         </div>
-        <!-- Diamonds pill (P4-D.3). Premium currency, cyan/blue per GDD §9.2. -->
-        <div class="hdr-pill hdr-pill-diamond" title="Diamonds">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 9 L12 3 L18 9 L12 21 Z" fill="#A5D8FF" stroke="#1E3A8A" stroke-width="1.5" stroke-linejoin="round"/>
-            <path d="M6 9 L18 9" stroke="#1E3A8A" stroke-width="1.5"/>
-            <path d="M12 3 L9 9 L12 21 L15 9 Z" fill="#60A5FA" stroke="#1E3A8A" stroke-width="1" stroke-linejoin="round"/>
+        <!-- Diamonds pill — multi-faceted brilliant-cut gem SVG.
+             Click anywhere on the pill → shop (diamonds). -->
+        <div class="hdr-pill hdr-pill-diamond" title="Get more diamonds" onclick="doShop('diamonds')" style="cursor:pointer">
+          <svg class="hdr-dia-svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <defs>
+              <linearGradient id="diaUp" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#DBEAFE"/>
+                <stop offset="50%" stop-color="#7DD3FC"/>
+                <stop offset="100%" stop-color="#2563EB"/>
+              </linearGradient>
+              <linearGradient id="diaDown" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#3B82F6"/>
+                <stop offset="100%" stop-color="#0F1E5C"/>
+              </linearGradient>
+              <linearGradient id="diaSide" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#1E40AF"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+              </linearGradient>
+            </defs>
+            <path d="M3.5,9 L8,3.5 L16,3.5 L20.5,9 L12,21 Z" fill="url(#diaUp)" stroke="#0F1E5C" stroke-width="0.6" stroke-linejoin="round"/>
+            <path d="M3.5,9 L20.5,9 L12,21 Z" fill="url(#diaDown)" stroke="#0F1E5C" stroke-width="0.6" stroke-linejoin="round" opacity="0.95"/>
+            <path d="M8,3.5 L9.5,9 L12,21 M16,3.5 L14.5,9 L12,21 M3.5,9 L9.5,9 M14.5,9 L20.5,9" stroke="#0F1E5C" stroke-width="0.45" opacity="0.7"/>
+            <path d="M9,4.5 L11,4 L10.5,8 Z" fill="rgba(255,255,255,0.7)"/>
+            <path d="M6,9.5 L9.5,10 L10,12 Z" fill="rgba(255,255,255,0.35)"/>
           </svg>
           <span id="hdiamonds">0</span>
-          <button class="hdr-pill-plus" onclick="doShop('diamonds')" title="Buy diamonds" aria-label="Buy diamonds">+</button>
         </div>
-        <span id="huser" style="font-weight:800;font-size:12px;cursor:pointer" onclick="showProfile()" title="View Profile"></span>
-        <div class="lobby-menu-wrap" style="position:relative">
-          <button class="btnS" onclick="toggleFriendsPanel()" id="friendsLobbyBtn" style="position:relative">👥<span class="friends-notif" id="friendsNotifLobby" style="position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;"></span></button>
-        <button class="btnS" onclick="document.getElementById('lobbyMenu').classList.toggle('show')">⚙</button>
-          <div id="lobbyMenu" class="game-menu" style="right:0;left:auto;top:40px;">
-            <div class="game-menu-title" data-i18n="settings">Settings</div>
-            <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 <span data-i18n="profile">Profile</span></button>
-            <button class="game-menu-item" onclick="showLangPicker();document.getElementById('lobbyMenu').classList.remove('show')">🌐 <span data-i18n="language">Language</span></button>
-            <button class="game-menu-item" onclick="showThemePicker();document.getElementById('lobbyMenu').classList.remove('show')">🎨 Season Theme</button>
-            <button class="game-menu-item" onclick="pwaInstall();document.getElementById('lobbyMenu').classList.remove('show')">📲 <span data-i18n="installApp">Install App</span></button>
-            <button class="game-menu-item" id="adminPanelMenuItem" style="display:none" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ <span data-i18n="adminPanel">Admin Panel</span></button>
-            <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 <span data-i18n="logout">Logout</span></button>
+        <!-- ─── Center actions — Bell, Chat, Settings.
+             All three circular glass buttons with a soft hover glow. The
+             settings button toggles the dropdown anchored below it. The
+             notification badges on Bell + Chat surface unread counts. ─── -->
+        <div class="hdr-actions">
+          <button class="hdr-action-btn" id="hdrBellBtn" onclick="Notifs.open()" title="Notifications" aria-label="Notifications">
+            <span class="hdr-action-ic">🔔</span>
+            <span class="hdr-action-notif" id="hdrBellNotif" style="display:none">0</span>
+          </button>
+          <button class="hdr-action-btn" id="hdrChatBtn" onclick="DM.openInbox()" title="Messages" aria-label="Messages">
+            <span class="hdr-action-ic">💬</span>
+            <span class="hdr-action-notif" id="hdrChatNotif" style="display:none">0</span>
+          </button>
+          <button class="hdr-action-btn" id="hdrFriendsBtn" onclick="toggleFriendsPanel()" title="Friends" aria-label="Friends">
+            <span class="hdr-action-ic">👥</span>
+            <span class="hdr-action-notif" id="hdrFriendsNotif" style="display:none">0</span>
+          </button>
+          <div class="hdr-settings-wrap" style="position:relative">
+            <button class="hdr-action-btn" id="hdrSettingsBtn" onclick="document.getElementById('lobbyMenu').classList.toggle('show')" title="Settings" aria-label="Settings">
+              <span class="hdr-action-ic">⚙</span>
+            </button>
+            <div id="lobbyMenu" class="game-menu" style="right:0;left:auto;top:54px;">
+              <div class="game-menu-title" data-i18n="settings">Settings</div>
+              <button class="game-menu-item" onclick="showProfile();document.getElementById('lobbyMenu').classList.remove('show')">👤 <span data-i18n="profile">Profile</span></button>
+              <button class="game-menu-item" onclick="showLangPicker();document.getElementById('lobbyMenu').classList.remove('show')">🌐 <span data-i18n="language">Language</span></button>
+              <button class="game-menu-item" onclick="pwaInstall();document.getElementById('lobbyMenu').classList.remove('show')">📲 <span data-i18n="installApp">Install App</span></button>
+              <button class="game-menu-item" id="adminPanelMenuItem" style="display:none" onclick="showAdminPanel();document.getElementById('lobbyMenu').classList.remove('show')">⚙️ <span data-i18n="adminPanel">Admin Panel</span></button>
+              <button class="game-menu-item" style="color:#f87171;border-top:1px solid var(--border);margin-top:6px;padding-top:12px" onclick="doLogout()">🚪 <span data-i18n="logout">Logout</span></button>
+              <!-- Account deletion moved INSIDE the Profile modal (danger zone
+                   at the bottom) — kept in-app for App Store 5.1.1(v). -->
+            </div>
           </div>
         </div>
+        <!-- Profile chip moved to the LEFT corner of the header. -->
       </div>
     </div>
     <div class="lbody">
       <div class="lside">
-        <button class="bp-banner" onclick="showBattlePass()">
-          <div class="bp-banner-glow"></div>
-          <div class="bp-banner-crown">👑</div>
-          <div class="bp-banner-txt">
-            <div class="bp-banner-title">BATTLE PASS</div>
-            <div class="bp-banner-sub" id="bpBannerSub">Season 1 · Tap to open</div>
-          </div>
-          <div class="bp-banner-chev">›</div>
-        </button>
-        <!-- Main rail — mockup's 9-item layout. Subtitles give context per the reference. -->
+        <!-- Main rail — 8-item layout matching the reference picture exactly.
+             PLAY is the default active row with gold glow; the other rows
+             stay neutral until hovered/clicked. -->
         <div class="lside-section">
-          <button class="lbtn lbtn-main" onclick="doPlay()">
-            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🏠</span>
+          <button class="lbtn lbtn-main lbtn-active" onclick="if(typeof showRankedReady==='function')showRankedReady();else showRanked()">
+            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#B45309">👑</span>
             <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="play">Play</span>
-              <span class="lbtn-sub" data-i18n="playSub">Start your match</span>
+              <span class="lbtn-label" data-i18n="ranked">Ranked</span>
+              <span class="lbtn-sub" data-i18n="rankedSub">Climb the leaderboard</span>
             </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn lbtn-main" onclick="showJoinByCode()">
-            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#7C3AED">🔑</span>
+          <!-- Join by Code is the 2nd big hero tile now, so no sidebar entry
+               (removed again 2026-08-08 to avoid duplication). -->
+          <button class="lbtn lbtn-main" onclick="showGameCenter()">
+            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#5B21B6">🤖</span>
             <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="joinCode">Join by Code</span>
-              <span class="lbtn-sub" data-i18n="joinCodeSub">Enter room code</span>
+              <span class="lbtn-label" data-i18n="gameCenter">Training</span>
+              <span class="lbtn-sub" data-i18n="gameCenterSub">Play against bots</span>
             </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn lbtn-main lbtn-cta" onclick="doCreate()">
-            <span class="lbtn-icon" style="--c:#E8324A;--c2:#C1192F">➕</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="createRoom">Create Room</span>
-              <span class="lbtn-sub" data-i18n="createRoomSub">Custom private room</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="doQuickMatch()">
-            <span class="lbtn-icon" style="--c:#FB7185;--c2:#9F1239">🔥</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="quickMatch">Quick Match</span>
-              <span class="lbtn-sub" data-i18n="quickMatchSub">Find a random match</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="doPractice()">
-            <span class="lbtn-icon" style="--c:#06B6D4;--c2:#0E7490">🤖</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="practice">Practice</span>
-              <span class="lbtn-sub" data-i18n="practiceSub">Play vs bots</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="doDaily()">
-            <span class="lbtn-icon" style="--c:#FBBF24;--c2:#D97706">🎁</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="dailyReward">Daily Reward</span>
-              <span class="lbtn-sub" data-i18n="dailyRewardSub">Collect your bonus</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="showCollection()">
-            <span class="lbtn-icon" style="--c:#F59E0B;--c2:#B45309">👑</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="collection">Collection</span>
-              <span class="lbtn-sub" data-i18n="collectionSub">Cards, decks &amp; more</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="showMissions()">
-            <span class="lbtn-icon" style="--c:#22D3EE;--c2:#0E7490">🎯</span>
-            <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="missions">Missions</span>
-              <span class="lbtn-sub" data-i18n="missionsSub">Complete missions</span>
-            </span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-main" onclick="showLeaderboard()">
+          <button class="lbtn lbtn-main" onclick="showTournaments()">
             <span class="lbtn-icon" style="--c:#FFD700;--c2:#D97706">🏆</span>
             <span class="lbtn-text">
-              <span class="lbtn-label" data-i18n="leaderboard">Leaderboard</span>
-              <span class="lbtn-sub" data-i18n="leaderboardSub">Top players</span>
+              <span class="lbtn-label" data-i18n="tournament">Tournament</span>
+              <span class="lbtn-sub" data-i18n="tournamentSub">Compete &amp; win</span>
             </span>
             <span class="lbtn-chev">›</span>
           </button>
@@ -216,39 +253,22 @@
             <span class="lbtn-icon" style="--c:#F472B6;--c2:#9D174D">🛍️</span>
             <span class="lbtn-text">
               <span class="lbtn-label" data-i18n="shop">Shop</span>
-              <span class="lbtn-sub" data-i18n="shopSub">Buy coins &amp; items</span>
+              <span class="lbtn-sub" data-i18n="shopSub">Coins, diamonds &amp; cosmetics</span>
             </span>
             <span class="lbtn-chev">›</span>
           </button>
-        </div>
-        <!-- Competitions secondary group — visually demoted, SOON items kept visible (free marketing). -->
-        <div class="lside-section lside-section--secondary">
-          <div class="lside-title" data-i18n="competitions">Competitions</div>
-          <button class="lbtn lbtn-sec" onclick="showLeague()">
-            <span class="lbtn-icon" style="--c:#22C55E;--c2:#14532D">🏆</span>
-            <span class="lbtn-label" data-i18n="league">League</span>
+          <button class="lbtn lbtn-main" onclick="showCollection('avatars')">
+            <span class="lbtn-icon" style="--c:#A78BFA;--c2:#4F46E5">🗄️</span>
+            <span class="lbtn-text">
+              <span class="lbtn-label" data-i18n="collection">Collection</span>
+              <span class="lbtn-sub" data-i18n="collectionSub">Your avatars, cards, tables &amp; boards</span>
+            </span>
             <span class="lbtn-chev">›</span>
           </button>
-          <button class="lbtn lbtn-sec" onclick="showTournaments()">
-            <span class="lbtn-icon" style="--c:#A855F7;--c2:#4C1D95">⚔️</span>
-            <span class="lbtn-label" data-i18n="tournament">Tournament</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-sec" onclick="doScheduleFromGC()">
-            <span class="lbtn-icon" style="--c:#16A34A;--c2:#14532D">📅</span>
-            <span class="lbtn-label" data-i18n="schedule">Schedule</span>
-            <span class="lbtn-chev">›</span>
-          </button>
-          <button class="lbtn lbtn-sec lbtn-soon" onclick="comingSoon('Champions League','Top-ranked players only — knockout matches, big prize. Coming soon.')">
-            <span class="lbtn-icon" style="--c:#3B82F6;--c2:#0F1F4A">⚽</span>
-            <span class="lbtn-label" data-i18n="championsLeague">Champions League</span>
-            <span class="lbtn-badge" data-i18n="soon">SOON</span>
-          </button>
-          <button class="lbtn lbtn-sec lbtn-soon" onclick="comingSoon('Continental Cups','🌍 Africa · 🌎 Europe · 🌐 World — bracket cups by region. Coming soon.')">
-            <span class="lbtn-icon" style="--c:#EF4444;--c2:#7F1D1D">🌍</span>
-            <span class="lbtn-label" data-i18n="continentalCups">Continental Cups</span>
-            <span class="lbtn-badge" data-i18n="soon">SOON</span>
-          </button>
+          <!-- Missions + Emotes sidebar rows removed 2026-07-22 (user request).
+               Emotes stays reachable in-game via quickchat. Missions (the only
+               path to daily/weekly coin rewards) is now reached from the header
+               🎯 button + auto-opens once per day on lobby entry. -->
         </div>
         <!-- Follow promo — visible pill with subtle glow per direction. Earns its spot via real reward. -->
         <button class="lbtn-follow" onclick="doInsta()">
@@ -258,58 +278,176 @@
             <span class="lbtn-sub" data-i18n="followInstaSub">@uno · One-time bonus</span>
           </span>
         </button>
-        <div class="lside-coins" onclick="showCoinsModal()" title="Click for budget details">
-          <div class="lside-coins-shimmer"></div>
-          <div class="lside-coins-lbl">💰 <span data-i18n="coins">Coins</span></div>
-          <div class="lside-coins-val" id="scoins">0</div>
-        </div>
+        <!-- Daily Spin Wheel — surfaced through the Notifications panel
+             ONLY per user request. The lobby tile is hidden; the bell-icon
+             notification ("Daily Spin is ready") is now the single entry
+             point to the spin overlay. -->
+        <button class="spin-banner" id="spinBanner" onclick="SpinWheel.open()" style="display:none !important">
+          <div class="spin-banner-glow"></div>
+          <div class="spin-banner-icon">
+            <div class="spin-banner-wheel" aria-hidden="true"></div>
+          </div>
+          <div class="spin-banner-txt">
+            <div class="spin-banner-title">DAILY SPIN</div>
+            <div class="spin-banner-sub" id="spinBannerSub">Free reward · Tap to spin</div>
+          </div>
+          <div class="spin-banner-chev">›</div>
+        </button>
+        <!-- Battle Pass card — matches reference picture: SEASON 1 eyebrow,
+             title, playing-card illustration, XP progress bar with level
+             badge, and gold VIEW REWARDS button. Populated from BP.data
+             when the battlepass module loads; falls back to placeholder
+             values until the first /api/battlepass call resolves. -->
+        <button class="bp-card" id="bpCard" onclick="showBattlePass()" aria-label="Open Battle Pass">
+          <div class="bp-card-glow"></div>
+          <div class="bp-card-head">
+            <div class="bp-card-eyebrow"><span id="bpSeasonLbl">SEASON 1</span></div>
+            <div class="bp-card-title">BATTLE PASS</div>
+          </div>
+          <div class="bp-card-body">
+            <div class="bp-card-art" aria-hidden="true">
+              <span class="bp-art-card bp-art-c1">8</span>
+              <span class="bp-art-card bp-art-c2">+9</span>
+              <span class="bp-art-card bp-art-c3">C</span>
+              <span class="bp-art-coin bp-art-coin-1">🪙</span>
+              <span class="bp-art-coin bp-art-coin-2">🪙</span>
+              <span class="bp-art-coin bp-art-coin-3">🪙</span>
+            </div>
+            <div class="bp-card-progress">
+              <div class="bp-card-bar"><div class="bp-card-fill" id="bpCardFill" style="width:0%"></div></div>
+              <div class="bp-card-prog-row">
+                <span class="bp-card-prog" id="bpCardProg">0 / 1000</span>
+                <span class="bp-card-tier" id="bpCardTier">1</span>
+              </div>
+            </div>
+          </div>
+          <div class="bp-card-cta">
+            <span class="bp-card-cta-shine"></span>
+            <span class="bp-card-cta-lbl">VIEW REWARDS</span>
+          </div>
+        </button>
+        <!-- Sidebar COINS pill removed per user request. The header
+             already shows the coin balance; the sidebar shortcut was
+             redundant. -->
+
       </div>
       <div class="lmain">
-        <!-- Seasonal Event banner — injected by the EVENT module when an event is live -->
-        <div id="eventBannerSlot"></div>
-        <!-- Player hero banner — click anywhere on this opens the profile modal (matches mockup's top-right user click). -->
-        <div class="lobby-hero" id="lobbyHero" onclick="showProfile()" style="cursor:pointer" role="button" aria-label="Open profile">
-          <div class="hero-shine"></div>
-          <div class="hero-glow"></div>
-          <div class="hero-left">
-            <div class="hero-avatar" id="heroAvatar">🎮</div>
-            <div class="hero-id">
-              <div class="hero-greeting" id="heroGreeting" data-i18n="welcomeBack">Welcome back</div>
-              <div class="hero-name-row">
-                <div class="hero-name" id="heroName">Player</div>
-                <!-- GDD §7.2 — Account level pill (also shows on profile + podium) -->
-                <div class="hero-level-pill" id="heroLevel" title="Account level">Lv 1</div>
-              </div>
-              <div class="hero-league" id="heroLeague">🥈 Silver</div>
-            </div>
-          </div>
-          <div class="hero-stats">
-            <div class="hero-stat">
-              <div class="hero-stat-val" id="heroCoins">0</div>
-              <div class="hero-stat-lbl">🪙 <span data-i18n="coins">Coins</span></div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-val" id="heroElo">1000</div>
-              <div class="hero-stat-lbl">⚡ <span data-i18n="statRating">Rating</span></div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-val" id="heroWins">0</div>
-              <div class="hero-stat-lbl">🏆 <span data-i18n="statWins">Wins</span></div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-val" id="heroWinRate">0%</div>
-              <div class="hero-stat-lbl">📊 <span data-i18n="statWinRate">Win Rate</span></div>
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-          <div>
-            <div class="public-title" data-i18n="publicRooms">🃏 Public Rooms</div>
-            <div class="public-info" id="rinfo">Loading...</div>
-          </div>
-          <button class="btnI" onclick="loadRooms();this.querySelector('span').style.animation='none';void this.offsetWidth;this.querySelector('span').style.animation='';" title="Refresh rooms"><span>🔄</span></button>
-        </div>
+        <!-- Seasonal event banner removed per user request — no Grand Anniversary
+             (or any event) panel appears in the lobby anymore. The EVENT module's
+             slot lookups silently fail and the banner never renders. -->
+        <!-- Welcome-back hero banner removed per user request — the header
+             profile chip already covers identity at a glance. -->
+
+        <!-- Public Rooms header (title + online pill) removed 2026-07-22 per
+             user request — the featured tiles speak for themselves. The count
+             still lives in S.onlineCount for the matchmaking screen; the
+             setOnlineCount() DOM writes are null-guarded so this is safe. -->
         <div class="rgrid" id="rgrid"></div>
+
+        <!-- Hero CTAs directly under the 4 featured room cards.
+             Mirror the reference artwork: glossy round icon button on
+             one side, tilted UNO playing cards behind it, glowing
+             border, italic bold title, glossy arrow on the other side.
+             OPTIONAL: drop /client/cta-create.png and/or /client/cta-quick.png
+             to override the CSS art with real renders. -->
+        <div class="ctaPair">
+          <button class="ctaTile ctaTile--violet" onclick="doCreate()" aria-label="Create Room">
+            <!-- Real banner art fills the tile; CSS art below is the fallback. -->
+            <img class="ctaFullArt" src="cta-create.png?v=10" alt="" onerror="this.remove()" />
+            <span class="ctaArt ctaArt--left">
+              <span class="ctaCards">
+                <span class="ctaCard ctaCard--a">8</span>
+                <span class="ctaCard ctaCard--b">+9</span>
+                <span class="ctaCard ctaCard--c">C</span>
+              </span>
+              <span class="ctaOrb">
+                <svg viewBox="0 0 36 36" width="38" height="38" aria-hidden="true">
+                  <circle cx="14" cy="13" r="5" fill="#fff"/>
+                  <path d="M6 28c0-5 4-9 8-9s8 4 8 9z" fill="#fff"/>
+                  <path d="M27 9v8M23 13h8" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </span>
+            <span class="ctaText">
+              <span class="ctaTitle">CREATE ROOM</span>
+              <span class="ctaSub">Create your own room and invite friends</span>
+            </span>
+            <span class="ctaArrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </button>
+
+          <!-- Slot 2 = JOIN BY CODE. Blue banner from the matched sheet 8d3f8acf
+               (identical 1822×372 crop to CREATE ROOM → proportioned, aligned
+               pair); its baked "QUICK MATCH" wording was inpaint-replaced with
+               "JOIN BY CODE" 2026-08-08. Quick Match retired; join-by-code now
+               lives here (sidebar entry removed to avoid duplication). -->
+          <button class="ctaTile ctaTile--sky" onclick="showJoinByCode()" aria-label="Join by Code">
+            <img class="ctaFullArt" src="cta-quick.png?v=11" alt="" onerror="this.remove()" />
+            <span class="ctaArrow ctaArrow--left" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="ctaText ctaText--right">
+              <span class="ctaTitle">JOIN BY CODE</span>
+              <span class="ctaSub">Enter a room code</span>
+            </span>
+            <span class="ctaArt ctaArt--right">
+              <span class="ctaCards">
+                <span class="ctaCard ctaCard--d">7</span>
+                <span class="ctaCard ctaCard--e">+2</span>
+              </span>
+              <span class="ctaOrb">
+                <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+                  <circle cx="9" cy="9" r="4.2" fill="none" stroke="#fff" stroke-width="2.4"/>
+                  <path d="M12 12l7 7M16 16l2.5-2.5M18.5 18.5l2-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <!-- ═══ SEASON HERO — "Road to Champion" premium progression banner.
+             Fills the space under the hero CTAs. Hydrated by 13-battlepass.js
+             (_renderSeasonHero) from the SAME /api/battlepass data as the
+             sidebar card (no extra request); the whole banner opens the full
+             Battle Pass. Placeholder values show until the API responds. ═══ -->
+        <button class="season-hero" id="seasonHero" onclick="showBattlePass()" aria-label="Open Battle Pass — Road to Champion">
+          <span class="sh-shine" aria-hidden="true"></span>
+          <span class="sh-glow" aria-hidden="true"></span>
+          <span class="sh-emblem" aria-hidden="true">
+            <span class="sh-emblem-ring"></span>
+            <span class="sh-emblem-icon">🏆</span>
+          </span>
+          <span class="sh-main">
+            <span class="sh-top">
+              <span class="sh-eyebrow" id="shSeason">SEASON 1</span>
+              <span class="sh-title">ROAD TO CHAMPION</span>
+              <span class="sh-timer" id="shTimer">⏳ —</span>
+            </span>
+            <span class="sh-progress">
+              <span class="sh-tierbadge">
+                <span class="sh-tier-lbl">TIER</span>
+                <span class="sh-tier-n" id="shTier">1</span>
+              </span>
+              <span class="sh-barwrap">
+                <span class="sh-bar"><span class="sh-fill" id="shFill" style="width:0%"></span></span>
+                <span class="sh-barmeta">
+                  <span id="shXp">0 / 1000 XP</span>
+                  <span id="shNext">NEXT 🎁</span>
+                </span>
+              </span>
+            </span>
+          </span>
+          <span class="sh-cta">
+            <span class="sh-cta-lbl">VIEW PASS</span>
+            <span class="sh-cta-arrow">→</span>
+          </span>
+        </button>
+
+        <!-- Bottom icon strip removed 2026-07-22 (user request). Its items
+             live on elsewhere: Leaderboard + Achievements in the Profile nav,
+             Collection / Missions / Emotes in the left rail. -->
+
         <div id="liveSection" style="display:none;margin-top:28px">
           <div class="public-title" style="font-size:24px;margin-bottom:6px" data-i18n="liveGames">📺 Live Games</div>
           <div class="public-info" id="liveinfo" style="margin-bottom:14px">Watch in progress matches</div>
@@ -317,21 +455,31 @@
         </div>
       </div>
       <div class="lrail">
-        <div class="rail-panel">
+        <!-- Friends Online — matches the picture: "FRIENDS ONLINE — 8" header,
+             rows with avatar + name + status + INVITE/JOIN button. -->
+        <div class="rail-panel rail-panel-friends">
           <div class="rail-head">
-            <span>👥 Friends Online</span>
-            <span class="rail-count" id="railFriendsN">0</span>
+            <span class="rail-head-lbl">FRIENDS</span>
+            <span class="rail-head-sep">—</span>
+            <span class="rail-head-n" id="railFriendsN">0</span>
           </div>
           <div class="rail-friends" id="railFriends">
             <div class="rail-empty">Loading…</div>
           </div>
         </div>
-        <div class="rail-panel rail-chat-panel">
-          <div class="rail-head"><span>🌐 World Chat</span></div>
-          <div class="rail-chat-msgs" id="worldMsgs"></div>
-          <div class="rail-chat-bar">
-            <input id="worldInput" type="text" maxlength="200" placeholder="Type a message…" autocomplete="off"/>
-            <button class="rail-chat-send" onclick="sendWorld()" aria-label="Send">➤</button>
+        <!-- Public Rooms — every open public room joins this list as
+             players create them. Anyone can join with one tap. Updates
+             every few seconds via loadRailPublicRooms(). -->
+        <div class="rail-panel rail-pubrooms-panel">
+          <div class="rail-head">
+            <span class="rail-head-lbl">🏠 PUBLIC ROOMS</span>
+            <span class="rail-head-n" id="railPubRoomsN" style="display:none">0</span>
+            <button class="rail-refresh" id="railPubRefresh" onclick="loadRailPublicRooms(true)" title="Refresh rooms" aria-label="Refresh rooms">
+              <span class="rail-refresh-ic">↻</span>
+            </button>
+          </div>
+          <div class="rail-pubrooms" id="railPubRooms">
+            <div class="rail-empty">Loading…</div>
           </div>
         </div>
       </div>
@@ -345,7 +493,7 @@
         <div class="offer-banner-title" id="offerTitle">SPECIAL OFFER!</div>
         <div class="offer-banner-headline" id="offerHeadline">—</div>
         <div class="offer-banner-sub" id="offerSub">—</div>
-        <div class="offer-banner-timer">⏱️ <span id="offerTimer">—</span></div>
+        <div class="offer-banner-timer">⏰ <span id="offerTimer">—</span></div>
       </div>
       <button class="offer-banner-cta" onclick="Offers.view()">VIEW OFFER</button>
     </div>
@@ -356,16 +504,64 @@
     <div class="rbox">
       <div class="rtitle">🃏 <span data-i18n="gameRoom">Game Room</span></div>
       <div style="color:var(--muted);font-size:11px;margin-bottom:20px" id="ridlbl"></div>
-      <div style="font-size:10px;color:var(--muted);text-align:left;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px" data-i18n="players">Players:</div>
-      <div class="room-code-box" id="roomCodeBox" style="display:none">
-  <div class="room-code-label" data-i18n="shareCode">Room Code — Share with friends</div>
-  <div class="room-code" id="roomCodeDisplay">------</div>
-  <button class="room-code-copy" onclick="copyRoomCode()">📋 <span data-i18n="copyCode">Copy Code</span></button>
-</div>
-<div class="plist" id="plist"></div>
+      <!-- ─── Room info — read-only. Shows the fixed entry price for this room
+              and how many players are seated. The bet is set by the room, not
+              per-player, so there's nothing to adjust here. ─── -->
+      <div class="bet-card bet-card-info" id="betCard" style="display:none">
+        <div class="bet-info-stat">
+          <span class="bet-info-lbl">ENTRY PRICE</span>
+          <span class="bet-info-val" id="betCardPrice">0 🪙</span>
+        </div>
+        <div class="bet-info-div"></div>
+        <div class="bet-info-stat">
+          <span class="bet-info-lbl">PLAYERS</span>
+          <span class="bet-info-val bet-info-val-players" id="betCardPlayers">0/0</span>
+        </div>
+      </div>
+      <!-- Ranked matchmaking search overlay — only mounts when room is RANKED + lobby is not full. -->
+      <div id="rankedSearchBox" style="display:none"></div>
+      <div id="plistLabel" style="font-size:10px;color:var(--muted);text-align:left;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px" data-i18n="players">Players:</div>
+      <div class="plist" id="plist"></div>
       <button class="btnSt" id="bstart" disabled onclick="doStart()" data-i18n="waitingPlayers">Waiting for players...</button>
-      <br>
-      <button class="btnLv" onclick="doLeaveRoom()">← <span data-i18n="backToLobby">Back to Lobby</span></button>
+      <!-- ─── Invite Hero — sits BELOW the players + start button (user
+              request 2026-07-21) so the room's live state leads and the
+              share code is the secondary action. Visible only on rooms
+              that have a share code. ─── -->
+      <div class="invite-hero" id="roomCodeBox" style="display:none">
+        <div class="invite-hero-eyebrow">
+          <span class="invite-hero-dot"></span>
+          <span data-i18n="shareCode">SHARE THIS CODE WITH A FRIEND</span>
+        </div>
+        <div class="invite-hero-code-wrap">
+          <div class="invite-hero-code" id="roomCodeDisplay" onclick="copyRoomCode()" title="Click to copy">------</div>
+        </div>
+        <div class="invite-hero-share">
+          <button class="invite-share-btn invite-share-btn--gold" onclick="copyRoomCode()">
+            <span class="invite-share-ic">📋</span>
+            <span class="invite-share-lbl" data-i18n="copyCode">Copy Code</span>
+          </button>
+          <button class="invite-share-btn invite-share-btn--blue" onclick="copyRoomLink()">
+            <span class="invite-share-ic">🔗</span>
+            <span class="invite-share-lbl">Copy Link</span>
+          </button>
+          <button class="invite-share-btn invite-share-btn--green" onclick="shareRoomNative()">
+            <span class="invite-share-ic">📤</span>
+            <span class="invite-share-lbl">Share</span>
+          </button>
+        </div>
+        <div class="invite-hero-steps">
+          <span class="invite-hero-steps-title">How your friend joins:</span>
+          <ol class="invite-hero-stepslist">
+            <li><b>1</b>Open RONDAONE</li>
+            <li><b>2</b>Tap <em>Join by Code</em></li>
+            <li><b>3</b>Enter the code above</li>
+          </ol>
+        </div>
+        <!-- One-tap friend invites — opens the online-friends picker;
+             each invite fires the existing friend:invite pop-up flow. -->
+        <button class="rinv-open" onclick="showRoomInvitePicker()">👥 Invite Friends</button>
+      </div>
+      <button class="btnLv" id="roomBackBtn" onclick="doLeaveRoom()"><span class="btnLv-arrow">←</span> <span data-i18n="backToLobby">Back to Lobby</span></button>
     </div>
   </div>
 
@@ -377,7 +573,8 @@
       <div class="carea">
         <div style="text-align:center">
           <div class="ucard cardback" id="drawpile" onclick="doDraw()" title="Draw a card">
-            <div class="cbl">UNO</div>
+            <!-- "UNO" wordmark removed per user request — the card back shows
+                 just the clean design (or the player's equipped cardback art). -->
             <div class="dbadge" id="dcnt">108</div>
           </div>
         </div>
@@ -400,11 +597,19 @@
       <div class="myhand" id="myhand"></div>
     </div>
     <div class="ghud">
-      <div class="hpill" id="hturn">⏳ ...</div>
-      <div class="hpill" id="hdir">↻ Clockwise</div>
-      <div class="hpill" id="hphase">🃏 Playing</div>
-      <div class="hpill hpill-pot" id="hpot" style="display:none">🪙 Pot: <span id="hpotn">0</span></div>
-      <div class="hpill" id="hstack" style="display:none;border-color:#f87171;color:#f87171;">⚠️ Stack: <span id="hstackn">0</span></div>
+      <!-- Turn pill removed per user request — turn ownership is already
+           clear from the gold breath on the current player's seat. -->
+      <div class="hpill" id="hturn" style="display:none !important">⏳ ...</div>
+      <!-- Direction (Clockwise/Counter) + Phase pills removed per user
+           request — these were visual noise. Pot + Stack still appear
+           when relevant (kept hidden until the engine surfaces them). -->
+      <div class="hpill" id="hdir" style="display:none">↻ Clockwise</div>
+      <div class="hpill" id="hphase" style="display:none">🃏 Playing</div>
+      <!-- Pot pill removed per user request. -->
+      <div class="hpill hpill-pot" id="hpot" style="display:none !important">🪙 Prize: <span id="hpotn">0</span></div>
+      <!-- Stack pill removed per user request — the +N animation on
+           the player's hand surface already conveys the pending stack. -->
+      <div class="hpill" id="hstack" style="display:none !important;border-color:#f87171;color:#f87171;">⚠️ Stack: <span id="hstackn">0</span></div>
     </div>
     <div class="myinfo">
       <div class="miname" id="myname">You</div>
@@ -414,7 +619,11 @@
       <button class="cancel-btn" onclick="doCancel()">✕ Pass turn</button>
     </div>
     <div class="actbar">
-      <button class="btnUNO disabled" id="btnUNO" onclick="doUNO()">UNO!</button>
+      <button class="hand-mic" id="handMicUno" onclick="VoiceChat.toggle()" title="Microphone">
+        <span class="hand-mic-ic">🎤</span>
+        <span class="hand-mic-lbl">MIC OFF</span>
+      </button>
+      <button class="btnUNO disabled" id="btnUNO" onclick="doUNO()">Cardora!</button>
     </div>
     <!-- Settings gear (top-left) -->
     <div class="game-menu-btn" id="gameMenuBtn" onclick="toggleGameMenu()">⚙</div>
@@ -422,11 +631,7 @@
       <div class="game-menu-title">⚙ <span data-i18n="gameMenu">Game Menu</span></div>
       <button class="game-menu-item" onclick="toggleSound()">🔊 <span id="soundLabel">Sound: ON</span></button>
       <button class="game-menu-item" onclick="toggleMusic()">🎵 <span id="musicLabel">Music: ON</span></button>
-      <button class="game-menu-item" onclick="toggleChat()">💬 <span data-i18n="chat">Chat</span></button>
-      <button class="game-menu-item" onclick="gameMenuProfile()">👤 <span data-i18n="profile">Profile</span></button>
-      <button class="game-menu-item" onclick="showLangPicker()">🌐 <span data-i18n="language">Language</span></button>
-      <button class="game-menu-item" style="border-top:1px solid var(--border);margin-top:6px;padding-top:12px;color:#f87171" onclick="confirmLeave()">🚪 <span data-i18n="leaveGame">Leave game</span></button>
-      <button class="game-menu-item" style="color:#f87171" onclick="gameMenuLogout()">🚪 <span data-i18n="logout">Logout</span></button>
+      <button class="game-menu-item" style="color:#f87171" onclick="confirmLeave()">🚪 <span data-i18n="leaveGame">Leave game</span></button>
       <button class="game-menu-item" onclick="toggleGameMenu()">✕ <span data-i18n="close">Close</span></button>
     </div>
   </div>
@@ -444,38 +649,69 @@
   <div class="winov" id="winov">
     <div class="win-rays" aria-hidden="true"></div>
     <div class="win-spot" aria-hidden="true"></div>
+    <!-- Top-left ranked header (badge + "Ranked Match" + tier). Shown only for
+         ranked results, populated by _renderRankedPanel(). -->
+    <div class="wr-header" id="wrHeader" style="display:none"></div>
     <div class="win-content" id="winContent">
+      <div class="win-eyebrow" id="weyebrow">⚔️ MATCH COMPLETE</div>
       <div class="wtitle" id="wtitle">VICTORY!</div>
       <div class="win-det" id="wdet"></div>
+      <!-- Premium RANKED result panel — animated rank badge + RP progress bar +
+           point breakdown + rank ladder. Populated by _renderRankedPanel(data)
+           for RANKED matches only; hidden (and the podium shows) otherwise. -->
+      <div class="win-ranked" id="winRanked" style="display:none"></div>
       <!-- 4-slot podium 1->4 — populated by _renderWinPodium(data) -->
       <div class="win-podium" id="winPodium" aria-label="Match results"></div>
       <!-- Rewards row — coins (only the winner gets the pot) + XP (everyone) -->
       <div class="win-rewards" id="winRewards"></div>
       <!-- Pot math line — kept for transparency -->
       <div class="win-bet" id="wbet"></div>
-      <div id="mvpBadge" class="mvp-badge" style="display:none">
-        <div class="mvp-avatar" id="mvpAvatar">⭐</div>
+      <!-- MVP "Man of the Match" + Crowd Favorite cards removed per
+           user request — the win actions (Play Again / Back to Lobby)
+           sit directly under the rewards row now. Hidden placeholders
+           kept with display:none so any legacy code that still calls
+           getElementById('mvpName') etc. doesn't blow up. -->
+      <div id="mvpBadge" class="mvp-badge" style="display:none !important">
+        <div class="mvp-avatar" id="mvpAvatar"></div>
         <div class="mvp-info">
-          <div class="mvp-label">⭐ MAN OF THE MATCH</div>
-          <div class="mvp-name" id="mvpName">—</div>
-          <div class="mvp-reason" id="mvpReason">—</div>
+          <div class="mvp-label"></div>
+          <div class="mvp-name" id="mvpName"></div>
+          <div class="mvp-reason" id="mvpReason"></div>
         </div>
       </div>
-      <div id="crowdFav" class="crowd-fav" style="display:none">
-        <div class="crowd-fav-avatar" id="crowdFavAvatar">🗳️</div>
+      <div id="crowdFav" class="crowd-fav" style="display:none !important">
+        <div class="crowd-fav-avatar" id="crowdFavAvatar"></div>
         <div class="crowd-fav-info">
-          <div class="crowd-fav-label">🎉 CROWD FAVORITE</div>
-          <div class="crowd-fav-name" id="crowdFavName">—</div>
-          <div class="crowd-fav-meta" id="crowdFavMeta">—</div>
+          <div class="crowd-fav-label"></div>
+          <div class="crowd-fav-name" id="crowdFavName"></div>
+          <div class="crowd-fav-meta" id="crowdFavMeta"></div>
         </div>
       </div>
       <!-- Hidden mirror of the coin gain — kept for legacy renderers; the
            podium + rewards row are the canonical display now. -->
       <div class="win-coins" id="wcoins" style="display:none">+0 🪙</div>
-      <!-- Action row: Play Again (re-routes into the same room type) + Back to Lobby -->
+      <!-- Action row: Play Again (re-routes into the same room type) +
+           Share Result + Back to Lobby. Buttons now match the new design
+           system: red-gradient primary, blue glass secondary, neutral
+           ghost tertiary. -->
       <div class="win-actions">
-        <button class="btnS win-play-again" onclick="winPlayAgain()">▶ Play Again</button>
-        <button class="btnP win-back" onclick="backLobby()" data-i18n="backToLobby">Back to Lobby</button>
+        <button class="win-act win-act-primary" onclick="winPlayAgain()">
+          <span class="win-act-shine"></span>
+          <span class="win-act-ic">▶</span>
+          <span class="win-act-lbl">PLAY AGAIN</span>
+        </button>
+        <button class="win-act win-act-share" onclick="doShareWin()" aria-label="Share result">
+          <span class="win-act-ic">📤</span>
+          <span class="win-act-lbl">SHARE</span>
+        </button>
+        <button class="win-act win-act-back" onclick="backLobby()">
+          <span class="win-act-lbl" data-i18n="backToLobby">Back to Lobby</span>
+        </button>
+      </div>
+      <!-- Auto-return to lobby — small subtle countdown so players don't
+           park here indefinitely. Click anywhere to cancel. -->
+      <div class="win-autoback" id="winAutoback">
+        Returning to lobby in <b id="winAutobackS">30</b>s · tap to cancel
       </div>
     </div>
   </div>
@@ -490,65 +726,123 @@
       <div class="mm-sweep"></div>
       <div class="mm-core">🎯</div>
     </div>
+    <div class="mm-eyebrow">⚡ QUICK MATCH</div>
     <div class="mm-title"><span data-i18n="findingMatch">Finding Match</span><span class="mm-dots"><i></i><i></i><i></i></span></div>
     <div class="mm-sub" id="mmcnt">1 in queue</div>
     <div class="mm-hint">Pairing you with a worthy opponent…</div>
     <button class="mm-cancel" onclick="doLeaveMM()" data-i18n="cancel">Cancel</button>
   </div>
 
-  <!-- ═══ PROFILE ═══ -->
+  <!-- ═══ PROFILE V4 — Modern dashboard (sidebar + player card + rank + stats) ═══ -->
   <div class="profile-ov" id="profileOv">
-    <div class="profile-box">
-      <button class="profile-close-x" onclick="document.getElementById('profileOv').classList.remove('show')" aria-label="Close">×</button>
+    <div class="profile-box profile-v4">
+      <div class="profile-v4-layout">
+        <!-- Left sidebar — BACK button sits on top so the exit affordance
+             is always one tap away and visually anchored to the nav. -->
+        <nav class="profile-v4-sidebar">
+          <button class="profile-v4-back" onclick="document.getElementById('profileOv').classList.remove('show')" aria-label="Back to lobby" title="Back to lobby">
+            <span class="profile-v4-back-arrow">←</span>
+            <span class="profile-v4-back-lbl">BACK</span>
+          </button>
+          <div class="profile-v4-nav-divider"></div>
+          <button class="profile-v4-nav active" data-section="overview">OVERVIEW</button>
+          <button class="profile-v4-nav" data-section="stats">STATS</button>
+          <button class="profile-v4-nav" data-section="history">MATCH HISTORY</button>
+          <button class="profile-v4-nav" data-section="ranked">RANKED</button>
+          <button class="profile-v4-nav" data-section="friends">FRIENDS</button>
+          <button class="profile-v4-nav" data-section="achievements">ACHIEVEMENTS</button>
+          <button class="profile-v4-nav" data-section="leaderboard">LEADERBOARD</button>
+        </nav>
 
-      <div class="profile-stage">
-        <div class="profile-stage-ring"></div>
-        <div class="profile-avatar" id="profileAvatar" onclick="showAvatarPicker()" title="Choose your avatar">🎮</div>
-        <button class="profile-avatar-edit" onclick="showAvatarPicker()" title="Change avatar" aria-label="Change avatar">✏️</button>
-      </div>
+        <!-- Main content -->
+        <div class="profile-v4-main">
+          <!-- Section content holder — sidebar nav swaps stats / history /
+               ranked / friends / achievements into here. Hidden by default
+               and revealed via .is-section on the parent. -->
+          <div class="profile-v4-section" id="profileSection" style="display:none"></div>
 
-      <div class="profile-name" id="profileName">Player</div>
-      <div class="profile-league" id="profileLeague">🥈 Silver League</div>
-      <div class="profile-meta">
-        <span class="profile-id" id="profileId" title="Click to copy ID" onclick="copyProfileId()">ID ----</span>
-        <span class="profile-dot">·</span>
-        <span class="profile-joined" id="profileJoined">Joined —</span>
-      </div>
+          <!-- OVERVIEW content — shown by default, hidden when another
+               section is active. -->
+          <div id="profileOverview">
+          <!-- Player card -->
+          <div class="profile-v4-card profile-v4-player">
+            <div class="profile-v4-avatar" id="profileAvatar" onclick="showAvatarPicker()" title="Choose your avatar">🎮</div>
+            <div class="profile-v4-info">
+              <div class="profile-v4-name-row">
+                <span class="profile-v4-name" id="profileName">Player</span>
+                <span class="profile-v4-verified" id="profileVerified" title="Verified">✓</span>
+              </div>
+              <button class="profile-v4-title" id="profileTitleBadge" onclick="showTitles()" title="Choose your title" style="display:none"></button>
+              <button class="profile-v4-id" id="profileId" onclick="copyProfileId()" title="Click to copy ID">
+                ID: <span class="profile-v4-id-num">----</span>
+                <span class="profile-v4-id-copy">📋</span>
+              </button>
+              <div class="profile-v4-level-row">
+                <span class="profile-v4-lvl-lbl">Level <b id="profileLvl">1</b></span>
+                <div class="profile-v4-xp-bar">
+                  <div class="profile-v4-xp-fill" id="profileXpFill" style="width:0%"></div>
+                </div>
+                <span class="profile-v4-xp-text" id="profileXpText">0 / 1000</span>
+              </div>
+            </div>
+            <button class="profile-v4-edit" onclick="showAvatarPicker()">
+              <span class="profile-v4-edit-ic">📝</span>
+              Edit Profile
+            </button>
+            <button class="profile-v4-banner-btn" onclick="showBannerPicker()" title="Change your profile banner" aria-label="Change banner">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M3.6 16.4l4.1-3.9 3 2.8 3.8-4.1 5.9 6.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="8.4" cy="9.6" r="1.4" fill="currentColor"/>
+              </svg>
+              <span>Banner</span>
+            </button>
+          </div>
 
-      <div class="profile-stats">
-        <div class="profile-stat" style="--c:#FFD700">
-          <div class="profile-stat-icon">🪙</div>
-          <div class="profile-stat-val" id="pCoins">0</div>
-          <div class="profile-stat-lbl">Coins</div>
-        </div>
-        <div class="profile-stat" style="--c:#22D3EE">
-          <div class="profile-stat-icon">⚡</div>
-          <div class="profile-stat-val" id="pRating">1000</div>
-          <div class="profile-stat-lbl">Rating</div>
-        </div>
-        <div class="profile-stat" style="--c:#F59E0B">
-          <div class="profile-stat-icon">🏆</div>
-          <div class="profile-stat-val" id="pWon">0</div>
-          <div class="profile-stat-lbl">Wins</div>
-        </div>
-        <div class="profile-stat" style="--c:#A78BFA">
-          <div class="profile-stat-icon">🎮</div>
-          <div class="profile-stat-val" id="pPlayed">0</div>
-          <div class="profile-stat-lbl">Played</div>
-        </div>
-      </div>
+          <!-- Rank card -->
+          <div class="profile-v4-card profile-v4-rank">
+            <div class="profile-v4-rank-emblem" id="profileEmblemUno"></div>
+            <div class="profile-v4-rank-block">
+              <div class="profile-v4-rank-lbl">CURRENT RANK</div>
+              <div class="profile-v4-rank-tier" id="profileTierUno">BRONZE I</div>
+            </div>
+            <div class="profile-v4-rank-divider"></div>
+            <div class="profile-v4-rank-block">
+              <div class="profile-v4-rank-lbl">RANK POINTS</div>
+              <div class="profile-v4-rank-pts" id="pRating">1000</div>
+            </div>
+          </div>
 
-      <div class="profile-winrate">
-        <div class="profile-wr-head">
-          <span>Win Rate</span>
-          <span id="pWinRate">0%</span>
-        </div>
-        <div class="profile-bar"><div class="profile-bar-fill" id="pWinBar" style="width:0%"></div></div>
-      </div>
+          <!-- Stats row -->
+          <div class="profile-v4-stats">
+            <div class="profile-v4-stat">
+              <div class="profile-v4-stat-lbl">MATCHES</div>
+              <div class="profile-v4-stat-val" id="pPlayed">0</div>
+            </div>
+            <div class="profile-v4-stat">
+              <div class="profile-v4-stat-lbl">WINS</div>
+              <div class="profile-v4-stat-val profile-v4-stat-green" id="pWon">0</div>
+            </div>
+            <div class="profile-v4-stat">
+              <div class="profile-v4-stat-lbl">WIN RATE</div>
+              <div class="profile-v4-stat-val" id="pWinRateStat">0%</div>
+            </div>
+            <div class="profile-v4-stat">
+              <div class="profile-v4-stat-lbl">COINS</div>
+              <div class="profile-v4-stat-val" id="pCoins">0</div>
+            </div>
+            <div class="profile-v4-stat">
+              <div class="profile-v4-stat-lbl">STREAK</div>
+              <div class="profile-v4-stat-val" id="pStreak">0</div>
+            </div>
+          </div>
 
-      <div class="profile-actions">
-        <button class="profile-act profile-act-secondary" onclick="showAvatarPicker()">🦸 Change Avatar</button>
-        <button class="profile-act profile-act-primary" onclick="document.getElementById('profileOv').classList.remove('show')">Close</button>
+          <!-- Hidden back-compat slots (kept so old code paths don't crash). -->
+          <span id="pWinRate" style="display:none">0%</span>
+          <span id="pWinBar"   style="display:none"></span>
+          <span id="pDiamonds" style="display:none">0</span>
+          </div><!-- /#profileOverview -->
+        </div>
       </div>
     </div>
   </div>
@@ -556,7 +850,11 @@
   <!-- ═══ LEADERBOARD ═══ -->
   <div class="lb-ov" id="lbOv">
     <div class="lb-box">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <button class="lb-x" onclick="document.getElementById('lbOv').classList.remove('show')" aria-label="Close">×</button>
+      <div class="lb-head">
+        <div class="lb-eyebrow">🏆 HALL OF FAME</div>
+        <div class="lb-title">LEADERBOARD</div>
+      </div>
       <div class="lb-list" id="lbList"></div>
       <button class="lb-close" onclick="document.getElementById('lbOv').classList.remove('show')">Close</button>
     </div>
@@ -598,8 +896,9 @@
         <h3 style="margin:0">⚙️ ADMIN PANEL</h3>
         <button onclick="document.getElementById('adminOv').classList.remove('show')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
       </div>
+      <button class="btnP" onclick="showAnalytics()" style="width:100%;margin-bottom:18px;background:linear-gradient(135deg,#2563EB,#1E3A8A)">📊 Analytics Dashboard</button>
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Create Tournament</div>
-      <div class="fg"><label>Name</label><input class="fg input" id="adminTName" placeholder="UNO Championship" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
+      <div class="fg"><label>Name</label><input class="fg input" id="adminTName" placeholder="Cardora Championship" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Max Players</label><input id="adminTMax" type="number" value="8" min="2" max="16" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
         <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Prize Coins</label><input id="adminTPrize" type="number" value="5000" min="100" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
@@ -608,9 +907,50 @@
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">Start Tournament</div>
       <div class="fg"><label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:6px">Tournament ID</label><input id="adminTId" placeholder="Paste tournament ID here" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none"/></div>
       <button class="btnP" onclick="adminStartTournament()" style="width:100%;background:linear-gradient(135deg,#16A34A,#15803D)">⚔️ Start Tournament</button>
+
+      <!-- Security — 2FA + audit log -->
+      <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px">🔐 Security</div>
+        <div id="admin2faStatus" style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:10px">Checking 2FA status…</div>
+        <button class="btnP" onclick="admin2faOpenSetup()" id="admin2faSetupBtn" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#A855F7,#4C1D95)">🔐 Manage 2FA</button>
+        <button class="btnP" onclick="adminOpenAuditLog()" style="width:100%;background:linear-gradient(135deg,#0EA5E9,#0369A1)">📋 View Audit Log</button>
+      </div>
     </div>
   </div>
-  <!-- Ranked Leaderboard -->
+
+  <!-- 2FA setup modal — opened from the admin panel. Hands the admin a
+       QR code + secret + verification field; on success, shows 10 backup
+       codes ONCE for them to save. -->
+  <div class="modal" id="admin2faOv">
+    <div class="mbox" style="width:min(440px,94vw);text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">🔐 ENABLE 2FA</h3>
+        <button onclick="document.getElementById('admin2faOv').classList.remove('show')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+      </div>
+      <div id="admin2faBody"></div>
+    </div>
+  </div>
+
+  <!-- Audit log viewer — last N admin actions. Read-only, refreshable. -->
+  <div class="modal" id="adminAuditOv">
+    <div class="mbox" style="width:min(720px,96vw);max-height:88vh;overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">📋 ADMIN AUDIT LOG</h3>
+        <div>
+          <button onclick="adminOpenAuditLog()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:#fff;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;letter-spacing:.6px;cursor:pointer;margin-right:8px">↻ REFRESH</button>
+          <button onclick="document.getElementById('adminAuditOv').classList.remove('show')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div id="adminAuditBody" style="overflow-y:auto;flex:1;font-size:12px;color:rgba(255,255,255,.85)">Loading…</div>
+    </div>
+  </div>
+  <!-- ═══ NEW RANKED HUB (Phases 1-4: rankPoints + placement + seasons + DC warning) ═══ -->
+  <div class="modal" id="rankedHubOv" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="mbox" style="width:min(640px,94vw);max-height:88vh;overflow-y:auto;padding:0">
+      <div id="rankedHubBody" style="padding:24px"></div>
+    </div>
+  </div>
+  <!-- Ranked Leaderboard (legacy ELO — kept for /api/leaderboard backwards-compat) -->
   <div class="ranked-lb-box" id="rankedLbOv">
     <div class="ranked-lb-inner">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -620,34 +960,30 @@
       <div id="rankedLbList"></div>
     </div>
   </div>
-  <!-- Join by Code Modal -->
-  <div class="modal" id="joinCodeModal">
-    <div class="mbox" style="width:min(380px,92vw)">
-      <h3>🔑 JOIN BY CODE</h3>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Enter the 6-character room code</p>
-      <input class="join-code-input" id="joinCodeInput" maxlength="6" placeholder="ENTER CODE" oninput="this.value=this.value.toUpperCase()"/>
-      <div id="joinCodeErr" class="err"></div>
-      <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btnP" style="flex:1" onclick="doJoinByCode()">JOIN</button>
-        <button class="btnI" onclick="document.getElementById('joinCodeModal').classList.remove('show')">Cancel</button>
-      </div>
-    </div>
-  </div>
-  <!-- Coins balance modal -->
+  <!-- Join by Code modal is built on-demand by 17-room-code.js (.cr-* sheet) -->
+  <!-- Coins balance modal — harmonized with the new design system -->
   <div class="modal" id="coinsModal" onclick="if(event.target===this)this.classList.remove('show')">
-    <div class="mbox" style="width:min(420px,92vw);padding:32px 28px;">
-      <div style="font-size:11px;color:#FFB87A;font-weight:800;letter-spacing:2px;margin-bottom:6px">YOUR BUDGET</div>
+    <div class="mbox coins-mbox" style="width:min(440px,92vw);padding:28px 26px;">
+      <button class="coins-x" onclick="document.getElementById('coinsModal').classList.remove('show')" aria-label="Close">×</button>
+      <div class="coins-eyebrow">💰 YOUR WALLET</div>
       <div class="coins-hero" id="coinsHeroVal">0</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:6px;font-weight:700">🪙 Total coins</div>
-      <div style="margin-top:22px;text-align:left">
+      <div class="coins-sub">🪙 Total coins</div>
+      <div class="coins-rows">
         <div class="coins-row"><span class="coins-row-label">🏆 ELO</span><span class="coins-row-value" id="coinsELO">—</span></div>
         <div class="coins-row"><span class="coins-row-label">🎖️ League</span><span class="coins-row-value" id="coinsLeague">—</span></div>
         <div class="coins-row"><span class="coins-row-label">🎮 Games played</span><span class="coins-row-value" id="coinsGames">0</span></div>
         <div class="coins-row"><span class="coins-row-label">✨ Wins</span><span class="coins-row-value" id="coinsWins">0</span></div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:22px">
-        <button class="btnP" style="flex:1" onclick="document.getElementById('coinsModal').classList.remove('show');doDaily()">🎁 Claim Daily</button>
-        <button class="btnI" style="width:auto;height:auto;padding:12px 20px;font-size:14px" onclick="document.getElementById('coinsModal').classList.remove('show')"><span style="animation:none">✕</span></button>
+      <div class="coins-actions">
+        <button class="coins-act coins-act-daily" onclick="document.getElementById('coinsModal').classList.remove('show');doDaily()">
+          <span class="coins-act-shine"></span>
+          <span class="coins-act-ic">🎁</span>
+          <span class="coins-act-lbl">CLAIM DAILY</span>
+        </button>
+        <button class="coins-act coins-act-shop" onclick="document.getElementById('coinsModal').classList.remove('show');doShop('coins')">
+          <span class="coins-act-ic">🛍️</span>
+          <span class="coins-act-lbl">BUY MORE</span>
+        </button>
       </div>
     </div>
   </div>
@@ -691,12 +1027,27 @@
       <span class="ct-line3">ONE CARD LEFT!</span>
     </div>
   </div>
-  <!-- Friends Panel -->
-  <button class="friends-btn" id="friendsBtn" onclick="toggleFriendsPanel()">👥<span class="friends-notif" id="friendsNotif">0</span></button>
+  <!-- Friends Panel — opened from the header 👥 action button. The
+       legacy floating .friends-btn was removed (replaced by the header
+       button) per user request. -->
+  <button class="friends-btn" id="friendsBtn" style="display:none !important" onclick="toggleFriendsPanel()" aria-hidden="true">👥<span class="friends-notif" id="friendsNotif">0</span></button>
   <div class="friends-panel" id="friendsPanel">
     <div class="friends-header">
-      <div class="friends-title">👥 FRIENDS</div>
-      <button onclick="toggleFriendsPanel()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
+      <div>
+        <div class="friends-eyebrow">SOCIAL</div>
+        <div class="friends-title">FRIENDS</div>
+      </div>
+      <button class="friends-close" onclick="toggleFriendsPanel()" aria-label="Close">×</button>
+    </div>
+    <div class="friends-meta">
+      <div class="friends-meta-item"><span class="fmeta-dot fmeta-dot-on"></span><b id="friendsOnlineN">0</b> online</div>
+      <div class="friends-meta-sep"></div>
+      <div class="friends-meta-item friends-meta-cap"><b id="friendsTotalN">0</b><span class="fmeta-cap-sep">/</span><span class="fmeta-cap-max">250</span></div>
+    </div>
+    <div class="friends-search-wrap">
+      <span class="friends-search-ic">🔎</span>
+      <input class="friends-search" id="friendsSearch" placeholder="Search friends…" maxlength="30">
+      <button class="friends-search-clear" id="friendsSearchClear" aria-label="Clear" style="display:none">×</button>
     </div>
     <div class="friends-tabs">
       <button class="friends-tab active" id="ftab-friends" onclick="switchFriendsTab('friends')">Friends</button>
@@ -704,8 +1055,9 @@
     </div>
     <div class="friends-list" id="friendsList"></div>
     <div class="add-friend-wrap">
-      <input class="add-friend-input" id="addFriendInput" placeholder="Add by username..." maxlength="20"/>
-      <button class="add-friend-btn" onclick="doAddFriend()">Add</button>
+      <div class="fr-search-results" id="frSearchResults"></div>
+      <input class="add-friend-input" id="addFriendInput" placeholder="🔎 Search a player by name or ID…" maxlength="25" autocomplete="off" oninput="onFriendSearchInput(this.value)" onkeydown="if(event.key==='Enter')doAddFriend()"/>
+      <button class="add-friend-btn" onclick="doAddFriend()" title="Send friend request">+</button>
     </div>
   </div>
   <!-- Invite Toast -->
@@ -741,25 +1093,26 @@
   </div>
 
   <!-- ═══ QUICK CHAT (GDD §7.5) ═══ Fab on game screen; grid of pre-vetted phrases. -->
-  <div class="qc-fab" id="qcFab" title="Quick chat" aria-label="Quick chat">💭</div>
+  <div class="qc-fab" id="qcFab" title="Quick chat" aria-label="Quick chat">💬</div>
   <div class="qc-panel" id="qcPanel" role="menu" aria-label="Quick chat presets"></div>
 
-  <!-- ═══ PRIVATE DMs (GDD §7.5 B) ═══ Inbox + thread overlay, opened from friends panel or fab. -->
-  <div class="dm-fab" id="dmFab" title="Messages" aria-label="Messages" onclick="DM.openInbox()">
-    ✉️
-    <div class="dm-fab-badge" id="dmFabBadge">0</div>
-  </div>
+  <!-- ═══ PRIVATE DMs (GDD §7.5 B) ═══ Inbox + thread overlay, opened from the header chat button. -->
   <div class="dm-overlay" id="dmOverlay" role="dialog" aria-modal="true" aria-label="Direct messages">
     <div class="dm-card">
       <div class="dm-header">
         <button class="dm-back" id="dmBack" type="button" title="Back to inbox">←</button>
-        <div class="dm-title" id="dmTitle">Messages</div>
-        <button class="dm-close" id="dmClose" type="button" title="Close">✕</button>
+        <div class="dm-head-titles">
+          <div class="dm-eyebrow" id="dmEyebrow">DIRECT MESSAGES</div>
+          <div class="dm-title" id="dmTitle">MESSAGES</div>
+        </div>
+        <button class="dm-close" id="dmClose" type="button" title="Close" aria-label="Close">×</button>
       </div>
       <div class="dm-body" id="dmBody"></div>
       <form class="dm-composer" id="dmForm" autocomplete="off">
         <input type="text" id="dmInput" class="dm-input" maxlength="240" placeholder="Type a message…">
-        <button type="submit" class="dm-send">Send</button>
+        <button type="submit" class="dm-send" aria-label="Send">
+          <span class="dm-send-arrow">➤</span>
+        </button>
       </form>
     </div>
   </div>
@@ -809,15 +1162,21 @@
   <script src="ui/modules/17-room-code.js"></script>
   <script src="ui/modules/18-friends.js"></script>
   <script src="ui/modules/19-competitions.js"></script>
-  <script src="ui/modules/20-room-scene.js"></script>
-  <script src="ui/modules/21-lobby-scene.js"></script>
-  <script src="ui/modules/22-parallax.js"></script>
   <script src="ui/modules/23-shop.js"></script>
   <script src="ui/modules/24-atmosphere.js"></script>
   <script src="ui/modules/26-offers.js"></script>
   <script src="ui/modules/27-music.js"></script>
   <script src="ui/modules/28-quickchat.js"></script>
   <script src="ui/modules/29-dms.js"></script>
+  <script src="ui/modules/30-spin.js"></script>
+  <script src="ui/modules/31-notifs.js"></script>
+  <script src="ui/modules/32-browse-rooms.js"></script>
+  <script src="ui/modules/33-match-intro.js"></script>
+  <script src="ui/modules/34-mobile-rotate.js"></script>
+  <script src="ui/modules/35-cosmetics.js"></script>
+  <script src="ui/modules/36-ronda.js"></script>
+  <script src="ui/modules/38-dama.js"></script>
+  <script src="ui/modules/39-chess.js"></script>
   <script src="ui/app.js"></script>
   </body>
   </html>

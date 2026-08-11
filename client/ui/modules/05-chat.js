@@ -11,11 +11,14 @@
   }
   function showChatFab(show){
     document.getElementById('emojiBtn').classList.toggle('visible', show);
-    document.getElementById('micBtn')?.classList.toggle('visible', show);
+    // Floating corner #micBtn is now superseded by each game's dedicated
+    // mic button (UNO actbar, Ronda corner, Dama action bar). Keep it
+    // hidden to avoid two mic controls on screen.
+    document.getElementById('micBtn')?.classList.remove('visible');
     if(!show){
       document.getElementById('emojiPicker').classList.remove('show');
       document.getElementById('friendsPanel').classList.remove('open'); Friends.open=false;
-      if (typeof VoiceChat !== 'undefined' && VoiceChat.isOn) VoiceChat.leave();
+      if (typeof VoiceChat !== 'undefined' && VoiceChat.connected) VoiceChat.leave();
     }
     document.getElementById('chatFab').classList.toggle('visible',show);
     document.getElementById('qcFab')?.classList.toggle('visible',show);
@@ -58,7 +61,7 @@
     Chat.history.push(msg);if(Chat.history.length>50)Chat.history.shift();
     const c=document.getElementById('chatMsgs'),isMe=msg.userId===S.user?.id;
     const d=document.createElement('div');d.className=`chat-msg ${isMe?'mine':'other'}`;
-    d.innerHTML=`${!isMe?`<div class="chat-name">${esc(msg.username)}</div>`:''}<div class="chat-text">${esc(msg.text)}</div><div class="chat-time">${fmtTime(msg.createdAt)}</div>`;
+    d.innerHTML=`${!isMe?`<div class="chat-name">${esc(msg.username)}${verifiedBadgeHTML(msg.username,{size:'xs'})}</div>`:''}<div class="chat-text">${esc(msg.text)}</div><div class="chat-time">${fmtTime(msg.createdAt)}</div>`;
     c.appendChild(d);
     while(c.children.length>50)c.removeChild(c.firstChild);
     if(Chat.open&&Chat.activeTab==='chat')scrollChatBottom();
@@ -96,14 +99,31 @@
     sk.on('chat:history',({messages})=>{document.getElementById('chatMsgs').innerHTML='';messages.forEach(m=>addChatMsg(m));});
     sk.on('room:player_joined',({player})=>{const n=player?.username||'A player';addActivityMsg(`🟢 ${esc(n)} joined the room`,'join');toast(`${n} joined!`,'i');refreshRoom();});
     sk.on('room:player_left',({username})=>{addActivityMsg(`🔴 ${esc(username||'Player')} left`,'leave');toast(`${username||'Player'} left`,'w');refreshRoom();});
+    // Host-side kick — server splices us out of the room and emits this.
+    // Bounce the kicked user back to the lobby with a clear notice.
+    sk.on('room:kicked',({by,reason})=>{
+      toast(`👋 You were removed by ${esc(by||'the host')}`,'w');
+      S.roomId = null; S.roomCode = null;
+      if(typeof goLobby === 'function') goLobby();
+    });
+    // Per-player bet pool update — drives the bet card + pot display
+    // + the bet chip rendered next to each player's name.
+    sk.on('room:bets',({minBet,playerBets})=>{
+      S.roomMinBet = minBet || 0;
+      S.roomBets   = playerBets || {};
+      if(typeof renderBetCard === 'function') renderBetCard();
+      refreshRoom();
+    });
     sk.on('game:reaction',(data)=>{
       showReactionOnPanel(data.emoji, data.playerId);
     });
 
     /* Voice chat signaling */
     sk.on('voice:peers', ({ peers }) => {
-      // Sent only to us right after we join — initiate offers to existing peers
-      if (!VoiceChat.isOn) return;
+      // Sent right after we voice:join — initiate offers to existing
+      // peers so we can hear them. Fires for listen-only too: even
+      // without a mic we want the inbound audio stream.
+      if (!VoiceChat.connected) return;
       (peers || []).forEach((peerId) => VoiceChat._ensurePeer(peerId, true));
     });
     sk.on('voice:peer_joined', () => {
@@ -153,8 +173,8 @@
       }
     });
     sk.on('game:uno_called',({username})=>{
-      addActivityMsg(`🗣️ ${esc(username)} called UNO!`,'uno');SFX.play('uno');
-      const d=document.createElement('div');d.className='uno-alert';d.textContent=`${username} — UNO!`;
+      addActivityMsg(`🗣️ ${esc(username)} called Cardora!`,'uno');SFX.play('uno');
+      const d=document.createElement('div');d.className='uno-alert';d.textContent=`${username} — Cardora!`;
       document.body.appendChild(d);setTimeout(()=>d.remove(),2000);
     });
     sk.on('game:started_notify',()=>{addActivityMsg('🎮 Game has started!','game');});

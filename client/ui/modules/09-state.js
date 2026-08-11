@@ -1,3 +1,44 @@
+  // Resolve + apply MY equipped table as the Cardora backdrop. If the catalog
+  // hasn't loaded yet (deep-link straight into a game), force-hydrate it and
+  // re-apply — otherwise the equipped table would silently never show.
+  let _unoFeltLoadKicked = false;
+  function _applyUnoArenaFelt(){
+    try{
+      const mine = (S.user && S.user.equippedTableFelt) || '';
+      if(!mine){ document.body.classList.remove('uno-felt-art'); return; }
+      const ok = (typeof Cosmetics !== 'undefined' && Cosmetics.applyFeltId) ? Cosmetics.applyFeltId(mine) : false;
+      if(ok){ document.body.classList.add('uno-felt-art'); return; }
+      // Not resolvable yet — usually the catalog isn't loaded. Force it once.
+      if(typeof Cosmetics !== 'undefined' && typeof Cosmetics.load === 'function'
+         && !(Cosmetics.tableFelts || []).length && !_unoFeltLoadKicked){
+        _unoFeltLoadKicked = true;
+        Cosmetics.load().then(()=>_applyUnoArenaFelt()).catch(()=>{});
+        return;
+      }
+      document.body.classList.remove('uno-felt-art');   // unknown/legacy id → drawn table
+    }catch(e){}
+  }
+
+  // Sort a Cardora hand for display: same colours grouped together (red →
+  // yellow → green → blue), numbers ascending then action cards, wilds last.
+  // Cards keep their id, so tap-to-play (by data-cid) is unaffected — this is a
+  // pure display order. Applied to BOTH my hand and my 2v2 partner's hand.
+  const _UNO_COLOR_ORDER = { red:0, yellow:1, green:2, blue:3 };
+  function _unoValueRank(v){
+    const n = Number(v);
+    if(Number.isFinite(n)) return n;                                   // 0..9
+    return ({ skip:10, reverse:11, draw_two:12, wild:13, wild_draw_four:14 })[v] ?? 20;
+  }
+  function _sortUnoHand(cards){
+    if(!Array.isArray(cards)) return cards;
+    return cards.slice().sort((a, b) => {
+      const ca = (a && a.color in _UNO_COLOR_ORDER) ? _UNO_COLOR_ORDER[a.color] : 9;  // wild/black → end
+      const cb = (b && b.color in _UNO_COLOR_ORDER) ? _UNO_COLOR_ORDER[b.color] : 9;
+      if(ca !== cb) return ca - cb;
+      return _unoValueRank(a && a.value) - _unoValueRank(b && b.value);
+    });
+  }
+
   /* ═══ STATE ═══ */
   function applyFullState(state){
     const g=S.g;
@@ -14,7 +55,7 @@
     if(state.myHand!==undefined){
       if(S._skipNextSync){
       }else{
-        g.myHand=state.myHand;
+        g.myHand=_sortUnoHand(state.myHand);
       }
     }
     if(state.myPlayable!==undefined)g.myPlayable=state.myPlayable;
@@ -26,10 +67,19 @@
     if(state.pot!==undefined){
       g.pot=state.pot||0;
       const pn=document.getElementById('hpotn'); if(pn) pn.textContent=g.pot.toLocaleString();
-      const pp=document.getElementById('hpot');  if(pp) pp.style.display=g.pot>0?'':'none';
+      // Pot pill removed per user request — keep state but never show.
+      const pp=document.getElementById('hpot');  if(pp) pp.style.display='none';
     }
+    // ARENA backdrop — my equipped table (rank / shop / prestige / mythic)
+    // becomes the full-screen room, same as RONDA. Runs on every state sync.
+    _applyUnoArenaFelt();
+    // 2v2 TEAM MODE — my partner's hand is sent only to me so I can see it and
+    // coordinate. Store it + render a small face-up strip up top.
+    if(state.teamMode!==undefined) g.teamMode=state.teamMode;
+    if(state.teammateHand!==undefined){ g.teammateHand=_sortUnoHand(state.teammateHand); g.teammateId=state.teammateId; g.teammateName=state.teammateName; }
     if(g.topCard)renderTop(g.topCard);
     renderOpps(g.players);renderHand();
+    if(typeof renderTeammateHand==='function') renderTeammateHand();
     document.getElementById('dcnt').textContent=g.drawPileSize;
     document.getElementById('myname').textContent=S.user?.username||'You';
     document.getElementById('mycnt').textContent=g.myHand.length;
@@ -60,7 +110,8 @@
     g.pot = state.pot || 0;
     {
       const pn=document.getElementById('hpotn'); if(pn) pn.textContent=g.pot.toLocaleString();
-      const pp=document.getElementById('hpot');  if(pp) pp.style.display=g.pot>0?'':'none';
+      // Pot pill removed per user request — keep state but never show.
+      const pp=document.getElementById('hpot');  if(pp) pp.style.display='none';
     }
     g.myHand = []; g.myPlayable = []; g.drawnCardId = null;
     g.spectatorHands = (state.hands || []).reduce((acc, h) => { acc[h.playerId] = h.cards; return acc; }, {});
@@ -102,7 +153,7 @@
       const voteBtn = `<button class="vote-btn ${isMyVote?'active':''}" onclick="voteFor('${p.id}')" title="${isMyVote?'Your pick':'Cheer for this player'}">${isMyVote?'⭐':'🗳️'} ${isMyVote?'Voted':'Vote'}</button>`;
       const voteCount = votes > 0 ? `<div class="vote-count">${votes} vote${votes===1?'':'s'}</div>` : '';
       return `<div class="opanel ${p.id===S.g.currentTurn?'myturn':''}" data-pid="${p.id}">
-        <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)} ${p.saidUno?'<span class="ouno">UNO!</span>':''}</div></div>
+        <div class="oname-row">${avatar}<div class="oname" style="color:${p.id===S.g.currentTurn?'var(--accent)':'var(--text)'}">${esc(p.username)} ${p.saidUno?'<span class="ouno">Cardora!</span>':''}</div></div>
         <div style="display:flex;align-items:center;height:64px">${cardsHtml}${more}</div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px">${voteBtn}${voteCount}</div>
       </div>`;

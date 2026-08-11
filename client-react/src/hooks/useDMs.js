@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { dmApi } from '../api/friends';
 import { getSocket } from '../api/socket';
+import { useAuth } from '../contexts/AuthContext';
 
 // useDMs — owns the inbox + total unread count + currently-open thread.
 // Live updates piggyback on dm:incoming and dm:read_by. The thread API
 // is exposed via openThread(partnerId) which fetches + marks read.
+//
+// Re-subscription on login: this hook is mounted at the app root inside
+// the DMsProvider, which means the first render happens BEFORE the user
+// authenticates (so getSocket() is null). We re-run the subscription
+// effect whenever `user?.id` changes — that re-fires after auth opens
+// the socket connection, so the dm:incoming / dm:read_by listeners
+// actually attach for the live session instead of silently no-op'ing
+// at boot time.
 
 export default function useDMs() {
+  const { user } = useAuth();
   const [threads, setThreads]   = useState([]);
   const [unread, setUnread]     = useState(0);
   const [openWith, setOpenWith] = useState(null);          // partner user object
@@ -23,6 +33,14 @@ export default function useDMs() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      // Logged out — wipe state and skip socket wiring.
+      setThreads([]);
+      setUnread(0);
+      setOpenWith(null);
+      setThread({ messages: [], partner: null, loading: false });
+      return;
+    }
     refreshInbox();
     const sk = getSocket();
     if (!sk) return;
@@ -44,7 +62,7 @@ export default function useDMs() {
       sk.off('dm:incoming', onIncoming);
       sk.off('dm:read_by',  onReadBy);
     };
-  }, [refreshInbox]);
+  }, [refreshInbox, user?.id]);
 
   const openThread = useCallback(async (partner) => {
     setOpenWith(partner);

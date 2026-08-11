@@ -44,7 +44,11 @@
       this.view = 'inbox';
       this.activePartner = null;
       this._setHeader('Messages', false);
-      document.getElementById('dmComposer').style.display = 'none';
+      // The composer is <form id="dmForm"> — NOT "dmComposer". Referencing
+      // the wrong id returned null and threw on .style, which silently
+      // crashed open() so the overlay never appeared ("nothing happens").
+      const comp = document.getElementById('dmForm');
+      if(comp) comp.style.display = 'none';
       const body = document.getElementById('dmBody');
       if(body) body.innerHTML = '<div class="dm-empty">Loading…</div>';
       this.openOverlay();
@@ -80,7 +84,7 @@
           <div class="dm-row" onclick="DM.openThread('${esc(t.partnerId)}','${esc(t.partnerName)}','${esc(t.partnerAvatar||'')}')">
             ${avatar}
             <div class="dm-row-text">
-              <div class="dm-row-name">${esc(t.partnerName)} <span class="dm-row-time">${esc(when)}</span></div>
+              <div class="dm-row-name">${esc(t.partnerName)}${verifiedBadgeHTML(t.partnerName,{size:'xs'})} <span class="dm-row-time">${esc(when)}</span></div>
               <div class="dm-row-prev">${prev}</div>
             </div>
             ${badge}
@@ -92,7 +96,8 @@
       this.view = 'thread';
       this.activePartner = { id: partnerId, username: partnerName, avatar: partnerAvatar || '' };
       this._setHeader(partnerName, true);
-      document.getElementById('dmComposer').style.display = 'flex';
+      const comp = document.getElementById('dmForm');
+      if(comp) comp.style.display = 'flex';
       const body = document.getElementById('dmBody');
       if(body) body.innerHTML = '<div class="dm-empty">Loading…</div>';
       this.openOverlay();
@@ -186,19 +191,35 @@
     },
 
     _renderFabBadge(){
-      const b = document.getElementById('dmFabBadge');
-      if(!b) return;
-      if(this.unreadTotal > 0){
-        b.textContent = this.unreadTotal > 99 ? '99+' : String(this.unreadTotal);
-        b.classList.add('show');
-      } else {
-        b.classList.remove('show');
+      // FAB removed (no role mid-game). Badge now lives only on the
+      // header chat (💬) action button — friend DMs only, separate from
+      // the bell which is game notifications.
+      const h = document.getElementById('hdrChatNotif');
+      if(h){
+        if(this.unreadTotal > 0){
+          h.textContent = this.unreadTotal > 9 ? '9+' : String(this.unreadTotal);
+          h.style.display = '';
+        } else {
+          h.style.display = 'none';
+        }
       }
     },
 
     _setHeader(title, showBack){
       const t = document.getElementById('dmTitle');
-      if(t) t.textContent = title;
+      const eb = document.getElementById('dmEyebrow');
+      // Thread view = a real person → show the verified seal next to the name.
+      // Inbox view = a static label ("DIRECT MESSAGES") → plain text only.
+      if(t){
+        if(showBack && title){
+          t.innerHTML = esc(String(title).toUpperCase()) + verifiedBadgeHTML(title,{size:'sm'});
+        } else {
+          t.textContent = (title || '').toUpperCase();
+        }
+      }
+      // Inbox vs thread: inbox shows "DIRECT MESSAGES / MESSAGES",
+      // thread view shows "CHAT WITH / [partner name]".
+      if(eb) eb.textContent = showBack ? 'CHAT WITH' : 'DIRECT MESSAGES';
       const back = document.getElementById('dmBack');
       if(back) back.style.display = showBack ? 'inline-flex' : 'none';
     },
@@ -215,6 +236,12 @@
     if(diff < 7*86_400_000)  return Math.floor(diff/86_400_000) + 'd';
     try{ return new Date(at).toLocaleDateString(); }catch(e){ return ''; }
   }
+
+  // Expose on window so inline onclick handlers in index.html (header
+  // chat button → DM.openInbox()) can resolve the reference even from
+  // Safari / PWA WebViews where script-scoped `const` declarations
+  // aren't visible to event-attribute handlers.
+  window.DM = DM;
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', ()=>DM.init(), { once:true });

@@ -83,7 +83,7 @@
           <div class="league-pos ${posClass}">#${u.rank}</div>
           ${av}
           <div style="flex:1;min-width:0">
-            <div class="league-row-name">${esc(u.username)}${isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}</div>
+            <div class="league-row-name">${esc(u.username)}${verifiedBadgeHTML(u.username,{size:'xs'})}${isMe?' <span style="font-size:9px;color:#FFD700">(You)</span>':''}</div>
             <div class="league-row-meta">${u.gamesWon}W · ${u.gamesPlayed-u.gamesWon}L · ${winRate}%</div>
           </div>
           <div class="league-row-elo">${u.elo}</div>
@@ -115,7 +115,7 @@
       const gdStr = gd > 0 ? '+'+gd : (gd < 0 ? gd : '0');
       const gdClass = gd > 0 ? 'pos' : gd < 0 ? 'neg' : 'zero';
       const youTag = p.isMe ? '<span class="liga-you-tag">YOU</span>' : '';
-      const botTag = p.isBot ? '<span class="liga-bot-tag">BOT</span>' : '';
+      const botTag = '';   // bots blend in as real players — no BOT tag
       return `<tr class="${p.isMe?'me':''} ${zoneClass}">
         <td><span class="liga-pos ${posClass}">${p.rank}</span></td>
         <td><div class="liga-name-cell">${av}<span class="liga-name">${esc(p.name)}${youTag}${botTag}</span></div></td>
@@ -267,7 +267,7 @@
         }
         return `<div class="programme-row ${m.status}">
           <div class="programme-time">${timeStr}</div>
-          <div class="programme-vs">${av}<span>${esc(opp?.name||'?')}${opp?.isBot?' 🤖':''}</span></div>
+          <div class="programme-vs">${av}<span>${esc(opp?.name||'?')}</span></div>
           ${resultBadge || action}
         </div>`;
       }).join('');
@@ -300,9 +300,9 @@
 
   function updateSpectatorTurnUI(){
     const g = S.g;
-    const stackEl = document.getElementById('hstack'), stackN = document.getElementById('hstackn');
-    if ((g.stackDraw || 0) > 0) { stackEl.style.display='flex'; stackN.textContent = g.stackDraw + ' cards!'; }
-    else stackEl.style.display = 'none';
+    // Stack pill removed per user request — kept hidden.
+    const stackEl = document.getElementById('hstack');
+    if (stackEl) stackEl.style.display = 'none';
     const cur = g.players.find(p => p.id === g.currentTurn);
     document.getElementById('tdisp').textContent = `🎬 ${cur?.username || '...'}'s turn`;
     document.getElementById('tdisp').className = 'turndisp';
@@ -315,14 +315,25 @@
 
   function updateTurnUI(){
     const g=S.g;
-    const stackEl=document.getElementById('hstack'),stackN=document.getElementById('hstackn');
-    if((g.stackDraw||0)>0){stackEl.style.display='flex';stackN.textContent=(g.stackDraw)+' cards!';}
-    else stackEl.style.display='none';
+    const stackEl=document.getElementById('hstack');
+    if(stackEl) stackEl.style.display='none';   // Stack pill removed per user request
     const me=myTurn(),el=document.getElementById('tdisp'),ht=document.getElementById('hturn');
-    if(me){el.textContent='⚡ YOUR TURN!';el.className='turndisp me';ht.textContent='⚡ Your Turn';}
-    else{const p=g.players.find(p=>p.id===g.currentTurn);el.textContent=`${p?.username||'...'}\'s turn`;el.className='turndisp';ht.textContent=`⏳ ${p?.username||'...'}`;document.getElementById('cancelArea').style.display='none';}
+    if(me){
+      el.textContent='⚡ YOUR TURN!';el.className='turndisp me';
+      ht.textContent='⚡ Your Turn';
+      ht.classList.add('hpill-me');
+    } else {
+      const p=g.players.find(p=>p.id===g.currentTurn);
+      el.textContent=`${p?.username||'...'}\'s turn`;el.className='turndisp';
+      ht.textContent=`⏳ ${p?.username||'...'}`;
+      ht.classList.remove('hpill-me');
+      document.getElementById('cancelArea').style.display='none';
+    }
     document.getElementById('hdir').textContent=g.direction===1?'↻ Clockwise':'↺ Counter-CW';
     document.getElementById('hphase').textContent=`🃏 ${g.myHand.length} cards`;
+    // Calm "it's YOUR turn" cue — soft gold glow at the bottom (see CSS). When
+    // it's an opponent's move this is off and their seat is the bright one.
+    document.body.classList.toggle('uno-my-turn', me);
     updateUNOButton();
   }
 

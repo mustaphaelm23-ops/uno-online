@@ -14,7 +14,7 @@
     { id: 3,  text: '🤣 GG' },
     { id: 4,  text: '😤 So close!' },
     { id: 5,  text: '🙏 Sorry!' },
-    { id: 6,  text: '🎉 UNO!' },
+    { id: 6,  text: '🎉 Cardora!' },
     { id: 7,  text: '⚠️ Watch out!' },
     { id: 8,  text: '🔥 Let\'s go!' },
     { id: 9,  text: '😅 Oops' },

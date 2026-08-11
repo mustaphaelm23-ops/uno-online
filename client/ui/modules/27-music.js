@@ -70,6 +70,9 @@
     },
 
     switchTo(track){
+      // Global mute — music is disabled across the app. Original lifecycle
+      // calls remain (goLobby / game-screen) but they no-op here.
+      return;
       if(track !== 'lobby' && track !== 'match'){
         this.stop();
         return;

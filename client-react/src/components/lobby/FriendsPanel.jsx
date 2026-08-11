@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Avatar from '../ui/Avatar';
 import { friendsApi } from '../../api/friends';
 import useFriends from '../../hooks/useFriends';
-import useDMs from '../../hooks/useDMs';
+import { useDMsCtx } from '../../contexts/DMsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -186,9 +186,19 @@ function RequestsTab({ requests, refresh }) {
 
 function ThreadList({ threads, onOpen }) {
   if (threads.length === 0) {
-    return <div className="text-ink-faint text-sm py-8 text-center leading-relaxed">
-      No conversations yet.<br/>Tap 💬 on a friend to start a chat.
-    </div>;
+    // Empty inbox — explicit "no messages" state with a hint about how to
+    // start one. Goes beyond a plain text line because the user opened
+    // the chat icon expecting to see something here.
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-10 px-4 text-center gap-3">
+        <div className="w-16 h-16 rounded-full bg-bg-2/60 border border-line grid place-items-center text-2xl opacity-70">💬</div>
+        <div className="font-display text-base tracking-widest text-ink">NO MESSAGES YET</div>
+        <p className="text-xs text-ink-soft leading-relaxed max-w-[240px]">
+          You have no messages currently.<br />
+          Open the <b className="text-ink">Friends</b> tab and tap 💬 on any friend to start a conversation.
+        </p>
+      </div>
+    );
   }
   return (
     <ul className="flex flex-col gap-1.5 overflow-y-auto">
@@ -284,7 +294,7 @@ function ThreadView({ thread, myId, onSend, onBack }) {
 export default function FriendsPanel({ open, onClose, initialTab = 'friends', activeRoomId }) {
   const { user } = useAuth();
   const { friends, requests, loading, refresh } = useFriends();
-  const dms = useDMs();
+  const dms = useDMsCtx();
   const toast = useToast();
   const [tab, setTab] = useState(initialTab);
 

@@ -7,6 +7,14 @@ import Card from './Card';
 //
 // Clicking a non-wild playable card immediately calls onPlay(cardId);
 // wild cards bubble up to the parent which opens the ColorPicker first.
+//
+// IMPORTANT — every game:state event from the server pumps a fresh `hand`
+// + `playable` prop through here. Earlier versions used framer-motion's
+// `layout` + animated `y` based on `playable`, which caused EVERY turn
+// flip to re-animate every card → the "cards jumping on my turn" bug in
+// 4-player rooms. The fix: use AnimatePresence ONLY for enter/exit (add
+// and play), and a plain CSS transform for the "lift" on playable cards.
+// No layout prop → no FLIP recompute on prop churn.
 
 export default function MyHand({ hand = [], playable = [], myTurn, onPlayCard }) {
   const playableSet = new Set(playable);
@@ -34,21 +42,30 @@ export default function MyHand({ hand = [], playable = [], myTurn, onPlayCard })
               return (
                 <motion.div
                   key={card.id}
-                  layout
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: canPlay ? -10 : 0 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -40, scale: 0.8 }}
                   transition={{ duration: 0.22, ease: 'easeOut' }}
                   className="-ml-5 sm:-ml-4 first:ml-0 hover:z-10"
                   style={{ zIndex: i }}
                 >
-                  <Card
-                    card={card}
-                    size="md"
-                    playable={canPlay}
-                    dim={myTurn && !canPlay}
-                    onClick={canPlay ? () => onPlayCard?.(card) : undefined}
-                  />
+                  {/* Inner CSS-only lift — keeps framer-motion off the
+                      "playable" toggle so a turn change can't trigger
+                      a full re-animation of every card in the hand. */}
+                  <div
+                    style={{
+                      transform: canPlay ? 'translateY(-10px)' : 'translateY(0)',
+                      transition: 'transform .2s ease-out',
+                    }}
+                  >
+                    <Card
+                      card={card}
+                      size="md"
+                      playable={canPlay}
+                      dim={myTurn && !canPlay}
+                      onClick={canPlay ? () => onPlayCard?.(card) : undefined}
+                    />
+                  </div>
                 </motion.div>
               );
             })}

@@ -5,6 +5,11 @@
     const scr=document.getElementById('lobby-screen');
     if(!g||!scr) return;                       // no GSAP → CSS entrance plays
     if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    // Skip the lobby intro animation on phones — the orchestrated GSAP
+    // timeline runs ~10 simultaneous tweens with stagger, which murders
+    // first-paint perf on mid-range mobile. Snap straight to the rest
+    // state and let the user start interacting.
+    if(document.body.classList.contains('mobile-lite')) return;
     scr.classList.add('intro-gsap');           // hand entrance over to GSAP
     g.killTweensOf([scr,'.lhdr','.lobby-hero','.lside-section','.lrail .rail-panel','.lnav','.lobby-bg-img','.lobby-3d','.lobby-fx']);
     const tl=g.timeline({defaults:{ease:'power3.out'},
@@ -128,14 +133,17 @@
           const ty = (tr.top + tr.height*0.42) - sy;
           const apexY = ty - (88 + Math.random()*54);     // arc apex above the hand
           const rot = Math.random()*26 - 13;
-          g.timeline({delay:i*0.072})
+          // Bigger stagger + a flick sound on EVERY card → a deliberate,
+          // one-card-at-a-time deal (the "tfri9a" feel from Ronda) instead of
+          // a quick fan-out.
+          g.timeline({delay:i*0.13})
             .set(c,{opacity:1})
             .to(c,{keyframes:[
               {x:tx*0.5, y:apexY, rotation:rot*0.5, scale:1.14, duration:0.22, ease:'power2.out'},
               {x:tx, y:ty+9, rotation:rot, scale:0.99, duration:0.2, ease:'power2.in'}
             ]},0)
             .to(c,{y:ty, scale:1, duration:0.22, ease:'back.out(3)',
-              onStart:()=>{ if(i%2===0){ try{SFX.play('draw');}catch(e){} } }})
+              onStart:()=>{ try{SFX.play('draw');}catch(e){} }})
             .to(c,{opacity:0, duration:0.16, delay:0.06, onComplete:()=>c.remove()});
         }
         if(deck) g.fromTo(deck,{scale:1},{scale:0.93,duration:0.1,yoyo:true,repeat:1,
@@ -168,15 +176,18 @@
       const c = document.createElement('div');
       c.className = `anim-card ${this._cardColor(card)}`;
       c.textContent = this._cardLabel(card);
-      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;`;
+      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;box-shadow:0 16px 34px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.4);will-change:transform,opacity;`;
+      // Deliberate "pick up → carry → set down": a clear lift off the hand,
+      // a smooth glide to the pile, then a settle onto it — so the play reads
+      // as a real, physical move instead of a quick flick.
       c.animate([
-        {transform:'scale(1) rotate(0)',opacity:1},
-        {transform:'scale(1.35) translateY(-40px) rotate(-6deg)',opacity:1,offset:.35},
-        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1) rotate(0)`,opacity:1,offset:.8},
-        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(.95) rotate(0)`,opacity:1}
-      ],{duration:480,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
+        {transform:'translate(0,0) scale(1) rotate(0)',opacity:1},
+        {transform:'translate(0,-56px) scale(1.42) rotate(-6deg)',opacity:1,offset:.30},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1.06) rotate(3deg)`,opacity:1,offset:.84},
+        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(.97) rotate(0)`,opacity:1}
+      ],{duration:600,easing:'cubic-bezier(.34,1.04,.4,1)',fill:'forwards'});
       this.el.appendChild(c);
-      setTimeout(()=>c.remove(),600);
+      setTimeout(()=>c.remove(),720);
       // float label
       this._floatLabel(card, to);
     },
@@ -203,9 +214,27 @@
     drawMany(count, fromEl, toEl, opts = {}){
       if(!this.el || !count) return;
       const stagger = opts.stagger ?? 110;
-      const duration = opts.duration ?? 520;
+      const duration = opts.duration ?? 720;
       const total = Math.min(count, 12);
       try{ SFX?.play && SFX.play('draw'); }catch(e){}
+      // Resolve the DRAWING player's equipped card-back design, so the flying
+      // cards show THEIR back (premium/default) — not a generic random one.
+      // NOTE: S is a lexical const (not on window) — must reference it bare.
+      let cbArt = '';
+      try{
+        if(opts.cardBackArt){
+          cbArt = opts.cardBackArt;
+        } else {
+          const St = (typeof S!=='undefined') ? S : null;
+          let cbId = opts.cardBackId || '';
+          if(!cbId && opts.playerId && St){
+            cbId = (St.g?.players||[]).find(p=>p.id===opts.playerId)?.cardBackId
+                || (St.user && opts.playerId===St.user.id ? (St.user.equippedCardBack || St.user.cardBackId) : '')
+                || 'cb_default';
+          }
+          if(cbId) cbArt = (window.Cosmetics?.cardBacks||[]).find(c=>c.id===cbId)?.art || '';
+        }
+      }catch(e){}
       const from0 = fromEl?.getBoundingClientRect() || {left:window.innerWidth/2,top:window.innerHeight/2,width:80,height:120};
       const to0   = toEl?.getBoundingClientRect()   || {left:window.innerWidth/2,top:window.innerHeight*.5,width:80,height:120};
       for(let i=0;i<total;i++){
@@ -213,19 +242,25 @@
           const fromEl2 = fromEl?.getBoundingClientRect ? fromEl.getBoundingClientRect() : from0;
           const toEl2 = toEl?.getBoundingClientRect ? toEl.getBoundingClientRect() : to0;
           const c = document.createElement('div');
-          c.className = 'anim-card back';
+          c.className = 'anim-card back' + (cbArt?' has-cb':'');
           const startX = fromEl2.left + fromEl2.width/2 - 37;
           const startY = fromEl2.top + fromEl2.height/2 - 55;
-          c.style.cssText = `left:${startX}px;top:${startY}px;`;
+          c.style.cssText = `left:${startX}px;top:${startY}px;` + (cbArt?`background:${cbArt};`:'');
           const dx = toEl2.left + toEl2.width/2 - (startX+37);
           const dy = toEl2.top + toEl2.height/2 - (startY+55);
-          const rot = (Math.random()*30 - 15);
+          // Tilt TOWARD the player (direction of travel) instead of at random,
+          // so the cards clearly glide "his way" — tidy, not scattered.
+          const rot = Math.max(-13, Math.min(13, dx/22));
+          // Card lifts off the deck and GROWS as it glides — big + clear, right
+          // in front of the eye — then settles into the target. Slower + more
+          // prominent so you actually SEE the pick-up.
           c.animate([
-            {transform:'scale(.5) rotate(0deg)',opacity:0},
-            {transform:`translate(${dx*.45}px,${dy*.45}px) scale(1.15) rotate(${rot/2}deg)`,opacity:1,offset:.4},
-            {transform:`translate(${dx}px,${dy}px) scale(1) rotate(${rot}deg)`,opacity:1,offset:.85},
-            {transform:`translate(${dx}px,${dy}px) scale(.85) rotate(${rot}deg)`,opacity:0}
-          ],{duration,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+            {transform:'translate(0,0) scale(.5) rotate(0deg)',                              opacity:0, offset:0},
+            {transform:`translate(${dx*.26}px,${dy*.26}px) scale(1.32) rotate(${rot*.35}deg)`, opacity:1, offset:.30},
+            {transform:`translate(${dx*.7}px,${dy*.7}px) scale(1.24) rotate(${rot*.7}deg)`,     opacity:1, offset:.64},
+            {transform:`translate(${dx}px,${dy}px) scale(1.02) rotate(${rot}deg)`,            opacity:1, offset:.9},
+            {transform:`translate(${dx}px,${dy}px) scale(.9) rotate(${rot}deg)`,              opacity:0, offset:1}
+          ],{duration,easing:'cubic-bezier(.3,.74,.3,1)',fill:'forwards'});
           this.el.appendChild(c);
           setTimeout(()=>c.remove(), duration + 100);
           if(opts.onLand) try{opts.onLand(i,total)}catch(e){}
@@ -233,7 +268,9 @@
       }
     },
 
-    // Opponent plays: card appears above opponent panel then flies to pile
+    // Opponent plays: a clean, realistic glide from the player's hand
+    // straight to the discard pile. No bouncy scale, no rotation spin —
+    // just a smooth slide with a subtle lift so the eye can follow it.
     opponentPlay(card, fromEl, toEl){
       if(!this.el) return;
       const from = fromEl?.getBoundingClientRect() || {left:window.innerWidth/2,top:80,width:0,height:0};
@@ -241,14 +278,20 @@
       const c = document.createElement('div');
       c.className = `anim-card ${this._cardColor(card)}`;
       c.textContent = this._cardLabel(card);
-      c.style.cssText=`left:${from.left+from.width/2-37}px;top:${from.top+from.height/2-55}px;`;
+      const startX = from.left + from.width / 2 - 37;
+      const startY = from.top  + from.height/ 2 - 55;
+      const dx = (to.left + to.width / 2) - (startX + 37);
+      const dy = (to.top  + to.height/ 2) - (startY + 55);
+      c.style.cssText = `left:${startX}px;top:${startY}px;
+        box-shadow:0 10px 24px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.35);
+        will-change:transform,opacity;`;
       c.animate([
-        {transform:'scale(.4) rotate(-20deg)',opacity:0},
-        {transform:'scale(1.2) rotate(3deg)',opacity:1,offset:.4},
-        {transform:`translate(${to.left-from.left}px,${to.top-from.top}px) scale(1) rotate(0)`,opacity:1}
-      ],{duration:600,easing:'cubic-bezier(.34,1.56,.64,1)',fill:'forwards'});
+        { transform:'translate(0,0) scale(.92)',          opacity:0 },
+        { transform:'translate(0,-18px) scale(1.05)',     opacity:1, offset:.22 },
+        { transform:`translate(${dx}px,${dy}px) scale(.99)`, opacity:1 },
+      ], { duration:560, easing:'cubic-bezier(.2,.7,.3,1)', fill:'forwards' });
       this.el.appendChild(c);
-      setTimeout(()=>c.remove(),750);
+      setTimeout(()=>c.remove(), 600);
       this._floatLabel(card, to);
     },
 

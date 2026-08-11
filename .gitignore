@@ -1,5 +1,22 @@
 node_modules
 users-db.json
+users.json
+db-status.txt
+audit.log
+audit.log.1
 ngrok.exe
 start.bat
 .env
+
+# Local dev tunnel
+cloudflared.exe
+cloudflared.log
+
+# Capacitor — generated native projects (recreate with `npx cap add`)
+/android
+/ios
+
+# Local-only, not for the repo
+backups/
+/Design Improvement Steps.html
+/Design Improvement Steps_files/

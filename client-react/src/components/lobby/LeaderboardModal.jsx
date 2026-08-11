@@ -51,6 +51,10 @@ function rowCls({ rank, isMe }) {
 }
 
 function RankedRow({ row, isMe, idx }) {
+  // Phase 3 server returns rankPoints + label/division; fall back to legacy
+  // elo for accounts that haven't earned a ranked rating yet.
+  const rp = row.rankPoints ?? row.elo ?? 1000;
+  const tierLabel = row.label || row.league || '—';
   return (
     <motion.li
       initial={{ opacity: 0, x: -8 }}
@@ -66,12 +70,12 @@ function RankedRow({ row, isMe, idx }) {
           {isMe && <span className="rounded-md bg-violet text-white text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 shrink-0">YOU</span>}
         </div>
         <div className="text-[10px] uppercase tracking-widest text-ink-faint truncate">
-          {row.league || '—'}{row.badge ? ` · ${row.badge}` : ''}
+          {row.badge ? `${row.badge} ` : ''}{tierLabel}{typeof row.gamesWon === 'number' ? ` · ${row.gamesWon}W/${row.gamesLost || 0}L` : ''}
         </div>
       </div>
       <div className="text-right shrink-0 leading-tight">
-        <div className="font-extrabold text-violet-soft tabular-nums">{fmt(row.elo)}</div>
-        <div className="text-[9px] text-ink-faint uppercase tracking-widest">Rating</div>
+        <div className="font-extrabold text-violet-soft tabular-nums">{fmt(rp)}</div>
+        <div className="text-[9px] text-ink-faint uppercase tracking-widest">RP</div>
       </div>
     </motion.li>
   );

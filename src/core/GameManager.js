@@ -50,6 +50,7 @@ class GameManager extends EventEmitter {
     this._drawnBy   = null;
     this._turnPhase = TURN_PHASE.WAITING;
     this._stackDraw = 0;
+    this._teamMode  = false;   // 2v2 — set at startGame from settings.teamMode
     // P4 — current match pot. Set by the server's game:start handler after
     // it debits each human's entry fee. Read here only for state broadcasts;
     // mutation lives server-side so the room object stays the source of truth.
@@ -98,9 +99,14 @@ class GameManager extends EventEmitter {
 
     this._deck.buildAndShuffle();
     const hands = this._deck.dealHands(this._players.length, this.settings.handSize);
+    // 2v2 TEAM MODE — partners sit ACROSS (seats 0+2 = Team A, 1+3 = Team B) so
+    // turn order alternates opponents. Teammates share card visibility and win
+    // together (see _playerState / _handleWin). Only for a full 4-seat table.
+    this._teamMode = !!this.settings.teamMode && this._players.length === 4;
     this._players.forEach((p,i) => {
       p.setHand(hands[i].map(c => Card.fromJSON(c.toJSON())));
       p.status = 'active';
+      p.team   = this._teamMode ? (i % 2) : null;
     });
 
     const first = this._deck.initFirst();
@@ -338,11 +344,29 @@ class GameManager extends EventEmitter {
   _setTurnPhase(phase) {
     this._turnPhase = phase;
     console.log(`[Turn] ${this.current?.username} → ${phase}`);
+    // Abandoned humans get skipped IMMEDIATELY on turn entry — no 30s
+    // dead air waiting for the turn timer, no bot pretending to play
+    // their seat. ~600 ms delay so the client gets one frame to render
+    // the "[name] abandoned — skipping" message before the next turn.
+    if (this.current && this.current.abandoned && !this.current.isBot) {
+      const me = this.current;
+      if (this._botTimer) clearTimeout(this._botTimer);
+      this._botTimer = setTimeout(() => {
+        if (this._phase === PHASE.PLAYING && this.current?.id === me.id && this.current?.abandoned && !this.current?.isBot) {
+          console.log(`[Turn] ${me.username} abandoned — auto-skipping`);
+          this._drawnCard = null;
+          this._drawnBy   = null;
+          this._advance();
+        }
+      }, 600);
+      return;
+    }
     if (phase === TURN_PHASE.MUST_PLAY && this.current?.isBot) {
       if (this._botTimer) clearTimeout(this._botTimer);
       const me = this.current;
       // Harder bots react faster, easier bots feel more relaxed.
-      const diff = this.settings.botDifficulty || 'medium';
+      // Per-bot difficulty (elite bots = 'hard') falls back to the room setting.
+      const diff = me.botDifficulty || this.settings.botDifficulty || 'medium';
       const base  = diff === 'hard' ? 900  : diff === 'easy' ? 1800 : 1500;
       const jitter = diff === 'hard' ? 700  : diff === 'easy' ? 1500 : 1200;
       this._botTimer = setTimeout(() => {
@@ -360,7 +384,19 @@ class GameManager extends EventEmitter {
     this._turnEndsAt = Date.now() + this.settings.turnTimeout;
     this._turnTimer = setTimeout(() => {
       if (this._phase !== PHASE.PLAYING) return;
-      console.log(`[Timeout] ${this.current?.username} timed out — bot taking over`);
+      // Abandoned humans are SKIPPED — no bot takeover. They were
+      // eliminated the moment they walked; their seat just passes the
+      // turn forward each rotation. The match keeps going for whoever
+      // is still at the table.
+      const cur = this.current;
+      if (cur && cur.abandoned && !cur.isBot) {
+        console.log(`[Timeout] ${cur.username} abandoned — turn skipped`);
+        this._drawnCard = null;
+        this._drawnBy   = null;
+        this._advance();
+        return;
+      }
+      console.log(`[Timeout] ${cur?.username} timed out — bot taking over`);
       if (this._turnPhase === TURN_PHASE.DREW_CARD) {
         this._drawnCard = null;
         this._drawnBy   = null;
@@ -383,7 +419,7 @@ class GameManager extends EventEmitter {
           ? [VALUES.DRAW_TWO, VALUES.WILD_DRAW_FOUR]
           : [];
       const counter = player.handRaw.find(c => need.includes(c.value));
-      const diff = this.settings.botDifficulty || 'medium';
+      const diff = player.botDifficulty || this.settings.botDifficulty || 'medium';
       const counterChance = diff === 'hard' ? 1 : diff === 'easy' ? 0.25 : 0.5;
       if (counter && Math.random() < counterChance) {
         return this._botPlay(player, counter);
@@ -467,22 +503,37 @@ class GameManager extends EventEmitter {
   //  hard   → punishes a near-winning opponent hard, otherwise dumps the
   //           heaviest point load and hoards wilds for later
   _pickBotCard(player, playable) {
-    const diff = this.settings.botDifficulty || 'medium';
+    const diff = player.botDifficulty || this.settings.botDifficulty || 'medium';
     const rand = () => playable[Math.floor(Math.random() * playable.length)];
     if (diff === 'easy' || playable.length === 1) return rand();
 
-    // Biggest threat = fewest cards among the other active players.
+    // 2v2 — my partner (seat across). Partners are never adjacent in turn order,
+    // so my +2/skip always lands on an OPPONENT, and a SKIP hands the turn to my
+    // PARTNER (skipping the opponent between us).
+    const mate = this._teamMode ? this._players.find(p => p.id !== player.id && p.team === player.team) : null;
+
+    // Biggest threat = fewest cards among OPPONENTS. A low PARTNER is an asset,
+    // not a threat, so exclude them from the panic calc.
     const minOpp = this._players
-      .filter(p => p.id !== player.id && p.status === 'active')
+      .filter(p => p.id !== player.id && p.status === 'active' && (!mate || p.id !== mate.id))
       .reduce((m, p) => Math.min(m, p.handRaw.length), 99);
     const threat = minOpp <= 2;
 
     const wildD4 = playable.filter(c => c.value === VALUES.WILD_DRAW_FOUR);
     const draw2  = playable.filter(c => c.value === VALUES.DRAW_TWO);
     const skips  = playable.filter(c => c.value === VALUES.SKIP || c.value === VALUES.REVERSE);
+    const skipOnly = playable.filter(c => c.value === VALUES.SKIP);
     const wilds  = playable.filter(c => c.value === VALUES.WILD);
     const nums   = playable.filter(c => !c.isWild && !c.isAction)
                            .sort((a, b) => b.points - a.points);
+
+    // TEAM PLAY: a SKIP passes the turn to my partner (and denies the opponent).
+    // Favour it when my partner is close to going out, or a low opponent needs
+    // to be stopped — coordinated 2-players-as-one play.
+    if (mate) {
+      const mateClose = mate.handRaw.length <= 3;
+      if (skipOnly.length && (mateClose || threat)) return skipOnly[0];
+    }
 
     if (diff === 'hard') {
       if (threat) {
@@ -508,6 +559,12 @@ class GameManager extends EventEmitter {
     player.handRaw.forEach(c => {
       if (counts[c.color] !== undefined) counts[c.color]++;
     });
+    // TEAM PLAY: also weight my PARTNER's colours (they share the plan) so the
+    // colour I choose lets my partner keep playing too.
+    if (this._teamMode) {
+      const mate = this._players.find(p => p.id !== player.id && p.team === player.team);
+      if (mate) mate.handRaw.forEach(c => { if (counts[c.color] !== undefined) counts[c.color] += 0.7; });
+    }
     const max = Math.max(...Object.values(counts));
     if (max === 0) {
       const colors = ['red','blue','green','yellow'];
@@ -539,8 +596,13 @@ class GameManager extends EventEmitter {
 
   _handleWin(winner, lastCard) {
     this._clearTimers();
-    this._winners.push(winner);
-    const losers = this._players.filter(p => p.id !== winner.id);
+    // 2v2 — the player who goes out wins for their WHOLE TEAM; the losers are
+    // the opposing team (their partner is a co-winner, not a loser).
+    const teamWin = this._teamMode && winner.team != null;
+    const winners = teamWin ? this._players.filter(p => p.team === winner.team) : [winner];
+    const losers  = teamWin ? this._players.filter(p => p.team !== winner.team)
+                            : this._players.filter(p => p.id !== winner.id);
+    this._winners = winners.slice();
     const score  = this._rules.calcScore(losers);
     const bet = this.settings.bet || 0;
     const totalWin = bet * losers.length + this._rules.calcCoins(score);
@@ -551,15 +613,23 @@ class GameManager extends EventEmitter {
       winnerId:winner.id, username:winner.username, lastCard:lastCard.toJSON(),
       score, coinsEarned:totalWin, bet,
       mvp,
+      teamMode:   teamWin,
+      winnerTeam: teamWin ? winner.team : null,
+      winnerIds:  winners.map(p => p.id),
       stats: this._players.map(p => ({
         id: p.id, username: p.username, avatar: p.avatar,
         cardsPlayed: p.stats?.cardsPlayed || 0,
         cardsDrawn:  p.stats?.cardsDrawn || 0,
         finalHand:   p.handSize,
+        // Real UNO point-value of cards still in hand at match end
+        // (0-9 = face value, action cards = 20, wilds = 50). Drives the
+        // ranked RP scaling so a 5-card hand with two wilds (~110 pts)
+        // bleeds far more than a 7-card hand of low numbers (~25 pts).
+        handPoints:  typeof p.handPoints === 'function' ? p.handPoints() : 0,
       })),
     };
     this.emit(EV.WON, wd);
-    this.emit(EV.OVER, { winners:this._winners.map(p=>p.toPublicJSON()), players:this._players.map(p=>p.toJSON()), mvp, stats: wd.stats });
+    this.emit(EV.OVER, { winners:this._winners.map(p=>p.toPublicJSON()), players:this._players.map(p=>p.toJSON()), mvp, stats: wd.stats, teamMode:teamWin, winnerTeam:teamWin?winner.team:null });
     return { success:true, winner:wd };
   }
 
@@ -631,17 +701,29 @@ class GameManager extends EventEmitter {
       // Server stays authoritative on the actual timeout; this is purely UI.
       turnEndsAt:   this._turnEndsAt || null,
       turnTimeout:  this.settings.turnTimeout,
+      teamMode:     this._teamMode || false,             // 2v2 — partners share hands + win together
     };
   }
 
   _playerState(player) {
     const top      = this._deck.top();
     const playable = player.getPlayable(top).map(c => c.id);
-    return {
+    const state = {
       ...this._publicState(),
       myHand:     player.hand.map(c => c.toJSON()),
       myPlayable: playable,
     };
+    // 2v2 — a player SEES their partner's hand (the whole point of "2 players
+    // in 1"). Sent only to that player, so opponents still can't see it.
+    if (this._teamMode && player.team != null) {
+      const mate = this._players.find(p => p.id !== player.id && p.team === player.team);
+      if (mate) {
+        state.teammateId   = mate.id;
+        state.teammateName = mate.username;
+        state.teammateHand = mate.hand.map(c => c.toJSON());
+      }
+    }
+    return state;
   }
 
   // Spectator state: public state + every player's full hand visible

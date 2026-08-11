@@ -34,6 +34,7 @@ const SettingsModal     = lazy(() => import('../components/lobby/SettingsModal')
 const DailyRewardModal  = lazy(() => import('../components/lobby/DailyRewardModal'));
 const JoinByCodeModal   = lazy(() => import('../components/lobby/JoinByCodeModal'));
 const LeaderboardModal  = lazy(() => import('../components/lobby/LeaderboardModal'));
+const RankedHubModal    = lazy(() => import('../components/lobby/RankedHubModal'));
 const EventModal        = lazy(() => import('../components/lobby/EventModal'));
 const AchievementsModal = lazy(() => import('../components/lobby/AchievementsModal'));
 const NotificationsPanel= lazy(() => import('../components/lobby/NotificationsPanel'));
@@ -96,6 +97,7 @@ export default function LobbyPage() {
   const [lbOpen, setLbOpen]             = useState(false);
   const [lbTab, setLbTab]               = useState('ranked');
   const openLb = (t = 'ranked') => { setLbTab(t); setLbOpen(true); };
+  const [rankedOpen, setRankedOpen]     = useState(false);
   const [eventOpen, setEventOpen]       = useState(false);
   const [achOpen, setAchOpen]           = useState(false);
   const [notifOpen, setNotifOpen]       = useState(false);
@@ -112,7 +114,7 @@ export default function LobbyPage() {
     if (id === 'quick')   return quickMatch();
     if (id === 'shop')    return openShop('packages');
     if (id === 'daily')   return setDailyOpen(true);
-    if (id === 'ranked')  return openLb('ranked');
+    if (id === 'ranked')  return setRankedOpen(true);
     return toast.info(`${id} ships in a follow-up commit`);
   };
 
@@ -321,6 +323,13 @@ export default function LobbyPage() {
             open={lbOpen}
             onClose={() => setLbOpen(false)}
             initialTab={lbTab}
+          />
+        </LazyWhenOpened>
+        <LazyWhenOpened open={rankedOpen}>
+          <RankedHubModal
+            open={rankedOpen}
+            onClose={() => setRankedOpen(false)}
+            onPlay={() => joinFeatured('RANKED')}
           />
         </LazyWhenOpened>
         <LazyWhenOpened open={eventOpen}>

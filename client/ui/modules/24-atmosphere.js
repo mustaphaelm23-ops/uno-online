@@ -35,6 +35,10 @@
     boot(){
       if(this.enabled||this.disabled) return;
       if(matchMedia('(prefers-reduced-motion:reduce)').matches){ this.disabled=true; return; }
+      // Phone-only opt-out — the breathing radial wash is full-viewport,
+      // animated forever, and pure ambience. Killing it is one of the
+      // biggest visible wins on mobile.
+      if(document.body.classList.contains('mobile-lite')){ this.disabled=true; return; }
       this._injectStyles();
       this._buildLayer();
       this._applyPalette(this._detectTheme());

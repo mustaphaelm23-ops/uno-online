@@ -72,20 +72,28 @@ export default function Card({ card, size = 'md', face = true, playable = false,
   const innerTextColor = card.isWild ? '#0f172a' : COLOR_BG[colorKey]?.match(/#[a-f0-9]+/i)?.[0] || '#000';
   const cornerColor    = card.isWild ? '#fff' : '#fff';
 
-  const Tag = onClick ? motion.button : 'div';
+  // Stable component type — we used to toggle between motion.button and a
+  // plain div based on whether onClick was defined, but that swapped the
+  // host element on every turn change, which forced React to fully
+  // unmount + remount the entire card (DOM + animations reset). The
+  // visible symptom in 4-player rooms was cards "jumping" or briefly
+  // disappearing the moment the turn flipped. Always rendering a
+  // motion.button (with an explicit type="button") keeps the element
+  // identity stable; we just no-op the click when it isn't playable.
   const interactiveProps = onClick
     ? { whileHover: { y: -8, scale: 1.04 }, whileTap: { scale: 0.97 } }
     : {};
 
   return (
-    <Tag
-      type={onClick ? 'button' : undefined}
+    <motion.button
+      type="button"
       onClick={onClick}
+      disabled={!onClick}
       {...interactiveProps}
       className={`${sz.card} relative rounded-lg overflow-hidden shadow-card border border-white/25
                   ${dim ? 'opacity-50 grayscale' : ''}
                   ${playable ? 'ring-2 ring-emerald shadow-[0_0_22px_rgba(16,185,129,0.5)]' : ''}
-                  ${onClick ? 'cursor-pointer' : ''}
+                  ${onClick ? 'cursor-pointer' : 'cursor-default'}
                   ${className}`}
     >
       <div className="absolute inset-0" style={bgStyle} />
@@ -104,6 +112,6 @@ export default function Card({ card, size = 'md', face = true, playable = false,
         <div className="absolute top-1 right-1 w-3 h-3 rounded-full border border-white"
              style={{ background: COLOR_BG[card.chosenColor]?.match(/#[a-f0-9]+/i)?.[0] || '#fff' }} />
       )}
-    </Tag>
+    </motion.button>
   );
 }

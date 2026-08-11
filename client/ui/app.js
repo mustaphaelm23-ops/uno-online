@@ -18,25 +18,39 @@
     if(e.code==='KeyC')doCancel();
   });
 
-  // Pause the WebGL scenes when the tab is hidden — saves GPU/battery.
-  // Auto-resume the lobby atmosphere when the tab is visible again (if still on lobby);
-  // the room scene re-focuses naturally on the next hover.
-  document.addEventListener('visibilitychange',()=>{
-    const onLobby=document.getElementById('lobby-screen')?.classList.contains('active');
-    if(document.hidden){
-      if(typeof RoomScene!=='undefined')  RoomScene.stop();
-      if(typeof LobbyScene!=='undefined') LobbyScene.stop();
-      if(typeof Parallax!=='undefined')   Parallax.stop();
-    } else if(onLobby){
-      if(typeof LobbyScene!=='undefined') LobbyScene.start();
-      if(typeof Parallax!=='undefined')   Parallax.start();
-    }
-  });
-
-  /* ═══ PWA: Service Worker ═══ */
+  /* ═══ PWA: Service Worker (with auto-update) ═══
+     Without this, a tab keeps running whatever JS the OLD service worker
+     cached — which is exactly how a stale apiFetch / module gets stuck
+     "Loading…" forever even though the server is fine. We now:
+       • re-check for a new build on load + every 5 min,
+       • and reload ONCE when a new build takes control,
+     so code/style updates roll out without anyone clearing their cache. */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[PWA] SW registration failed:', e));
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        try{ reg.update(); }catch(e){}
+        setInterval(() => { try{ reg.update(); }catch(e){} }, 5 * 60 * 1000);
+      }).catch((e) => console.warn('[PWA] SW registration failed:', e));
+
+      // When a NEW worker takes control, reload once to run the fresh assets.
+      // Skip the very first install (no prior controller) so we don't reload
+      // a brand-new visitor mid-boot, and NEVER reload during an active match
+      // (that would yank the player out of a game) — defer until they're back
+      // on the lobby/auth screen.
+      let _swReloaded = false;
+      const _inActiveGame = () =>
+        document.getElementById('game-screen')?.classList.contains('active')
+        || document.body.classList.contains('ronda-active')
+        || document.body.classList.contains('dama-active');
+      const _applyUpdate = () => {
+        if (_swReloaded || !hadController) return;
+        if (_inActiveGame()) { setTimeout(_applyUpdate, 8000); return; }   // wait until the match ends
+        _swReloaded = true;
+        console.log('[PWA] New build active — refreshing.');
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', _applyUpdate);
     });
   }
   /* Listen for the install prompt so we can offer it from the lobby gear menu later */

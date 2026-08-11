@@ -80,7 +80,22 @@ class Player {
       handSize:this._hand.length, isHost:this.isHost, saidUno:this.saidUno,
       isConnected:this.isConnected, status:this.status,
       abandoned:this.abandoned||false,                 // P4-NEW.1a
+      // Equipped card-back id so every client can paint THIS player's seat
+      // with the design they bought (resolved to art via the local catalog).
+      cardBackId:this.cardBackId || 'cb_default',
       isBot:this.isBot||false,
+      // For bots: difficulty + derived level so the in-game profile sheet
+      // can show "BOT — Easy/Medium/Hard, Lvl X" without an extra round-trip.
+      botDifficulty:this.botDifficulty||null,
+      accountLevel: this.accountLevel || 1,
+      isElite: this.isElite || false,   // premium "pro" bot — client shows top look + rank
+      tableFelt: this.tableFelt || null,
+      // Ranked identity (set for high-stakes pro bots) so the in-game profile
+      // reads as a genuine Master/Grandmaster opponent. Null for normal seats.
+      rankPoints: this.rankPoints || null,
+      rankedTier: this.rankedTier || null,
+      peakRankPoints: this.peakRankPoints || null,
+      team: (this.team === 0 || this.team === 1) ? this.team : null,   // 2v2 team index
     };
   }
 

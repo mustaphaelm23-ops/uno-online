@@ -1,3 +1,62 @@
+  // Mobile-lite detection runs at the earliest possible point so the
+  // first paint already has the right body class — no flash of heavy
+  // effects before they get stripped. The check matches the rule used
+  // elsewhere (coarse pointer + small viewport) so behavior is consistent.
+  try{
+    const isMobile = matchMedia('(pointer:coarse)').matches &&
+                     (innerWidth < 1024 || innerHeight < 1024);
+    if(isMobile){
+      // body may not exist yet if this module runs in <head>; wait if so.
+      if(document.body){ document.body.classList.add('mobile-lite'); }
+      else{ document.addEventListener('DOMContentLoaded',
+              ()=>document.body.classList.add('mobile-lite'),
+              { once:true }); }
+    }
+  }catch(e){}
+
+  // Synthesised audio silencer. Game SFX (beeps, click stingers, etc.)
+  // and the lobby/match music are all built from OscillatorNode +
+  // AudioBufferSourceNode chains under Web Audio. We patch those at
+  // the prototype so the synth path is dead even if some code path
+  // bypasses the SFX / Music wrappers above.
+  //
+  // IMPORTANT — we deliberately do NOT touch HTMLMediaElement.play:
+  // WebRTC voice chat plays peer audio through <audio> elements, and
+  // muting that here would break the mic-button feature the player
+  // expects to keep working.
+  try{
+    // Cancel any pending TTS.
+    if(window.speechSynthesis){
+      try{ window.speechSynthesis.cancel(); }catch(e){}
+    }
+    // Suspend any AudioContext that gets created (extra defense for
+    // synth-only paths; safe for voice chat because peer audio plays
+    // through HTMLMediaElement, not through an AudioContext).
+    const _AC = window.AudioContext || window.webkitAudioContext;
+    if(_AC){
+      const _origResume = _AC.prototype.resume;
+      _AC.prototype.resume = function(){ try{ this.suspend(); }catch(_){} return Promise.resolve(); };
+      window._origAudioResume = _origResume;
+    }
+    // The 110-138Hz lobby/match synth + every SFX beep run through
+    // OscillatorNode.start(). Patch it at the prototype so EVERY
+    // oscillator and buffer source in the page immediately stops on
+    // start — that kills the low-frequency hum + any future code
+    // path that bypasses our wrappers.
+    if(window.OscillatorNode){
+      const _o = OscillatorNode.prototype.start;
+      OscillatorNode.prototype.start = function(){ try{ this.stop(0); }catch(_){} };
+      OscillatorNode.prototype.stop = function(){};       // already silent
+      window._origOscStart = _o;
+    }
+    if(window.AudioBufferSourceNode){
+      const _b = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function(){ try{ this.stop(0); }catch(_){} };
+      AudioBufferSourceNode.prototype.stop = function(){};
+      window._origBufStart = _b;
+    }
+  }catch(e){ /* swallow — never block app boot for this */ }
+
   /* ═══════════════════════════════════════════
     I18N — multi-language support
     ═══════════════════════════════════════════ */
@@ -34,7 +93,7 @@
         a_sub:'Choose your battlefield. Winner takes everything.', a_vault:'in vault',
         a_fighters:'Fighters', a_fightersSub:'How many players in the arena?',
         a_duel:'Duel', a_triple:'Triple', a_squad:'Squad',
-        a_stake:'The Stake', a_stakeSub:'Every player matches. Winner takes the pot.',
+        a_stake:'Entry & Prize', a_stakeSub:'Every player pays the entry. Winner takes the prize.',
         a_rCommon:'Common', a_rRare:'Rare', a_rEpic:'Epic', a_rLegendary:'Legendary', a_rMythic:'Mythic',
         a_access:'Access', a_accessSub:'Anyone can join, or invite only.',
         a_public:'Public', a_publicSub:'Show in lobby — anyone joins',
@@ -98,8 +157,11 @@
         practice:'Practice', collection:'Collection', missions:'Missions', shop:'Shop', schedule:'Schedule',
         playSub:'Start your match', joinCodeSub:'Enter room code', createRoomSub:'Custom private room',
         quickMatchSub:'Find a random match', practiceSub:'Play vs bots', dailyRewardSub:'Collect your bonus',
-        collectionSub:'Cards, decks & more', missionsSub:'Complete missions', leaderboardSub:'Top players',
-        shopSub:'Buy coins & items', followInstaSub:'@uno · One-time bonus',
+        collectionSub:'Avatars, cards, tables & boards', missionsSub:'Complete missions', leaderboardSub:'Top players',
+        shopSub:'Buy coins & items', followInstaSub:'@cardora · One-time bonus',
+        gameCenterSub:'Fun mini games', rankedSub:'Climb the leaderboard',
+        tournamentSub:'Compete & win',
+        achievements:'Achievements', emotes:'Emotes',
       },
       fr:{
         login:'Connexion', register:'Inscription', username:'Nom d\'utilisateur', password:'Mot de passe',
@@ -122,7 +184,7 @@
         a_sub:'Choisissez votre champ de bataille. Le gagnant rafle tout.', a_vault:'en réserve',
         a_fighters:'Combattants', a_fightersSub:'Combien de joueurs dans l\'arène ?',
         a_duel:'Duel', a_triple:'Triple', a_squad:'Équipe',
-        a_stake:'La Mise', a_stakeSub:'Chaque joueur mise. Le gagnant rafle la cagnotte.',
+        a_stake:'Entrée & Prix', a_stakeSub:"Chaque joueur paie l'entrée. Le gagnant remporte le prix.",
         a_rCommon:'Commun', a_rRare:'Rare', a_rEpic:'Épique', a_rLegendary:'Légendaire', a_rMythic:'Mythique',
         a_access:'Accès', a_accessSub:'Ouvert à tous, ou sur invitation.',
         a_public:'Public', a_publicSub:'Visible dans le lobby — tout le monde rejoint',
@@ -202,7 +264,7 @@
         a_sub:'اختر ساحة معركتك. الفائز يأخذ كل شيء.', a_vault:'في الخزنة',
         a_fighters:'المقاتلون', a_fightersSub:'كم عدد اللاعبين في الحلبة؟',
         a_duel:'مبارزة', a_triple:'ثلاثي', a_squad:'فريق',
-        a_stake:'الرهان', a_stakeSub:'كل لاعب يراهن. الفائز يأخذ كل النقاط.',
+        a_stake:'الدخول والجائزة', a_stakeSub:'كل لاعب يدفع رسوم الدخول. الفائز يأخذ الجائزة.',
         a_rCommon:'عادي', a_rRare:'نادر', a_rEpic:'ملحمي', a_rLegendary:'أسطوري', a_rMythic:'خرافي',
         a_access:'الدخول', a_accessSub:'مفتوح للجميع، أو بدعوة فقط.',
         a_public:'عام', a_publicSub:'يظهر في الردهة — أي شخص ينضم',
@@ -282,7 +344,7 @@
         a_sub:'Wähle dein Schlachtfeld. Der Sieger bekommt alles.', a_vault:'im Tresor',
         a_fighters:'Kämpfer', a_fightersSub:'Wie viele Spieler in der Arena?',
         a_duel:'Duell', a_triple:'Trio', a_squad:'Team',
-        a_stake:'Der Einsatz', a_stakeSub:'Jeder Spieler setzt. Der Sieger bekommt den Pott.',
+        a_stake:'Eintritt & Preis', a_stakeSub:'Jeder Spieler zahlt den Eintritt. Der Sieger gewinnt den Preis.',
         a_rCommon:'Gewöhnlich', a_rRare:'Selten', a_rEpic:'Episch', a_rLegendary:'Legendär', a_rMythic:'Mythisch',
         a_access:'Zugang', a_accessSub:'Offen für alle oder nur mit Einladung.',
         a_public:'Öffentlich', a_publicSub:'In der Lobby sichtbar — jeder tritt bei',
@@ -362,7 +424,7 @@
         a_sub:'Elige tu campo de batalla. El ganador se lo lleva todo.', a_vault:'en la bóveda',
         a_fighters:'Luchadores', a_fightersSub:'¿Cuántos jugadores en la arena?',
         a_duel:'Duelo', a_triple:'Triple', a_squad:'Escuadra',
-        a_stake:'La Apuesta', a_stakeSub:'Cada jugador apuesta. El ganador se lleva el bote.',
+        a_stake:'Entrada y Premio', a_stakeSub:'Cada jugador paga la entrada. El ganador se lleva el premio.',
         a_rCommon:'Común', a_rRare:'Raro', a_rEpic:'Épico', a_rLegendary:'Legendario', a_rMythic:'Mítico',
         a_access:'Acceso', a_accessSub:'Abierto a todos, o solo con invitación.',
         a_public:'Pública', a_publicSub:'Visible en el lobby — cualquiera se une',
@@ -442,7 +504,7 @@
         a_sub:'Scegli il tuo campo di battaglia. Il vincitore prende tutto.', a_vault:'nel forziere',
         a_fighters:'Combattenti', a_fightersSub:'Quanti giocatori nell\'arena?',
         a_duel:'Duello', a_triple:'Triplo', a_squad:'Squadra',
-        a_stake:'La Posta', a_stakeSub:'Ogni giocatore punta. Il vincitore prende il piatto.',
+        a_stake:'Ingresso e Premio', a_stakeSub:"Ogni giocatore paga l'ingresso. Il vincitore vince il premio.",
         a_rCommon:'Comune', a_rRare:'Raro', a_rEpic:'Epico', a_rLegendary:'Leggendario', a_rMythic:'Mitico',
         a_access:'Accesso', a_accessSub:'Aperto a tutti, o solo su invito.',
         a_public:'Pubblica', a_publicSub:'Visibile nella lobby — chiunque entra',
@@ -522,7 +584,7 @@
         a_sub:'Välj ditt slagfält. Vinnaren tar allt.', a_vault:'i valvet',
         a_fighters:'Kämpar', a_fightersSub:'Hur många spelare i arenan?',
         a_duel:'Duell', a_triple:'Trippel', a_squad:'Lag',
-        a_stake:'Insatsen', a_stakeSub:'Varje spelare satsar. Vinnaren tar potten.',
+        a_stake:'Avgift & Pris', a_stakeSub:'Varje spelare betalar avgiften. Vinnaren tar priset.',
         a_rCommon:'Vanlig', a_rRare:'Sällsynt', a_rEpic:'Episk', a_rLegendary:'Legendarisk', a_rMythic:'Mytisk',
         a_access:'Åtkomst', a_accessSub:'Öppet för alla, eller endast med inbjudan.',
         a_public:'Offentligt', a_publicSub:'Syns i lobbyn — vem som helst går med',
@@ -605,31 +667,159 @@
   }
   function showLangPicker(){
     const old=document.getElementById('langPicker'); if(old) old.remove();
+    _ensureLangPickerStyles();
     const ov=document.createElement('div');
     ov.id='langPicker';
-    ov.style.cssText='position:fixed;inset:0;z-index:1200;background:rgba(4,6,14,.82);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:20px;animation:gcIn .25s ease';
+    ov.className='lp-ov';
     ov.innerHTML=`
-      <div style="width:min(360px,94vw);background:linear-gradient(180deg,rgba(28,32,57,.97),rgba(17,21,38,.99));border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7)">
-        <div style="font-family:'Bangers',cursive;font-size:24px;letter-spacing:2px;color:#fff;text-align:center;margin-bottom:4px">🌐 ${t('chooseLanguage')}</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
-          ${I18N.langs.map(l=>`
-            <button class="lang-opt" data-lang="${l.code}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;
-              background:${l.code===I18N.current?'rgba(245,158,11,.12)':'rgba(255,255,255,.03)'};
-              border:1.5px solid ${l.code===I18N.current?'#F59E0B':'rgba(255,255,255,.07)'};color:#fff">
-              <span style="font-size:24px">${l.flag}</span>
-              <span style="flex:1;font-weight:800;font-size:14px">${l.name}</span>
-              ${l.code===I18N.current?'<span style="color:#F59E0B;font-weight:900">✓</span>':''}
-            </button>`).join('')}
+      <div class="lp-panel" role="dialog" aria-label="Language">
+        <button class="lp-close" id="langPickerClose" aria-label="Close">×</button>
+        <div class="lp-head">
+          <div class="lp-eyebrow">🌐 PREFERENCES</div>
+          <div class="lp-title">${esc(t('chooseLanguage'))}</div>
         </div>
-        <button id="langPickerClose" style="width:100%;margin-top:14px;padding:12px;background:transparent;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.65);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">${t('close')}</button>
+        <div class="lp-list">
+          ${I18N.langs.map(l=>{
+            const on = l.code === I18N.current;
+            return `<button class="lp-opt ${on?'on':''}" data-lang="${l.code}">
+              <span class="lp-opt-flag">${l.flag}</span>
+              <span class="lp-opt-name">${esc(l.name)}</span>
+              <span class="lp-opt-check">✓</span>
+            </button>`;
+          }).join('')}
+        </div>
       </div>`;
     document.body.appendChild(ov);
-    ov.querySelectorAll('.lang-opt').forEach(b=>b.addEventListener('click',()=>{
+    requestAnimationFrame(()=>ov.classList.add('show'));
+    function close(){
+      ov.classList.remove('show'); ov.classList.add('out');
+      setTimeout(()=>ov.remove(), 240);
+    }
+    ov.querySelectorAll('.lp-opt').forEach(b=>b.addEventListener('click',()=>{
       setLang(b.dataset.lang);
-      ov.remove();
+      close();
       toast('🌐 '+I18N.langs.find(l=>l.code===b.dataset.lang).name,'s');
     }));
-    ov.querySelector('#langPickerClose').addEventListener('click',()=>ov.remove());
-    ov.addEventListener('mousedown',e=>{ if(e.target===ov) ov.remove(); });
+    ov.querySelector('#langPickerClose').addEventListener('click',close);
+    ov.addEventListener('mousedown',e=>{ if(e.target===ov) close(); });
+    const onKey=(e)=>{ if(e.key==='Escape'){ close(); document.removeEventListener('keydown',onKey); } };
+    document.addEventListener('keydown',onKey);
+  }
+  function _ensureLangPickerStyles(){
+    if(document.getElementById('langPickerStyles')) return;
+    const s=document.createElement('style');
+    s.id='langPickerStyles';
+    s.textContent=`
+      .lp-ov{
+        position:fixed; inset:0; z-index:1200;
+        display:flex; align-items:center; justify-content:center; padding:20px;
+        background:rgba(4,8,18,.0);
+        backdrop-filter:blur(0px); -webkit-backdrop-filter:blur(0px);
+        transition:background .25s ease, backdrop-filter .25s ease;
+      }
+      .lp-ov.show{
+        background:rgba(4,8,18,.62);
+        backdrop-filter:blur(14px) saturate(140%);
+        -webkit-backdrop-filter:blur(14px) saturate(140%);
+      }
+      .lp-ov.show .lp-panel{ transform:translateY(0) scale(1); opacity:1; }
+      .lp-ov.out .lp-panel{
+        transform:translateY(12px) scale(.97); opacity:0;
+        transition:transform .22s ease, opacity .22s ease;
+      }
+      .lp-panel{
+        position:relative; overflow:hidden;
+        width:min(400px, 94vw); max-height:88vh; overflow-y:auto;
+        padding:24px 22px 22px;
+        border-radius:22px;
+        background:
+          radial-gradient(120% 60% at 50% 0%, rgba(251,191,36,.08) 0%, rgba(251,191,36,0) 60%),
+          linear-gradient(180deg, #1A2236 0%, #0E1525 50%, #080D1A 100%);
+        border:1px solid rgba(255,255,255,.08);
+        box-shadow:
+          0 40px 100px rgba(0,0,0,.75),
+          0 0 40px rgba(251,191,36,.06),
+          inset 0 1px 0 rgba(255,255,255,.06);
+        color:#fff; font-family:'Outfit',sans-serif;
+        transform:translateY(20px) scale(.95); opacity:0;
+        transition:transform .32s cubic-bezier(.18,.89,.32,1.07), opacity .32s ease;
+      }
+      .lp-panel::before{
+        content:""; position:absolute; left:28px; right:28px; top:0; height:2px;
+        background:linear-gradient(90deg, transparent 0%, rgba(251,191,36,.85) 18%, rgba(232,50,74,.95) 50%, rgba(251,191,36,.85) 82%, transparent 100%);
+        border-radius:2px;
+        filter:drop-shadow(0 0 6px rgba(251,191,36,.4));
+        pointer-events:none;
+      }
+      .lp-close{
+        position:absolute; top:14px; right:16px;
+        width:34px; height:34px; border-radius:50%; cursor:pointer;
+        background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);
+        color:rgba(255,255,255,.85); font-size:18px; font-weight:700; line-height:1;
+        display:flex; align-items:center; justify-content:center;
+        transition:transform .22s, background .2s, border-color .2s, color .2s;
+      }
+      .lp-close:hover{background:rgba(232,50,74,.20); border-color:rgba(232,50,74,.55); color:#fff; transform:rotate(90deg);}
+      .lp-head{ text-align:center; margin-bottom:14px; padding:0 8px; }
+      .lp-eyebrow{
+        font-size:10px; font-weight:900; letter-spacing:2.8px;
+        color:#FBBF24; text-transform:uppercase; margin-bottom:4px;
+        text-shadow:0 1px 2px rgba(0,0,0,.5);
+      }
+      .lp-title{
+        font-family:'Bangers','Outfit',sans-serif;
+        font-size:26px; letter-spacing:2.5px; line-height:1; font-weight:400;
+        background:linear-gradient(180deg, #FDE68A 0%, #FBBF24 50%, #D97706 100%);
+        -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+        filter:drop-shadow(0 2px 0 rgba(0,0,0,.35));
+        text-transform:uppercase;
+      }
+      .lp-list{ display:flex; flex-direction:column; gap:7px; }
+      .lp-opt{
+        display:flex; align-items:center; gap:13px;
+        padding:11px 14px; border-radius:13px;
+        background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+        border:1.5px solid rgba(255,255,255,.07);
+        color:#fff; font-family:inherit; text-align:left; cursor:pointer;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+        transition:transform .18s cubic-bezier(.2,.7,.3,1.4),
+                   background .2s, border-color .2s, box-shadow .2s;
+      }
+      .lp-opt:hover{
+        transform:translateX(-2px);
+        background:linear-gradient(180deg, rgba(251,191,36,.10), rgba(251,191,36,.02));
+        border-color:rgba(251,191,36,.30);
+        box-shadow:0 4px 12px rgba(0,0,0,.3), 0 0 12px rgba(251,191,36,.18);
+      }
+      .lp-opt.on{
+        background:
+          radial-gradient(120% 80% at 50% 0%, rgba(251,191,36,.22) 0%, rgba(251,191,36,0) 60%),
+          linear-gradient(180deg, #2A3658 0%, #19223A 100%);
+        border-color:#FBBF24;
+        box-shadow:0 6px 18px rgba(251,191,36,.30),
+                   inset 0 1px 0 rgba(255,255,255,.15);
+      }
+      .lp-opt-flag{
+        flex-shrink:0; width:38px; height:38px; border-radius:10px;
+        display:flex; align-items:center; justify-content:center;
+        font-size:22px; line-height:1;
+        background:rgba(0,0,0,.30); border:1px solid rgba(255,255,255,.08);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
+      }
+      .lp-opt-name{ flex:1; font-weight:800; font-size:14px; letter-spacing:.3px; }
+      .lp-opt-check{
+        flex-shrink:0; width:24px; height:24px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:13px; font-weight:900; color:transparent;
+        background:transparent; border:1.5px solid rgba(255,255,255,.15);
+        transition:all .2s;
+      }
+      .lp-opt.on .lp-opt-check{
+        color:#3D2308; background:linear-gradient(180deg, #FBBF24, #D97706);
+        border-color:#FFFBEB;
+        box-shadow:0 3px 8px rgba(251,191,36,.45), inset 0 1px 0 rgba(255,255,255,.4);
+      }
+    `;
+    document.head.appendChild(s);
   }
 

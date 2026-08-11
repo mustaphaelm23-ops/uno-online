@@ -1,0 +1,21 @@
+[DB] MongoDB connection failed: querySrv ENOTFOUND _mongodb._tcp.cluster0.57ly1uh.mongodb.net
+
+╔══════════════════════════════════╗
+║   UNO Online Server v2.1        ║
+║   Port: 8080                      ║
+║   CORS: *               ║
+║ ★★ BUILD-335 — auto bot-fill ★★║
+╚══════════════════════════════════╝
+
+[Ranked] Active tier ladder (1v1 winner / 4P bases):
+  Bronze       : +120 win  · 4P [+120, +60, +30, -25] · max loss -30
+  Silver       : +120 win  · 4P [+120, +60, +30, -25] · max loss -30
+  Gold         : +110 win  · 4P [+110, +55, +25, -25] · max loss -30
+  Platinum     : +60  win  · 4P [+60,  +25,  0,  -30] · max loss -55
+  Diamond      : +35  win  · 4P [+35,  +15,  -5, -35] · max loss -70
+  Master       : +22  win  · 4P [+22,  +10,  -8, -40] · max loss -80
+  Grandmaster  : +15  win  · 4P [+15,   +6,-12, -45] · max loss -90
+
+[Rooms] Active types: CLASSIC, RONDA, TBA9_ZROUT, DAMA, RANKED, CHILL
+  
+[Socket] Connected: Guest4863 (d5Tuo1yuw-VM6RVHAAAB)

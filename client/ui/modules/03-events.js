@@ -49,8 +49,16 @@
       setTimeout(()=>this._maybeIntro(d),900);           // entry cinematic after lobby settles
     },
 
-    /* ── temporary particles / floating lobby props ── */
+    /* ── temporary particles / floating lobby props ──
+       Disabled per user request 2026-05-30 — the falling confetti /
+       pumpkin / lantern / firework decorations were CPU-heavy on this
+       user's machine and made the lobby feel sluggish. Killing the
+       whole path is the cleanest fix; the event banner + intro + colour
+       theming still run normally. To re-enable later, just remove this
+       early return. */
     _buildProps(prop){
+      return;
+      /* eslint-disable no-unreachable */
       const host=document.getElementById('eventLayer');
       if(!host) return;
       if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;

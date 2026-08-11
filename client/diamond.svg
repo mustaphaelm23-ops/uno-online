@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="dg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8FBFF"/>
+      <stop offset="45%" stop-color="#7FE3FF"/>
+      <stop offset="100%" stop-color="#159FD6"/>
+    </linearGradient>
+    <linearGradient id="dg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#BFF2FF"/>
+      <stop offset="100%" stop-color="#0E7FB8"/>
+    </linearGradient>
+  </defs>
+  <!-- crown (top band) -->
+  <polygon points="24,4 40,15 8,15" fill="url(#dg)"/>
+  <polygon points="8,15 16,15 13,9" fill="#D8F7FF" opacity="0.9"/>
+  <polygon points="40,15 32,15 35,9" fill="#5CC8EE" opacity="0.9"/>
+  <polygon points="16,15 32,15 28,9 20,9" fill="#A7ECFF"/>
+  <!-- pavilion (lower point) -->
+  <polygon points="8,15 40,15 24,44" fill="url(#dg2)"/>
+  <polygon points="16,15 32,15 24,44" fill="#9FE9FF" opacity="0.55"/>
+  <polygon points="24,15 24,44 8,15" fill="#0C82BE" opacity="0.35"/>
+  <polygon points="40,15 32,15 24,44" fill="#0A6FA6" opacity="0.4"/>
+  <!-- top sparkle -->
+  <path d="M24 6.5l1.1 2.4 2.4 1.1-2.4 1.1L24 13.5l-1.1-2.4L20.5 10l2.4-1.1z" fill="#FFFFFF" opacity="0.85"/>
+</svg>

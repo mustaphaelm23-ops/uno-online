@@ -1,10 +1,10 @@
-/* UNO Online — service worker
+﻿/* RONDAONE — service worker
  * Caches the app shell so the lobby/auth screen still loads when offline,
  * but lets every API call and websocket bypass the cache (real-time game).
  */
 'use strict';
 
-const VERSION = 'uno-shell-v103';
+const VERSION = 'rondaone-shell-v725';
 const SHELL = [
   '/',
   '/index.html',
@@ -30,19 +30,31 @@ const SHELL = [
   '/ui/modules/17-room-code.js',
   '/ui/modules/18-friends.js',
   '/ui/modules/19-competitions.js',
-  '/ui/modules/20-room-scene.js',
-  '/ui/modules/21-lobby-scene.js',
-  '/ui/modules/22-parallax.js',
   '/ui/modules/23-shop.js',
   '/ui/modules/24-atmosphere.js',
   '/ui/modules/26-offers.js',
   '/ui/modules/27-music.js',
   '/ui/modules/28-quickchat.js',
   '/ui/modules/29-dms.js',
+  '/ui/modules/30-spin.js',
+  '/ui/modules/31-notifs.js',
+  '/ui/modules/32-browse-rooms.js',
+  '/ui/modules/33-match-intro.js',
+  '/ui/modules/34-mobile-rotate.js',
+  '/ui/modules/35-cosmetics.js',
+  '/ui/modules/36-ronda.js',
+  '/ui/modules/38-dama.js',
+  '/ui/modules/39-chess.js',
   '/manifest.json',
   '/icon.svg',
+  '/coin.svg',
+  '/diamond.svg',
   '/lobby-bg.png',
   '/game-bg.png',
+  '/ronda-bg.jpeg',
+  '/classic-bg.jpeg',
+  '/tba9zrout-bg.jpeg',
+  '/dama-bg.jpeg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -66,7 +78,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Never cache API or socket.io traffic — game state must be live.
+  // Never cache API or socket.io traffic â€” game state must be live.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) return;
   // Same-origin only
   if (url.origin !== self.location.origin) return;
@@ -84,7 +96,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for static assets
+  // Network-first for JS/CSS so code + style updates roll out on a SINGLE
+  // refresh (no more "refresh twice"). Falls back to cache when offline.
+  if (/\.(js|css)$/.test(url.pathname)) {
+    event.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(VERSION).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for other static assets (images, fontsâ€¦)
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req).then((res) => {

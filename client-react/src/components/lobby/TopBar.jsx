@@ -1,5 +1,6 @@
 import Avatar from '../ui/Avatar';
 import { useNotifications } from '../../contexts/NotificationsContext';
+import { useDMsCtx } from '../../contexts/DMsContext';
 
 // Top bar across the lobby. Designed for both phone and desktop:
 //   • Phone (< sm): hamburger + UNO logo + compact currency chips + 4 icon
@@ -58,7 +59,8 @@ function IconBtn({ icon, label, dot, badge, onClick }) {
 }
 
 export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onFriends, onNotifications, onMenu }) {
-  const { unread } = useNotifications();
+  const { unread }      = useNotifications();
+  const { unread: dms } = useDMsCtx();
   return (
     <header className="flex items-center gap-1.5 sm:gap-3 lg:gap-4">
       {/* Mobile/tablet hamburger — opens sidebar drawer. Hidden on lg+
@@ -95,7 +97,7 @@ export default function TopBar({ user, onShop, onSettings, onLogout, onChat, onF
       <div className="flex items-center gap-1 sm:gap-2">
         <IconBtn icon="🔔" label="Notifications" badge={unread} onClick={onNotifications} />
         <IconBtn icon="👥" label="Friends" onClick={onFriends} />
-        <IconBtn icon="💬" label="Messages" onClick={onChat} />
+        <IconBtn icon="💬" label="Messages" badge={dms} onClick={onChat} />
         <IconBtn icon="⚙️" label="Settings" onClick={onSettings} />
       </div>
 

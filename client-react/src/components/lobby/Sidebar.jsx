@@ -7,12 +7,9 @@
 import { motion } from 'framer-motion';
 
 const ITEMS = [
-  { id: 'play',    label: 'Play',         sub: 'Start your match',       icon: '🏠', tint: 'accent', active: true },
+  { id: 'ranked',  label: 'Ranked',       sub: 'Climb the leaderboard',  icon: '👑', tint: 'accent', active: true },
   { id: 'join',    label: 'Join by code', sub: 'Enter room code',        icon: '🔑', tint: 'emerald' },
-  { id: 'quick',   label: 'Quick Match',  sub: 'Find a random match',    icon: '⚡', tint: 'rose'    },
-  { id: 'games',   label: 'Game Center',  sub: 'Fun mini games',         icon: '🎮', tint: 'violet'  },
-  { id: 'daily',   label: 'Daily Reward', sub: 'Collect your bonus',     icon: '🎁', tint: 'rose'    },
-  { id: 'ranked',  label: 'Ranked',       sub: 'Climb the leaderboard',  icon: '👑', tint: 'accent'  },
+  { id: 'games',   label: 'Training',     sub: 'Play against bots',      icon: '🤖', tint: 'violet'  },
   { id: 'tourny',  label: 'Tournament',   sub: 'Compete & win',          icon: '🏆', tint: 'accent'  },
   { id: 'shop',    label: 'Shop',         sub: 'Buy coins & items',      icon: '🛍️', tint: 'sky'     },
 ];

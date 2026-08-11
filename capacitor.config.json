@@ -1,0 +1,15 @@
+{
+  "appId": "com.atlasarena.app",
+  "appName": "Atlas Arena",
+  "webDir": "client",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
